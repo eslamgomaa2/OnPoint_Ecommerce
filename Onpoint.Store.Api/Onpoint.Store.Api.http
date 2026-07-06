@@ -1,0 +1,6 @@
+@Onpoint.Store.Api_HostAddress = http://localhost:5102
+
+GET {{Onpoint.Store.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,25 @@
+{
+  "Success.Created": "Created successfully",
+  "Success.Updated": "Updated successfully",
+  "Success.Deleted": "Deleted successfully",
+  "Success.OperationCompleted": "Operation completed successfully",
+
+  "Errors.GenericError": "An unexpected error occurred. Please try again later",
+  "Errors.NotFound": "The requested resource was not found",
+  "Errors.Unauthorized": "You are not authorized to access this",
+  "Errors.Forbidden": "You do not have permission to perform this action",
+  "Errors.ValidationFailed": "Data validation failed",
+  "Errors.DuplicateEntry": "The entered data already exists",
+
+  "Validation.Required": "The {0} field is required",
+  "Validation.MaxLength": "The {0} field must not exceed {1} characters",
+  "Validation.MinLength": "The {0} field must be at least {1} characters",
+  "Validation.Email": "Invalid email format",
+  "Validation.OnlyNumbers": "The {0} field must contain numbers only",
+  "Validation.NotZero": "The {0} field must not be zero",
+
+  "Business.InvalidImage": "The uploaded image is invalid",
+  "Business.InsufficientStock": "Requested quantity exceeds available stock",
+  "Business.CannotDelete": "Cannot delete this item as it has associated data",
+  "Business.OrderCannotBeCancelled": "Cannot cancel the order in its current state"
+}
