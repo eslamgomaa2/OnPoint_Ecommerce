@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Onpoint.Store.Domin")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d26e29db87f17bdb0bd1c8b7ef3844d79abed899")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+afcef47ed7b74a3a52df82d812b7da8a98c65b1b")]
 [assembly: System.Reflection.AssemblyProductAttribute("Onpoint.Store.Domin")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Onpoint.Store.Domin")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
