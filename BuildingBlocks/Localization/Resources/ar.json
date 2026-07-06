@@ -1,0 +1,25 @@
+﻿{
+  "Success.Created": "تم الإنشاء بنجاح",
+  "Success.Updated": "تم التحديث بنجاح",
+  "Success.Deleted": "تم الحذف بنجاح",
+  "Success.OperationCompleted": "تمت العملية بنجاح",
+
+  "Errors.GenericError": "حدث خطأ غير متوقع. يرجى المحاولة لاحقاً",
+  "Errors.NotFound": "المورد المطلوب غير موجود",
+  "Errors.Unauthorized": "غير مصرح لك بالوصول",
+  "Errors.Forbidden": "ليس لديك صلاحية لتنفيذ هذا الإجراء",
+  "Errors.ValidationFailed": "فشل التحقق من صحة البيانات",
+  "Errors.DuplicateEntry": "البيانات المدخلة موجودة مسبقاً",
+
+  "Validation.Required": "حقل {0} مطلوب",
+  "Validation.MaxLength": "حقل {0} يجب ألا يتجاوز {1} حرفاً",
+  "Validation.MinLength": "حقل {0} يجب أن يكون على الأقل {1} حرفاً",
+  "Validation.Email": "صيغة البريد الإلكتروني غير صحيحة",
+  "Validation.OnlyNumbers": "حقل {0} يجب أن يحتوي على أرقام فقط",
+  "Validation.NotZero": "حقل {0} لا يجب أن يكون صفراً",
+
+  "Business.InvalidImage": "الصورة المرفوعة غير صالحة",
+  "Business.InsufficientStock": "الكمية المطلوبة تتجاوز المخزون المتاح",
+  "Business.CannotDelete": "لا يمكن حذف هذا العنصر لوجود بيانات مرتبطة به",
+  "Business.OrderCannotBeCancelled": "لا يمكن إلغاء الطلب في حالته الحالية"
+}

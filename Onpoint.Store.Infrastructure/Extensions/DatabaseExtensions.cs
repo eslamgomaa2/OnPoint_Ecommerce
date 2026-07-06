@@ -1,0 +1,25 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Onpoint.Store.Infrastructure.Data.Context;
+
+namespace Onpoint.Store.Infrastructure.Extensions
+{
+    public static class DatabaseExtensions
+    {
+        public static IServiceCollection AddDatabaseConfiguration(this IServiceCollection services, IConfiguration configuration)
+        {
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                 ?? throw new InvalidOperationException("Connection string not found.");
+
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(connectionString));
+
+           
+
+
+            return services;
+            
+        }
+    }
+}
