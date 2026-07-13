@@ -1,29 +1,99 @@
-﻿using Onpoint.Store.Domin.Repositories;
+﻿using Microsoft.EntityFrameworkCore.Storage;
+using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Onpoint.Store.Infrastructure.Repositories
 {
-    public class UnitOfWork:IUnitOfWork
+    public class UnitOfWork : IUnitOfWork
     {
-        
-       
-            private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context;
+        private IDbContextTransaction? _currentTransaction;
 
-            public UnitOfWork(ApplicationDbContext context)
+        private ICategoryRepository? _categories;
+        private IProductRepository? _products;
+        private ICartRepository? _carts;
+        private IEmailVerificationOtpRepo? _emailVerificationOtpRepo;
+        private IAddressRepository? _addresses;
+        private ICouponRepository? _couponRepository;
+        private IOrderRepo? _orders;
+        private IPaymentTransactionRepository? _paymentTransactions;
+        private IInvoiceRepository? _invoices;
+        private IWishlistRepository? _wishlists;
+        private IReviewRepository? _reviews;
+
+        private IGenericRepository<OrderItem, int>? _orderItems;
+
+        public UnitOfWork(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+        public IPaymentTransactionRepository PaymentTransactions => _paymentTransactions ??= new PaymentTransactionRepository(_context);
+        public IInvoiceRepository Invoices => _invoices ??= new InvoiceRepository(_context);
+        public ICategoryRepository Categories => _categories ??= new CategoryRepository(_context);
+        public IProductRepository Products => _products ??= new ProductRepository(_context);
+        public ICartRepository Carts => _carts ??= new CartRepository(_context);
+        public IEmailVerificationOtpRepo EmailVerificationOtpRepo => _emailVerificationOtpRepo ??= new EmailVerificationOtpRepo(_context);
+        public IAddressRepository Addresses => _addresses ??= new AddressRepository(_context);
+        public ICouponRepository Coupons => _couponRepository ??= new CouponRepository(_context);
+
+        public IGenericRepository<OrderItem, int> OrderItems => _orderItems ??= new GenericRepository<OrderItem, int>(_context);
+
+        public IOrderRepo Orders => _orders ??= new OrderRepo(_context);
+
+        public IWishlistRepository Wishlists => _wishlists ??= new WishlistRepository(_context);
+
+        public IReviewRepository Reviews => _reviews ??= new ReviewRepository(_context);
+
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            _currentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        }
+
+        public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            try
             {
-                _context = context;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                if (_currentTransaction != null)
+                    await _currentTransaction.CommitAsync(cancellationToken);
             }
-
-
-            public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            catch
             {
-                return await _context.SaveChangesAsync(cancellationToken);
+                await RollbackTransactionAsync(cancellationToken);
+                throw;
             }
-        
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.DisposeAsync();
+                    _currentTransaction = null;
+                }
+            }
+        }
+
+        public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (_currentTransaction != null)
+                    await _currentTransaction.RollbackAsync(cancellationToken);
+            }
+            finally
+            {
+                if (_currentTransaction != null)
+                {
+                    await _currentTransaction.DisposeAsync();
+                    _currentTransaction = null;
+                }
+            }
+        }
     }
 }

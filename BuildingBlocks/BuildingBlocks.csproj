@@ -8,7 +8,6 @@
 
 	<ItemGroup>
 		<Folder Include="Common\Constants\" />
-		<Folder Include="Common\Helpers\" />
 		<Folder Include="Common\Seeders\" />
 	</ItemGroup>
 

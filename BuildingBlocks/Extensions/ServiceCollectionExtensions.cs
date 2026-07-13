@@ -7,8 +7,18 @@ namespace BuildingBlocks.Extensions
     {
         public static IServiceCollection AddBuildingBlocksServices(this IServiceCollection services)
         {
-            
+
             services.AddHttpContextAccessor();
+            services.AddHttpClient();
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                });
+            });
             services.AddScoped<ServiceResultHandler>();
 
             return services;

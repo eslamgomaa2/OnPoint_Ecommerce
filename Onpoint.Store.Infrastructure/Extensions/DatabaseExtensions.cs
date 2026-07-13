@@ -15,11 +15,11 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
-           
+
 
 
             return services;
-            
+
         }
     }
 }

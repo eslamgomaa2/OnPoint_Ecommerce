@@ -1,0 +1,13 @@
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\bin\Debug\net8.0\BuildingBlocks.deps.json
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\bin\Debug\net8.0\BuildingBlocks.dll
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\bin\Debug\net8.0\BuildingBlocks.pdb
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.csproj.AssemblyReference.cache
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.AssemblyInfoInputs.cache
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.AssemblyInfo.cs
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.csproj.CoreCompileInputs.cache
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.sourcelink.json
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.dll
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\refint\BuildingBlocks.dll
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\BuildingBlocks.pdb
+C:\Users\Softlaptop\Desktop\.net_projects\Onpoint.Store.Api\BuildingBlocks\obj\Debug\net8.0\ref\BuildingBlocks.dll

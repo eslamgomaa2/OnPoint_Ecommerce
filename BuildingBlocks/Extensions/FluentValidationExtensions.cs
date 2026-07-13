@@ -1,41 +1,53 @@
-﻿using FluentValidation;
+﻿using BuildingBlocks.Results;
+using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
 
 namespace BuildingBlocks.Extensions
 {
     public static class FluentValidationExtensions
     {
-        public static IServiceCollection AddFluentValidationConfiguration(this IServiceCollection services)
+        public static IServiceCollection AddFluentValidationConfiguration(this IServiceCollection services, params Assembly[] assemblies)
         {
-            services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-            services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+            if (assemblies == null || assemblies.Length == 0)
+                throw new ArgumentNullException(nameof(assemblies), "Please provide the assemblies containing the validators.");
+
+            services.AddValidatorsFromAssemblies(assemblies);
+
+            services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.InvalidModelStateResponseFactory = context =>
                 {
-                    
-                    var errors = context.ModelState
+
+                    var failures = context.ModelState
                         .Where(e => e.Value?.Errors.Count > 0)
-                        .Select(e => $"{e.Key}: {e.Value?.Errors.First().ErrorMessage}")
+                        .SelectMany(e => e.Value!.Errors.Select(err => new ValidationError
+                        {
+                            Property = e.Key,
+                            Message = err.ErrorMessage,
+                            AttemptedValue = context.HttpContext.Request.Form[e.Key]
+                        }))
                         .ToList();
 
-                   
-                    var response = new
+                    var validationModel = new ValidationResultModel
+                    {
+                        Errors = failures
+                    };
+
+                    var response = new ServiceResult<ValidationResultModel>
                     {
                         Succeeded = false,
                         Message = "Data validation failed.",
-                        Errors = errors
+                        Data = validationModel,
+                        HttpStatusCode = System.Net.HttpStatusCode.UnprocessableEntity
                     };
 
-                    return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(response);
+                    return new UnprocessableEntityObjectResult(response);
                 };
             });
 
             return services;
         }
- 
     }
 }

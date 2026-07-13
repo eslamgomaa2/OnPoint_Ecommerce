@@ -1,36 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace BuildingBlocks.Results
+﻿namespace BuildingBlocks.Results
 {
-   
-        public class PagedResult<T>
+
+    public class PagedResult<T>
+    {
+        public IReadOnlyList<T> Items { get; set; } = new List<T>();
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+        public int TotalCount { get; set; }
+
+
+        public bool HasPreviousPage => PageNumber > 1;
+        public bool HasNextPage => PageNumber < TotalPages;
+
+
+        public static PagedResult<T> Create(IReadOnlyList<T> items, int totalCount, int pageNumber, int pageSize)
         {
-            public IReadOnlyList<T> Items { get; set; } = new List<T>();
-            public int PageNumber { get; set; }
-            public int PageSize { get; set; }
-            public int TotalPages { get; set; }
-            public int TotalCount { get; set; }
+            var totalPages = totalCount <= 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
 
-            
-            public bool HasPreviousPage => PageNumber > 1;
-            public bool HasNextPage => PageNumber < TotalPages;
-
-            
-            public static PagedResult<T> Create(IReadOnlyList<T> items, int totalCount, int pageNumber, int pageSize)
+            return new PagedResult<T>
             {
-                var totalPages = totalCount <= 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
-
-                return new PagedResult<T>
-                {
-                    Items = items,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize,
-                    TotalPages = totalPages,
-                    TotalCount = totalCount
-                };
-            }
+                Items = items,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                TotalCount = totalCount
+            };
         }
-    
+    }
+
 }
