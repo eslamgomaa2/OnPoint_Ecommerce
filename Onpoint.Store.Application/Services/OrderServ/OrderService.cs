@@ -71,8 +71,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
                 if (!string.IsNullOrWhiteSpace(cart.AppliedCouponCode))
                 {
-                    coupon = await _unitOfWork.Coupons
-                        .FirstOrDefaultAsync(c => c.Code == cart.AppliedCouponCode);
+                    coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == cart.AppliedCouponCode);
 
                     bool couponStillValid = coupon != null
                         && coupon.IsActive
@@ -137,24 +136,20 @@ namespace Onpoint.Store.Application.Services.OrderServ
                         discountAmount = order.SubTotal;
 
                     order.DiscountAmount = discountAmount;
-                    coupon.UsedCount++;
-                    _unitOfWork.Coupons.Update(coupon);
                 }
 
                 order.TotalAmount = order.SubTotal + order.ShippingCost - order.DiscountAmount;
 
-                foreach (var item in cart.Items)
-                {
-                    var product = products.First(p => p.Id == item.ProductId);
-                    product.StockQuantity -= item.Quantity;
-                    _unitOfWork.Products.Update(product);
-                }
-
                 await _unitOfWork.Orders.AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();
 
-                _unitOfWork.Carts.Remove(cart);
-                await _unitOfWork.SaveChangesAsync();
+                if (dto.PaymentMethod == PaymentMethod.CashOnDelivery)
+                {
+                    await FinalizeOrderAsync(order, cart, coupon, ct: default);
+                    order.Status = OrderStatus.Processing;
+                    _unitOfWork.Orders.Update(order);
+                    await _unitOfWork.SaveChangesAsync();
+                }
 
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -168,6 +163,32 @@ namespace Onpoint.Store.Application.Services.OrderServ
             }
         }
 
+        public async Task FinalizeOrderAsync(Order order, Cart? cart, Coupon? coupon, CancellationToken ct = default)
+        {
+            var productIds = order.OrderItems.Select(i => i.ProductId).ToList();
+            var products = await _unitOfWork.Products.GetByIdsAsync(productIds);
+
+            foreach (var item in order.OrderItems)
+            {
+                var product = products.First(p => p.Id == item.ProductId);
+                product.StockQuantity -= item.Quantity;
+                _unitOfWork.Products.Update(product);
+            }
+
+            if (coupon != null)
+            {
+                coupon.UsedCount++;
+                _unitOfWork.Coupons.Update(coupon);
+            }
+
+            if (cart != null)
+            {
+                _unitOfWork.Carts.Remove(cart);
+            }
+
+
+
+        }
         public async Task<ServiceResult<IEnumerable<OrderDto>>> GetUserOrdersAsync(int userId)
         {
             var orders = await _unitOfWork.Orders.GetUserOrders(userId);

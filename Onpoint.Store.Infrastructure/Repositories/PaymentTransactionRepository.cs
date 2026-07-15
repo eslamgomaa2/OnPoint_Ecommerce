@@ -18,7 +18,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
         public async Task<PaymentTransaction?> GetByOrderIdAsync(int orderId)
         {
-            return await _dbset.FirstOrDefaultAsync(p => p.OrderId == orderId);
+            return await _dbset
+                .Where(t => t.OrderId == orderId)
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
         }
     }
 }

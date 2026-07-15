@@ -2,6 +2,7 @@
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.Mappings;
 using Onpoint.Store.Application.Services.AddressServ;
 using Onpoint.Store.Application.Services.AuthServices;
@@ -14,6 +15,8 @@ using Onpoint.Store.Application.Services.CouponServ;
 using Onpoint.Store.Application.Services.InvoiceServ;
 using Onpoint.Store.Application.Services.MedioServices;
 using Onpoint.Store.Application.Services.OrderServ;
+using Onpoint.Store.Application.Services.PaymentServ;
+using Onpoint.Store.Application.Services.PaymentServices;
 using Onpoint.Store.Application.Services.PaymentTransactionServ;
 using Onpoint.Store.Application.Services.ProductServ;
 using Onpoint.Store.Application.Services.ReviewServ;
@@ -40,6 +43,10 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IInvoiceService, InvoiceService>();
             services.AddScoped<IWishlistService, WishlistService>();
             services.AddScoped<IReviewService, ReviewService>();
+            services.AddHttpClient<IMyFatoorahClient, MyFatoorahClient>();
+            services.AddScoped<IPaymentService, PaymentService>();
+
+            services.Configure<MyFatoorahOptions>(configuration.GetSection("MyFatoorah"));
 
             services.Configure<MailSettings>(configuration.GetSection("MailSettings"));
             services.AddScoped<IMediaService, MediaService>();

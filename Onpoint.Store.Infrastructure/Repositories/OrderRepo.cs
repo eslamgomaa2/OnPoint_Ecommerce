@@ -28,5 +28,11 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .SelectMany(o => o.OrderItems)
                 .AnyAsync(oi => oi.ProductId == productId, ct);
         }
+        public async Task<Order?> GetOrderWithItemsAsync(int orderId, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+        }
     }
 }

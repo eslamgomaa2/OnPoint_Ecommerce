@@ -7,5 +7,6 @@ namespace Onpoint.Store.Domin.Repositories
         Task<IEnumerable<Order>> GetUserOrders(int id);
 
         Task<bool> HasUserReceivedProductAsync(int userId, int productId, CancellationToken ct = default);
+        Task<Order?> GetOrderWithItemsAsync(int orderId, CancellationToken ct = default);
     }
 }
