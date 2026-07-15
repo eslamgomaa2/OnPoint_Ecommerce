@@ -3,20 +3,20 @@
   "WorkspaceRootPath": "C:\\Users\\Softlaptop\\Desktop\\.net_projects\\Onpoint.Store.Api\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D43F2B93-6DA2-4AE2-9B5E-E87CADA41FFC}|Onpoint.Store.Infrastructure\\Onpoint.Store.Infrastructure.csproj|c:\\users\\softlaptop\\desktop\\.net_projects\\onpoint.store.api\\onpoint.store.infrastructure\\repositories\\reviewrepository .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D43F2B93-6DA2-4AE2-9B5E-E87CADA41FFC}|Onpoint.Store.Infrastructure\\Onpoint.Store.Infrastructure.csproj|solutionrelative:onpoint.store.infrastructure\\repositories\\reviewrepository .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Softlaptop\\Desktop\\.net_projects\\Onpoint.Store.Api\\Onpoint.Store.Infrastructure\\Repositories\\ReviewRepository .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Onpoint.Store.Infrastructure\\Repositories\\ReviewRepository .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A72E87B7-CF58-4810-9990-E42EE1D8D6F1}|Onpoint.Store.Application\\Onpoint.Store.Application.csproj|c:\\users\\softlaptop\\desktop\\.net_projects\\onpoint.store.api\\onpoint.store.application\\services\\reviewserv\\ireviewservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A72E87B7-CF58-4810-9990-E42EE1D8D6F1}|Onpoint.Store.Application\\Onpoint.Store.Application.csproj|solutionrelative:onpoint.store.application\\services\\reviewserv\\ireviewservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Softlaptop\\Desktop\\.net_projects\\Onpoint.Store.Api\\Onpoint.Store.Application\\Services\\ReviewServ\\IReviewService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Onpoint.Store.Application\\Services\\ReviewServ\\IReviewService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A72E87B7-CF58-4810-9990-E42EE1D8D6F1}|Onpoint.Store.Application\\Onpoint.Store.Application.csproj|c:\\users\\softlaptop\\desktop\\.net_projects\\onpoint.store.api\\onpoint.store.application\\mappings\\reviewmappingprofile .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A72E87B7-CF58-4810-9990-E42EE1D8D6F1}|Onpoint.Store.Application\\Onpoint.Store.Application.csproj|solutionrelative:onpoint.store.application\\mappings\\reviewmappingprofile .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Softlaptop\\Desktop\\.net_projects\\Onpoint.Store.Api\\Onpoint.Store.Application\\Mappings\\ReviewMappingProfile .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Onpoint.Store.Application\\Mappings\\ReviewMappingProfile .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A72E87B7-CF58-4810-9990-E42EE1D8D6F1}|Onpoint.Store.Application\\Onpoint.Store.Application.csproj|c:\\users\\softlaptop\\desktop\\.net_projects\\onpoint.store.api\\onpoint.store.application\\services\\orderserv\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A72E87B7-CF58-4810-9990-E42EE1D8D6F1}|Onpoint.Store.Application\\Onpoint.Store.Application.csproj|solutionrelative:onpoint.store.application\\services\\orderserv\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Softlaptop\\Desktop\\.net_projects\\Onpoint.Store.Api\\Onpoint.Store.Application\\Services\\OrderServ\\OrderService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Onpoint.Store.Application\\Services\\OrderServ\\OrderService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [

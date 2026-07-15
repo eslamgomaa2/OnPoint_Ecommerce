@@ -46,8 +46,7 @@
               "RelativeToolTip": "Onpoint.Store.Application\\Services\\ReviewServ\\IReviewService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-13T12:38:26.244Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-13T12:38:26.244Z"
             },
             {
               "$type": "Document",
@@ -57,7 +56,7 @@
               "RelativeDocumentMoniker": "Onpoint.Store.Infrastructure\\Repositories\\ReviewRepository .cs",
               "ToolTip": "C:\\Users\\Softlaptop\\Desktop\\.net_projects\\Onpoint.Store.Api\\Onpoint.Store.Infrastructure\\Repositories\\ReviewRepository .cs",
               "RelativeToolTip": "Onpoint.Store.Infrastructure\\Repositories\\ReviewRepository .cs",
-              "ViewState": "AgIAAAcAAAAAAAAAAADgvx8AAAA8AAAAAAAAAA==",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAvwB8AAAA8AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-07-13T12:33:29.24Z",
               "EditorCaption": ""
@@ -72,8 +71,7 @@
               "RelativeToolTip": "Onpoint.Store.Application\\Mappings\\ReviewMappingProfile .cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-13T12:29:29.823Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-13T12:29:29.823Z"
             },
             {
               "$type": "Document",
@@ -85,8 +83,7 @@
               "RelativeToolTip": "Onpoint.Store.Application\\Services\\OrderServ\\OrderService.cs",
               "ViewState": "AgIAAJ0AAAAA//////8RwLQAAAAvAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-13T12:26:24.392Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-13T12:26:24.392Z"
             }
           ]
         }

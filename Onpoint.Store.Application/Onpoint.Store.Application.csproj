@@ -7,10 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+<<<<<<< HEAD
     <PackageReference Include="CloudinaryDotNet" Version="1.29.2" />
     <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.28" />
     <PackageReference Include="MimeKit" Version="4.17.0" />
+=======
+    <Folder Include="DTOs\" />
+    <Folder Include="Interfaces\" />
+    <Folder Include="Mappings\" />
+    <Folder Include="Services\" />
+    <Folder Include="Validators\" />
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
   </ItemGroup>
 
   <ItemGroup>

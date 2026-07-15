@@ -15,11 +15,19 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
+<<<<<<< HEAD
 
 
 
             return services;
 
+=======
+           
+
+
+            return services;
+            
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
         }
     }
 }

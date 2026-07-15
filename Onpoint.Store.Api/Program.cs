@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 using BuildingBlocks.Extensions;
 using Onpoint.Store.Application.Extensions;
 using Onpoint.Store.Infrastructure.Extensions;
@@ -32,6 +33,33 @@ builder.Services.AddSingleton(new CloudinaryDotNet.Cloudinary(cloudinaryAccount)
 var app = builder.Build();
 await app.MigrateDatabaseAsync();
 
+=======
+using BuildingBlocks.Extensions; 
+using BuildingBlocks.Middlewares;
+using Onpoint.Store.Infrastructure.Extensions; 
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+
+// BuildingBlocks
+builder.Services.AddBuildingBlocksServices();
+builder.Services.AddLocalizationServices();
+builder.Services.AddAutoMapperServices();
+builder.Services.AddFluentValidationConfiguration();
+builder.Services.AddSwaggerConfiguration();
+builder.Services.AddJwtAuthentication(builder.Configuration);
+
+//  Infrastructure 
+builder.Services.AddDatabaseConfiguration(builder.Configuration); 
+builder.Services.AddInfrastructureServices(); 
+
+
+var app = builder.Build();
+
+// Middlewares
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
 app.UseGlobalExceptionHandler();
 app.UseRequestLocalizationConfiguration();
 
@@ -40,7 +68,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+<<<<<<< HEAD
 app.UseCors("AllowAll");
+=======
+
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

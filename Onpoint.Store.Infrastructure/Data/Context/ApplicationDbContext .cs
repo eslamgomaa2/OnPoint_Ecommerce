@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -72,5 +73,26 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         {
             builder.Entity<TEntity>().HasQueryFilter(e => !e.IsDeleted);
         }
+=======
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace Onpoint.Store.Infrastructure.Data.Context
+{
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+        
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+
+            
+        }
+
+       
+
+       
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
     }
 }

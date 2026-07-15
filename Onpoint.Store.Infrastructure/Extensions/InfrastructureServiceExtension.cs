@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Onpoint.Store.Application.Services.AuthServices.ExternalAuthService;
@@ -5,10 +6,15 @@ using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
 using Onpoint.Store.Infrastructure.ExternalAuthServices;
+=======
+﻿using Microsoft.Extensions.DependencyInjection;
+using Onpoint.Store.Domin.Repositories;
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
 using Onpoint.Store.Infrastructure.Repositories;
 
 namespace Onpoint.Store.Infrastructure.Extensions
 {
+<<<<<<< HEAD
     public static class InfrastructureServiceExtension
     {
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
@@ -53,3 +59,18 @@ namespace Onpoint.Store.Infrastructure.Extensions
         }
     }
 }
+=======
+    
+        public static class InfrastructureServiceExtension
+        {
+            public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
+            {
+                
+                services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+                return services;
+            }
+        }
+    
+}
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
