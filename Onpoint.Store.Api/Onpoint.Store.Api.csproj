@@ -7,14 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+<<<<<<< HEAD
 	  <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.28">
 	    <PrivateAssets>all</PrivateAssets>
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
+=======
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
 	  <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
   </ItemGroup>
 
   <ItemGroup>
+<<<<<<< HEAD
+=======
+    <Folder Include="Controllers\" />
+>>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
     <Folder Include="wwwroot\Localization\" />
   </ItemGroup>
 
