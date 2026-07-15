@@ -1,21 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
-
 	<ItemGroup>
 		<Folder Include="Common\Constants\" />
-<<<<<<< HEAD
-=======
 		<Folder Include="Common\Helpers\" />
->>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
 		<Folder Include="Common\Seeders\" />
 	</ItemGroup>
-
-
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="13.0.1" />
 		<PackageReference Include="FluentValidation" Version="12.1.1" />
@@ -26,5 +19,4 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
 	</ItemGroup>
-
 </Project>

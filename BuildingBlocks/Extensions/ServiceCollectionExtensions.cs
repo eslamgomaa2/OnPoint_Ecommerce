@@ -7,7 +7,6 @@ namespace BuildingBlocks.Extensions
     {
         public static IServiceCollection AddBuildingBlocksServices(this IServiceCollection services)
         {
-<<<<<<< HEAD
 
             services.AddHttpContextAccessor();
             services.AddHttpClient();
@@ -20,10 +19,9 @@ namespace BuildingBlocks.Extensions
                           .AllowAnyMethod();
                 });
             });
-=======
-            
+
             services.AddHttpContextAccessor();
->>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
+
             services.AddScoped<ServiceResultHandler>();
 
             return services;

@@ -1,0 +1,23 @@
+BuildingBlocks/Common/Entities/BaseEntity.cs
+BuildingBlocks/Extensions/FluentValidationExtensions.cs
+BuildingBlocks/Extensions/JwtExtensions.cs
+BuildingBlocks/Extensions/LocalizationServiceExtension.cs
+BuildingBlocks/Extensions/MiddlewareExtensions.cs
+BuildingBlocks/Extensions/ServiceCollectionExtensions.cs
+BuildingBlocks/Extensions/SwaggerExtensions.cs
+BuildingBlocks/Localization/ILocalizationService.cs
+BuildingBlocks/Localization/LocalizationService.cs
+BuildingBlocks/Middlewares/GlobalExceptionMiddleware.cs
+BuildingBlocks/Results/PagedResult.cs
+BuildingBlocks/Results/PaginationRequest.cs
+BuildingBlocks/Results/ServiceResult.cs
+BuildingBlocks/Results/ValidationResultModel.cs
+Onpoint.Store.Api/Program.cs
+Onpoint.Store.Api/appsettings.json
+Onpoint.Store.Domin/Repositories/IGenericRepository.cs
+Onpoint.Store.Domin/Repositories/IUnitOfWork .cs
+Onpoint.Store.Infrastructure/Data/Context/ApplicationDbContext .cs
+Onpoint.Store.Infrastructure/Extensions/DatabaseExtensions.cs
+Onpoint.Store.Infrastructure/Extensions/InfrastructureServiceExtension.cs
+Onpoint.Store.Infrastructure/Repositories/GenericRepository.cs
+Onpoint.Store.Infrastructure/Repositories/UnitOfWork .cs

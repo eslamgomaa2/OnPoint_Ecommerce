@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Onpoint.Store.Domin.Common;
@@ -15,7 +14,6 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
         }
-
 
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
@@ -37,11 +35,10 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<EmailVerificationOtp> EmailVerificationOtps { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
 
-
-
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
             builder.ApplyConfiguration(new CategoryConfiguration());
             builder.ApplyConfiguration(new ProductConfiguration());
             builder.ApplyConfiguration(new CartConfiguration());
@@ -55,6 +52,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new ReviewConfiguration());
             builder.ApplyConfiguration(new CouponConfiguration());
 
+            // Apply global query filter for soft deletion on all entities inheriting from BaseEntity
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
                 if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
@@ -73,26 +71,5 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         {
             builder.Entity<TEntity>().HasQueryFilter(e => !e.IsDeleted);
         }
-=======
-﻿using Microsoft.EntityFrameworkCore;
-
-namespace Onpoint.Store.Infrastructure.Data.Context
-{
-    public class ApplicationDbContext : DbContext
-    {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-
-        
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-
-            
-        }
-
-       
-
-       
->>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
     }
 }

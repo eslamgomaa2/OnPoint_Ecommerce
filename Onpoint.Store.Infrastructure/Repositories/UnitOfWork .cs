@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.Storage;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
@@ -22,13 +21,13 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IInvoiceRepository? _invoices;
         private IWishlistRepository? _wishlists;
         private IReviewRepository? _reviews;
-
         private IGenericRepository<OrderItem, int>? _orderItems;
 
         public UnitOfWork(ApplicationDbContext context)
         {
             _context = context;
         }
+
         public IPaymentTransactionRepository PaymentTransactions => _paymentTransactions ??= new PaymentTransactionRepository(_context);
         public IInvoiceRepository Invoices => _invoices ??= new InvoiceRepository(_context);
         public ICategoryRepository Categories => _categories ??= new CategoryRepository(_context);
@@ -37,13 +36,9 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IEmailVerificationOtpRepo EmailVerificationOtpRepo => _emailVerificationOtpRepo ??= new EmailVerificationOtpRepo(_context);
         public IAddressRepository Addresses => _addresses ??= new AddressRepository(_context);
         public ICouponRepository Coupons => _couponRepository ??= new CouponRepository(_context);
-
         public IGenericRepository<OrderItem, int> OrderItems => _orderItems ??= new GenericRepository<OrderItem, int>(_context);
-
         public IOrderRepo Orders => _orders ??= new OrderRepo(_context);
-
         public IWishlistRepository Wishlists => _wishlists ??= new WishlistRepository(_context);
-
         public IReviewRepository Reviews => _reviews ??= new ReviewRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -63,7 +58,9 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 await _context.SaveChangesAsync(cancellationToken);
 
                 if (_currentTransaction != null)
+                {
                     await _currentTransaction.CommitAsync(cancellationToken);
+                }
             }
             catch
             {
@@ -85,7 +82,9 @@ namespace Onpoint.Store.Infrastructure.Repositories
             try
             {
                 if (_currentTransaction != null)
+                {
                     await _currentTransaction.RollbackAsync(cancellationToken);
+                }
             }
             finally
             {
@@ -98,34 +97,3 @@ namespace Onpoint.Store.Infrastructure.Repositories
         }
     }
 }
-=======
-﻿using Onpoint.Store.Domin.Repositories;
-using Onpoint.Store.Infrastructure.Data.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Onpoint.Store.Infrastructure.Repositories
-{
-    public class UnitOfWork:IUnitOfWork
-    {
-        
-       
-            private readonly ApplicationDbContext _context;
-
-            public UnitOfWork(ApplicationDbContext context)
-            {
-                _context = context;
-            }
-
-
-            public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-            {
-                return await _context.SaveChangesAsync(cancellationToken);
-            }
-        
-    }
-}
->>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3

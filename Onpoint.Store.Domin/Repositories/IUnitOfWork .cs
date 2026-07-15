@@ -1,18 +1,9 @@
-<<<<<<< HEAD
-﻿using Onpoint.Store.Domin.Entities;
-=======
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
->>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
+using Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Domin.Repositories
 {
     public interface IUnitOfWork
     {
-<<<<<<< HEAD
         ICategoryRepository Categories { get; }
         IProductRepository Products { get; }
         ICartRepository Carts { get; }
@@ -33,9 +24,3 @@ namespace Onpoint.Store.Domin.Repositories
         Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
     }
 }
-=======
-
-        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-    }
-}
->>>>>>> a4229cd5541012e96d4a2a23d93425d84f1837e3
