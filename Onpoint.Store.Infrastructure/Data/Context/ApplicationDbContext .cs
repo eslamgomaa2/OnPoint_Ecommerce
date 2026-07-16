@@ -1,39 +1,39 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Onpoint.Store.Domin.Common;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
+using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Infrastructure.Data.Configurations;
 using System.Reflection;
-
 namespace Onpoint.Store.Infrastructure.Data.Context
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        {
-        }
-
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<Discount> Discounts { get; set; }
-
         public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
-
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Invoice> Invoices { get; set; }
         public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<Address> Addresses { get; set; }
-
         public DbSet<Wishlist> Wishlists { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
         public DbSet<EmailVerificationOtp> EmailVerificationOtps { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Stock> Stocks { get; set; }
+        public DbSet<Branch> Branches { get; set; }
+        public DbSet<PosSession> PosSessions { get; set; }
+        public DbSet<PosSessionItem> PosSessionItems { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -51,8 +51,31 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new WishlistConfiguration());
             builder.ApplyConfiguration(new ReviewConfiguration());
             builder.ApplyConfiguration(new CouponConfiguration());
+            builder.ApplyConfiguration(new StockConfiguration());
+            builder.ApplyConfiguration(new BranchConfiguration());
+            builder.ApplyConfiguration(new ApplicationUserConfiguration());
+            builder.ApplyConfiguration(new PosSessionConfiguration());
+            builder.ApplyConfiguration(new PosSessionItemConfiguration());
 
-            // Apply global query filter for soft deletion on all entities inheriting from BaseEntity
+
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    var propertyType = property.ClrType;
+                    var underlyingType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+
+                    if (underlyingType.IsEnum)
+                    {
+                        var converterType = typeof(EnumToStringConverter<>).MakeGenericType(underlyingType);
+                        var converter = (ValueConverter)Activator.CreateInstance(converterType)!;
+                        property.SetValueConverter(converter);
+                        property.SetMaxLength(50);
+                    }
+                }
+            }
+
+
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
                 if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
@@ -60,10 +83,11 @@ namespace Onpoint.Store.Infrastructure.Data.Context
                     var method = typeof(ApplicationDbContext)
                         .GetMethod(nameof(SetIsDeletedQueryFilter), BindingFlags.NonPublic | BindingFlags.Static)!
                         .MakeGenericMethod(entityType.ClrType);
-
                     method.Invoke(null, new object[] { builder });
                 }
             }
+
+            builder.Entity<ApplicationUser>().HasQueryFilter(u => !u.IsDeleted);
         }
 
         private static void SetIsDeletedQueryFilter<TEntity>(ModelBuilder builder)

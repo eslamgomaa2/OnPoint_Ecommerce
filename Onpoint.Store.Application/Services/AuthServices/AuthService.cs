@@ -376,6 +376,16 @@ namespace Onpoint.Store.Application.Services.AuthServices
             return _resultHandler.Success("Password has been changed successfully. Please login with your new password.");
         }
 
+        public async Task<ServiceResult<bool>> DeleteMyAccountAsync(int userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user is null) return _resultHandler.NotFound<bool>("User not found");
+
+            user.IsDeleted = true;
+            user.DeletedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+            return _resultHandler.Deleted<bool>();
+        }
 
         // ==========================================================
         // ===================  Private Helpers  ===================

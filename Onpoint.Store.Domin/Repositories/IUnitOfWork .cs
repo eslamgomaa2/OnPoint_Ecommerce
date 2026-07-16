@@ -16,6 +16,12 @@ namespace Onpoint.Store.Domin.Repositories
         IInvoiceRepository Invoices { get; }
         IWishlistRepository Wishlists { get; }
         IReviewRepository Reviews { get; }
+        IApplicationUserRepo ApplicationUsers { get; }
+        IStockRepository Stocks { get; }
+        IBranchRepo Branches { get; }
+        IPosSessionRepository PosSessions { get; }
+
+        IGenericRepository<PosSessionItem, int> PosSessionItems { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

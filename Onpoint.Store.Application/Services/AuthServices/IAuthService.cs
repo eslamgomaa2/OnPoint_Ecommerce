@@ -12,6 +12,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
         Task<ServiceResult<PasswordResetTokenResponseDto>> VerifyResetCodeAsync(VerifyResetCodeDto dto, CancellationToken ct = default);
         Task<ServiceResult<string>> ResetPasswordAsync(ResetPasswordDto dto, CancellationToken ct = default);
         Task<ServiceResult<string>> ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken ct = default);
+        Task<ServiceResult<bool>> DeleteMyAccountAsync(int userId);
 
     }
 }

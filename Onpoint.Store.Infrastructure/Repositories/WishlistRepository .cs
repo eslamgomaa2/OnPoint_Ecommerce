@@ -2,7 +2,6 @@
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
-
 namespace Onpoint.Store.Infrastructure.Repositories
 {
     public class WishlistRepository : GenericRepository<Wishlist, int>, IWishlistRepository
@@ -18,6 +17,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
                     .ThenInclude(p => p.Images.Where(img => img.IsPrimary))
                 .Include(w => w.Product!)
                     .ThenInclude(p => p.Discounts)
+                .Include(w => w.Product!)
+                    .ThenInclude(p => p.Stocks)
                 .Where(w => w.UserId == userId)
                 .OrderByDescending(w => w.CreatedAt)
                 .ToListAsync(ct);

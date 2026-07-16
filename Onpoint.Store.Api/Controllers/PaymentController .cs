@@ -56,14 +56,7 @@ namespace Onpoint.Store.Api.Controllers
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [Authorize]
-        [HttpPost("pay-embedded")]
-        public async Task<IActionResult> PayViaEmbedded([FromBody] PayViaEmbeddedDto dto, CancellationToken ct = default)
-        {
-            var userId = GetUserId();
-            var result = await _paymentService.PayViaEmbeddedAsync(userId, dto, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
+
 
         // ============ Webhook (بيتنادى من MyFatoorah مباشرة، مش من الفرونت إند) ============
         [AllowAnonymous]
