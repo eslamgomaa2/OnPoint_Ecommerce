@@ -4,7 +4,7 @@ namespace Onpoint.Store.Infrastructure.SeedingData
 {
     internal class SeedingRoles
     {
-        private static readonly string[] Roles = { "SuperAdmin", "Customer" };
+        private static readonly string[] Roles = { "SuperAdmin", "Customer", "Cashier" };
 
         public static async Task SeedRolesAsync(RoleManager<IdentityRole<int>> roleManager)
         {

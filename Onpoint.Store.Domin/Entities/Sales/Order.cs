@@ -1,5 +1,6 @@
 ﻿using Onpoint.Store.Domin.Common;
 using Onpoint.Store.Domin.Entities.Sales;
+using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -26,6 +27,12 @@ namespace Onpoint.Store.Domin.Entities
 
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public PaymentMethod PaymentMethod { get; set; }
+        public OrderSource Source { get; set; } = OrderSource.Online;
+        [ForeignKey("Branch")]
+        public int? BranchId { get; set; }
+
+
+        public Branch? Branch { get; set; }
 
 
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

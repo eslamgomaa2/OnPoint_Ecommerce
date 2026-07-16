@@ -21,19 +21,19 @@ namespace Onpoint.Store.Application.Services.AuthServices.Token
         public (string token, DateTime expiresAt) GenerateToken(ApplicationUser user, IList<string> roles)
         {
             var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-            new("firstName", user.FirstName ?? string.Empty),
-            new("lastName", user.LastName ?? string.Empty),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+    {
+        new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+        new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+        new("firstName", user.FirstName ?? string.Empty),
+        new("lastName", user.LastName ?? string.Empty),
+        new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
 
+            if (user.BranchId.HasValue)
+                claims.Add(new Claim("BranchId", user.BranchId.Value.ToString()));
 
             foreach (var role in roles)
-            {
                 claims.Add(new Claim(ClaimTypes.Role, role));
-            }
 
             var keyString = _configuration["Jwt:Key"]
                 ?? throw new InvalidOperationException("Jwt:Key غير موجود في الإعدادات");

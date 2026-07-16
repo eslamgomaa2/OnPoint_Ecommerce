@@ -2,7 +2,6 @@
 using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.DTOs.Wishlist;
 using Onpoint.Store.Domin.Entities;
-
 namespace Onpoint.Store.Application.Mappings
 {
     public class WishlistMappingProfile : Profile
@@ -20,7 +19,7 @@ namespace Onpoint.Store.Application.Mappings
                     src.Product != null
                     && src.Product.IsActive
                     && !src.Product.IsDeleted
-                    && src.Product.StockQuantity > 0))
+                    && src.Product.Stocks.Sum(s => s.Quantity - s.ReservedQuantity) > 0))
                 .ForMember(dest => dest.AddedAt, opt => opt.MapFrom(src => src.CreatedAt));
         }
     }

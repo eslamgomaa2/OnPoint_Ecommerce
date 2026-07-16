@@ -82,14 +82,14 @@ namespace Onpoint.Store.Application.Services.WishlistServ
                 return _resultHandler.NotFound<CartDto>("Item not found in wishlist.");
 
             var product = await _unitOfWork.Products.GetByIdAsync(productId, ct);
-
-
             if (product == null || product.IsDeleted || !product.IsActive)
                 return _resultHandler.BadRequest<CartDto>("This product is no longer available.");
 
-            if (product.StockQuantity <= 0)
-                return _resultHandler.BadRequest<CartDto>("This product is out of stock.");
+            var stocks = await _unitOfWork.Stocks.FindAsync(s => s.ProductId == productId, ct: ct);
+            var totalAvailable = stocks.Sum(s => s.Quantity - s.ReservedQuantity);
 
+            if (totalAvailable <= 0)
+                return _resultHandler.BadRequest<CartDto>("This product is out of stock.");
 
             var addResult = await _cartService.AddToCartAsync(userId, new AddToCartDto
             {
@@ -99,7 +99,6 @@ namespace Onpoint.Store.Application.Services.WishlistServ
 
             if (!addResult.Succeeded)
                 return addResult;
-
 
             _unitOfWork.Wishlists.Remove(wishlistItem);
             await _unitOfWork.SaveChangesAsync(ct);

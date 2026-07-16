@@ -47,8 +47,19 @@ namespace Onpoint.Store.Application.Services.OrderServ
                     return _serviceResultHandler.BadRequest<OrderDto>("Cart is empty");
                 }
 
+
+                var defaultBranch = await _unitOfWork.Branches
+                    .FirstOrDefaultAsync(b => b.IsDefault && b.IsActive);
+
+                if (defaultBranch == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return _serviceResultHandler.BadRequest<OrderDto>("Default online branch is not configured");
+                }
+
                 var productIds = cart.Items.Select(i => i.ProductId).ToList();
                 var products = await _unitOfWork.Products.GetByIdsAsync(productIds);
+                var stocks = await _unitOfWork.Stocks.GetByProductIdsAsync(productIds, defaultBranch.Id);
 
                 foreach (var item in cart.Items)
                 {
@@ -59,7 +70,8 @@ namespace Onpoint.Store.Application.Services.OrderServ
                         return _serviceResultHandler.BadRequest<OrderDto>($"Product {item.ProductId} not found");
                     }
 
-                    if (product.StockQuantity < item.Quantity)
+                    var stock = stocks.FirstOrDefault(s => s.ProductId == item.ProductId);
+                    if (stock == null || stock.AvailableQuantity < item.Quantity)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         return _serviceResultHandler.BadRequest<OrderDto>($"Not enough stock for {product.Name}");
@@ -95,6 +107,8 @@ namespace Onpoint.Store.Application.Services.OrderServ
                     PaymentMethod = dto.PaymentMethod,
                     OrderNumber = GenerateOrderNumber(),
                     Status = OrderStatus.Pending,
+                    BranchId = defaultBranch.Id,
+                    Source = OrderSource.Online,
                     OrderItems = new List<OrderItem>()
                 };
 
@@ -165,14 +179,24 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
         public async Task FinalizeOrderAsync(Order order, Cart? cart, Coupon? coupon, CancellationToken ct = default)
         {
+            var branchId = order.BranchId ?? await GetDefaultBranchIdAsync(ct);
+
             var productIds = order.OrderItems.Select(i => i.ProductId).ToList();
-            var products = await _unitOfWork.Products.GetByIdsAsync(productIds);
+            var stocks = await _unitOfWork.Stocks.GetByProductIdsAsync(productIds, branchId, ct);
 
             foreach (var item in order.OrderItems)
             {
-                var product = products.First(p => p.Id == item.ProductId);
-                product.StockQuantity -= item.Quantity;
-                _unitOfWork.Products.Update(product);
+                var stock = stocks.FirstOrDefault(s => s.ProductId == item.ProductId);
+
+                if (stock is null)
+                    throw new InvalidOperationException($"Stock record not found for product {item.ProductName}");
+
+                if (stock.AvailableQuantity < item.Quantity)
+                    throw new InvalidOperationException(
+                        $"Insufficient stock for {item.ProductName}. Available: {stock.AvailableQuantity}, Requested: {item.Quantity}");
+
+                stock.Quantity -= item.Quantity;
+                _unitOfWork.Stocks.Update(stock);
             }
 
             if (coupon != null)
@@ -182,13 +206,9 @@ namespace Onpoint.Store.Application.Services.OrderServ
             }
 
             if (cart != null)
-            {
                 _unitOfWork.Carts.Remove(cart);
-            }
-
-
-
         }
+
         public async Task<ServiceResult<IEnumerable<OrderDto>>> GetUserOrdersAsync(int userId)
         {
             var orders = await _unitOfWork.Orders.GetUserOrders(userId);
@@ -199,17 +219,28 @@ namespace Onpoint.Store.Application.Services.OrderServ
             return _serviceResultHandler.Success<IEnumerable<OrderDto>>(ordersDto);
         }
 
-        public async Task<ServiceResult<bool>> UpdateOrderStatusAsync(int id, UpdateOrderStatusDto dto)
+        public async Task<ServiceResult<bool>> UpdateOrderStatusAsync(int id, OrderStatus status)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (order == null)
                 return _serviceResultHandler.NotFound<bool>("Order not found");
 
-            order.Status = dto.Status;
+            order.Status = status;
             _unitOfWork.Orders.Update(order);
             await _unitOfWork.SaveChangesAsync();
 
             return _serviceResultHandler.Success<bool>(true);
+        }
+
+        private async Task<int> GetDefaultBranchIdAsync(CancellationToken ct = default)
+        {
+            var defaultBranch = await _unitOfWork.Branches
+                .FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, ct);
+
+            if (defaultBranch == null)
+                throw new InvalidOperationException("Default online branch is not configured");
+
+            return defaultBranch.Id;
         }
 
         private decimal GetShippingCost()

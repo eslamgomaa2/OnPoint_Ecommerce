@@ -15,5 +15,6 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                    .HasForeignKey(c => c.ParentCategoryId)
                    .OnDelete(DeleteBehavior.Restrict);
         }
+
     }
 }

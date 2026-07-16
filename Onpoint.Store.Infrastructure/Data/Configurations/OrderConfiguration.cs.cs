@@ -41,7 +41,7 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
         public void Configure(EntityTypeBuilder<OrderItem> builder)
         {
             builder.Property(o => o.UnitPrice).HasColumnType("decimal(18,3)");
-            builder.Ignore(o => o.TotalPrice); // حسابية مش محفوظة
+            builder.Ignore(o => o.TotalPrice);
 
             builder.HasOne(oi => oi.Product)
                    .WithMany()

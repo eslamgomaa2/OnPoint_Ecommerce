@@ -9,6 +9,7 @@ using Onpoint.Store.Application.Services.AuthServices;
 using Onpoint.Store.Application.Services.AuthServices.Email;
 using Onpoint.Store.Application.Services.AuthServices.Otp;
 using Onpoint.Store.Application.Services.AuthServices.Token;
+using Onpoint.Store.Application.Services.BranchServ;
 using Onpoint.Store.Application.Services.CartServ;
 using Onpoint.Store.Application.Services.CategoryServ;
 using Onpoint.Store.Application.Services.CouponServ;
@@ -18,7 +19,9 @@ using Onpoint.Store.Application.Services.OrderServ;
 using Onpoint.Store.Application.Services.PaymentServ;
 using Onpoint.Store.Application.Services.PaymentServices;
 using Onpoint.Store.Application.Services.PaymentTransactionServ;
+using Onpoint.Store.Application.Services.PosServ;
 using Onpoint.Store.Application.Services.ProductServ;
+using Onpoint.Store.Application.Services.Profile;
 using Onpoint.Store.Application.Services.ReviewServ;
 using Onpoint.Store.Application.Services.WishlistServ;
 using System.Reflection;
@@ -45,6 +48,9 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IReviewService, ReviewService>();
             services.AddHttpClient<IMyFatoorahClient, MyFatoorahClient>();
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IProfileServices, ProfileServices>();
+            services.AddScoped<IBranchService, BranchService>();
+            services.AddScoped<IPosSessionService, PosSessionService>();
 
             services.Configure<MyFatoorahOptions>(configuration.GetSection("MyFatoorah"));
 

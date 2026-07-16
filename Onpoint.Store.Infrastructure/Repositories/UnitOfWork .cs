@@ -22,6 +22,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IWishlistRepository? _wishlists;
         private IReviewRepository? _reviews;
         private IGenericRepository<OrderItem, int>? _orderItems;
+        private IApplicationUserRepo? _applicationUsers;
+        private IStockRepository? _stockRepository;
+        private IBranchRepo? _branches;
+        private IPosSessionRepository? _posSessions;
+
+        private IGenericRepository<PosSessionItem, int>? _posSessionItems;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -40,6 +46,15 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IOrderRepo Orders => _orders ??= new OrderRepo(_context);
         public IWishlistRepository Wishlists => _wishlists ??= new WishlistRepository(_context);
         public IReviewRepository Reviews => _reviews ??= new ReviewRepository(_context);
+        public IApplicationUserRepo ApplicationUsers => _applicationUsers ??= new ApplicationUserRepo(_context);
+
+
+        public IStockRepository Stocks => _stockRepository ??= new StockRepository(_context);
+
+        public IBranchRepo Branches => _branches ??= new BranchRepo(_context);
+        public IGenericRepository<PosSessionItem, int> PosSessionItems => _posSessionItems ??= new GenericRepository<PosSessionItem, int>(_context);
+
+        public IPosSessionRepository PosSessions => _posSessions ??= new PosSessionRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

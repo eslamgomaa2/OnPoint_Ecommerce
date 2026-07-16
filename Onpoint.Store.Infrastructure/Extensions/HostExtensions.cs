@@ -34,6 +34,8 @@ namespace Onpoint.Store.Infrastructure.Extensions
                 var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
                 await SeedingAccounts.SeedAdminAsync(userManager, dbContext);
                 logger.LogInformation("Default accounts seeded successfully");
+                await SeedingAccounts.SeedCashierAsync(userManager, dbContext);
+                logger.LogInformation("Default accounts seeded successfully");
 
 
             }

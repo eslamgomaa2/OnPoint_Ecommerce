@@ -1,9 +1,12 @@
-﻿using Onpoint.Store.Domin.Enums;
-
-namespace Onpoint.Store.Application.DTOs.Order
+﻿namespace Onpoint.Store.Application.DTOs.Order
 {
-    public class UpdateOrderStatusDto
+    public enum UpdateOrderStatusDto
     {
-        public OrderStatus Status { get; set; }
+        Pending = 0,       // جديد (لم يتم الدفع أو التأكيد بعد)
+        Processing = 1,    // قيد التجهيز
+        Shipped = 2,       // تم الشحن
+        Delivered = 3,     // تم التسليم
+        Cancelled = 4,     // ملغي
+        Refunded = 5       // مسترد
     }
 }

@@ -3,7 +3,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-
 namespace BuildingBlocks.Extensions
 {
     public static class FluentValidationExtensions
@@ -14,17 +13,20 @@ namespace BuildingBlocks.Extensions
                 throw new ArgumentNullException(nameof(assemblies), "Please provide the assemblies containing the validators.");
 
             services.AddValidatorsFromAssemblies(assemblies);
+
             services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.InvalidModelStateResponseFactory = context =>
                 {
+                    var hasForm = context.HttpContext.Request.HasFormContentType;
+
                     var failures = context.ModelState
                         .Where(e => e.Value?.Errors.Count > 0)
                         .SelectMany(e => e.Value!.Errors.Select(err => new ValidationError
                         {
                             Property = e.Key,
                             Message = err.ErrorMessage,
-                            AttemptedValue = context.HttpContext.Request.Form[e.Key]
+                            AttemptedValue = hasForm ? context.HttpContext.Request.Form[e.Key].ToString() : null
                         }))
                         .ToList();
 

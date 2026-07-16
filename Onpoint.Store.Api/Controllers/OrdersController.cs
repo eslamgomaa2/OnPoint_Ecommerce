@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.Services.OrderServ;
+using Onpoint.Store.Domin.Enums;
 using System.Security.Claims;
 
 namespace Onpoint.Store.API.Controllers
@@ -37,7 +38,7 @@ namespace Onpoint.Store.API.Controllers
         }
 
         [HttpPut("{id}/status")]
-        public async Task<ActionResult<ServiceResult<bool>>> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
+        public async Task<ActionResult<ServiceResult<bool>>> UpdateStatus(int id, [FromBody] OrderStatus dto)
         {
             var result = await _orderService.UpdateOrderStatusAsync(id, dto);
             return StatusCode((int)result.HttpStatusCode, result);
