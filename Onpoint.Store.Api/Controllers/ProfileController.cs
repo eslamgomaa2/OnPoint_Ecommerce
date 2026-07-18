@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Onpoint.Store.Application.DTOs.Review;
 using Onpoint.Store.Application.Services.Profile;
 using System.Security.Claims;
 
@@ -28,7 +27,7 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpPost("[Action]")]
-        public async Task<IActionResult> DeleteMyAccount([FromBody] CreateReviewDto dto, CancellationToken ct = default)
+        public async Task<IActionResult> DeleteMyAccount(CancellationToken ct = default)
         {
             var userId = GetUserId();
             var result = await _profileServices.DeleteMyAccountAsync(userId);

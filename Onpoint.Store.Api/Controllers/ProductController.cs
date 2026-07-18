@@ -45,7 +45,7 @@ namespace Onpoint.Store.Api.Controllers
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpDelete("Delete{id}")]
+        [HttpDelete("Delete/{id}")]
         public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
         {
             var result = await _productService.DeleteAsync(id, ct);

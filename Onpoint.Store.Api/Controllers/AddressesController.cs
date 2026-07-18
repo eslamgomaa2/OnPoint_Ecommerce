@@ -34,7 +34,7 @@ namespace Onpoint.Store.API.Controllers
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpPut("Update")]
+        [HttpPut("Update/{id}")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateAddressDto dto, CancellationToken ct = default)
         {
             var result = await _addressService.UpdateAsync(GetUserId(), id, dto, ct);
