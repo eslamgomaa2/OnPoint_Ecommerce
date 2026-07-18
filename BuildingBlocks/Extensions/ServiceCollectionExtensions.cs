@@ -9,12 +9,14 @@ namespace BuildingBlocks.Extensions
         {
 
             services.AddHttpContextAccessor();
-            services.AddHttpClient();
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", policy =>
+                options.AddPolicy("FrontendOnly", policy =>
                 {
-                    policy.AllowAnyOrigin()
+                    policy.WithOrigins(
+                "https://example.com"
+
+                          )
                           .AllowAnyHeader()
                           .AllowAnyMethod();
                 });

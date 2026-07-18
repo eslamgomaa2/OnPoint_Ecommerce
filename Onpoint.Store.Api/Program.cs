@@ -50,7 +50,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAll");
+app.UseCors("FrontendOnly");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
