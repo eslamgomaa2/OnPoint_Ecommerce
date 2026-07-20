@@ -12,7 +12,13 @@ using Onpoint.Store.Application.Services.AuthServices.Token;
 using Onpoint.Store.Application.Services.BranchServ;
 using Onpoint.Store.Application.Services.CartServ;
 using Onpoint.Store.Application.Services.CategoryServ;
+using Onpoint.Store.Application.Services.CodeGeneration;
+using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration;
+using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration.Onpoint.Store.Application.Services.CodeGeneration;
+using Onpoint.Store.Application.Services.CodeGeneration.QrCodeGeneration;
+using Onpoint.Store.Application.Services.CodeGeneration.SkuGeneration;
 using Onpoint.Store.Application.Services.CouponServ;
+using Onpoint.Store.Application.Services.DiscountServ;
 using Onpoint.Store.Application.Services.InvoiceServ;
 using Onpoint.Store.Application.Services.MedioServices;
 using Onpoint.Store.Application.Services.OrderServ;
@@ -20,9 +26,12 @@ using Onpoint.Store.Application.Services.PaymentServ;
 using Onpoint.Store.Application.Services.PaymentServices;
 using Onpoint.Store.Application.Services.PaymentTransactionServ;
 using Onpoint.Store.Application.Services.PosServ;
+using Onpoint.Store.Application.Services.ProductAttributeServ;
 using Onpoint.Store.Application.Services.ProductServ;
+using Onpoint.Store.Application.Services.ProductVariantServ;
 using Onpoint.Store.Application.Services.Profile;
 using Onpoint.Store.Application.Services.ReviewServ;
+using Onpoint.Store.Application.Services.StockServ;
 using Onpoint.Store.Application.Services.WishlistServ;
 using System.Reflection;
 
@@ -51,6 +60,16 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IProfileServices, ProfileServices>();
             services.AddScoped<IBranchService, BranchService>();
             services.AddScoped<IPosSessionService, PosSessionService>();
+            services.AddScoped<IStockService, StockService>();
+            services.AddScoped<IProductVariantService, ProductVariantService>();
+            services.AddScoped<IDiscountService, DiscountService>();
+            services.AddScoped<ISkuGeneratorService, SkuGeneratorService>();
+            services.AddScoped<IQrCodeService, QrCodeService>();
+            services.AddScoped<IBarcodeService, BarcodeService>();
+            services.AddScoped<IProductAttributeService, ProductAttributeService>();
+
+
+
 
             services.Configure<MyFatoorahOptions>(configuration.GetSection("MyFatoorah"));
 

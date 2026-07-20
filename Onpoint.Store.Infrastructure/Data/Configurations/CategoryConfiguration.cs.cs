@@ -14,7 +14,23 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                    .WithMany(c => c.SubCategories)
                    .HasForeignKey(c => c.ParentCategoryId)
                    .OnDelete(DeleteBehavior.Restrict);
+            builder
+          .HasMany(c => c.ProductAttributes)
+          .WithMany(a => a.Categories)
+          .UsingEntity(j => j.ToTable("CategoryProductAttributes"));
         }
+    }
+
+}
+public class DiscountConfiguration : IEntityTypeConfiguration<Discount>
+{
+    public void Configure(EntityTypeBuilder<Discount> builder)
+    {
+        builder.HasOne(d => d.Product)
+               .WithMany(p => p.Discounts)
+               .HasForeignKey(d => d.ProductId)
+               .OnDelete(DeleteBehavior.Cascade);
+
 
     }
 }

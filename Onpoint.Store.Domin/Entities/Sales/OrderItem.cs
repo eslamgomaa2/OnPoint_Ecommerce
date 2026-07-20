@@ -13,14 +13,18 @@ namespace Onpoint.Store.Domin.Entities
         [ForeignKey(nameof(ProductId))]
         public virtual Product? Product { get; set; }
 
-        public string ProductName { get; set; } = string.Empty; // بنحفظ اسم المنتج وقت الطلب
-        public string? ProductImageUrl { get; set; } = string.Empty; // وصورة المنتج
+        public int? ProductVariantId { get; set; }
+        [ForeignKey(nameof(ProductVariantId))]
+        public virtual ProductVariant? ProductVariant { get; set; }
+
+        public string ProductName { get; set; } = string.Empty;
+        public string? ProductImageUrl { get; set; } = string.Empty;
+
+        public string? VariantDescription { get; set; }
 
         public int Quantity { get; set; }
-
         [Column(TypeName = "decimal(18,2)")]
-        public decimal UnitPrice { get; set; } // السعر وقت الشراء (زي ما عملنا في الكارت)
-
+        public decimal UnitPrice { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice => Quantity * UnitPrice;
     }

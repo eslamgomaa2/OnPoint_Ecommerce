@@ -13,6 +13,10 @@ namespace Onpoint.Store.Domin.Entities
         [ForeignKey(nameof(ProductId))]
         public virtual Product? Product { get; set; }
 
+        public int? ProductVariantId { get; set; }
+        [ForeignKey(nameof(ProductVariantId))]
+        public virtual ProductVariant? ProductVariant { get; set; }
+
         public int Quantity { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]

@@ -10,6 +10,7 @@
 
         public decimal FinalPrice { get; set; }
 
+        public string? Sku { get; set; }
         public string? PrimaryImageUrl { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public bool IsPopular { get; set; }

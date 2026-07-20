@@ -1,0 +1,15 @@
+﻿
+using Onpoint.Store.Domin.Enums;
+
+namespace Onpoint.Store.Application.DTOs.ProductAttribute
+{
+    public class CreateProductAttributeDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Key { get; set; } = string.Empty;
+        public AttributeValueType ValueType { get; set; } = AttributeValueType.Text;
+
+
+        public List<int> CategoryIds { get; set; } = new();
+    }
+}

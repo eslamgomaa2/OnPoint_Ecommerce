@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Product;
 
 namespace Onpoint.Store.Application.Services.ProductServ
@@ -12,7 +13,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
         Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int id, CancellationToken ct = default);
 
         Task<ServiceResult<ProductDto>> CreateAsync(CreateProductDto dto, CancellationToken ct = default);
-        Task<ServiceResult<ProductDto>> UpdateAsync(UpdateProductDto dto, CancellationToken ct = default);
+        Task<ServiceResult<ProductDto>> UpdateAsync(int id, UpdateProductDto dto, CancellationToken ct = default);
         Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default);
+        Task<ServiceResult<ProductDto>> GetBySkuAsync(string sku, CancellationToken ct = default);
     }
 }

@@ -21,9 +21,22 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<PosSessionItem> builder)
         {
-            builder.HasOne(i => i.PosSession).WithMany(s => s.Items).HasForeignKey(i => i.PosSessionId).OnDelete(DeleteBehavior.Cascade);
-            builder.HasOne(i => i.Product).WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
-            builder.HasIndex(i => new { i.PosSessionId, i.ProductId }).IsUnique();
+            builder.HasOne(i => i.PosSession)
+                   .WithMany(s => s.Items)
+                   .HasForeignKey(i => i.PosSessionId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(i => i.Product)
+                   .WithMany()
+                   .HasForeignKey(i => i.ProductId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(i => i.ProductVariant)
+                   .WithMany()
+                   .HasForeignKey(i => i.ProductVariantId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasIndex(i => new { i.PosSessionId, i.ProductId, i.ProductVariantId }).IsUnique();
         }
     }
 }

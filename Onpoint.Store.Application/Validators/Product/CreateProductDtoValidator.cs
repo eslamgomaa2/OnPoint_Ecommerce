@@ -1,39 +1,33 @@
 ﻿using FluentValidation;
-using Onpoint.Store.Application.DTOs.Product;
+using Onpoint.Store.Application.DTOs;
+using Onpoint.Store.Application.Validators.Product;
+using Onpoint.Store.Domin.Enums;
+using Onpoint.Store.Domin.Repositories;
 
-namespace Onpoint.Store.Application.Validators.Product
+public class CreateProductDtoValidator : AbstractValidator<CreateProductDto>
 {
-    public class CreateProductDtoValidator : AbstractValidator<CreateProductDto>
+    public CreateProductDtoValidator(IUnitOfWork unitOfWork)
     {
-        public CreateProductDtoValidator()
-        {
-            RuleFor(x => x.Name)
-                .NotEmpty().WithMessage("Product name is required.")
-                .MaximumLength(200);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
 
-            RuleFor(x => x.Slug)
-                .NotEmpty().WithMessage("Slug is required.")
-                .MaximumLength(220)
-                .Matches(@"^[a-z0-9]+(?:-[a-z0-9]+)*$").WithMessage("Invalid slug format.");
+        RuleFor(x => x.Sku)
+            .NotEmpty()
+            .When(x => x.SkuMode == CodeGenerationMode.Manual)
+            .WithMessage("SKU is required when SkuMode is Manual.");
 
-            RuleFor(x => x.Price)
-                .GreaterThan(0).WithMessage("Price must be greater than 0.");
+        RuleFor(x => x.Sku)
+            .MustAsync(async (sku, ct) => !await unitOfWork.Products.SkuExistsAsync(sku!, null, ct))
+            .When(x => x.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrWhiteSpace(x.Sku))
+            .WithMessage("SKU already exists.");
 
-            RuleFor(x => x.StockQuantity)
-                .GreaterThanOrEqualTo(0).WithMessage("Stock quantity cannot be negative.");
+        RuleFor(x => x.Barcode)
+            .NotEmpty()
+            .When(x => x.BarcodeMode == CodeGenerationMode.Manual)
+            .WithMessage("Barcode is required when BarcodeMode is Manual.");
+        RuleFor(x => x.Discount)
+            .SetValidator(new CreateDiscountDtoValidator()!)
+            .When(x => x.Discount != null);
 
-            RuleFor(x => x.CategoryId)
-                .GreaterThan(0).WithMessage("Please select a valid category.");
-
-
-            RuleFor(x => x.Images)
-                .Must(images => images == null || images.Count == 0 || images.Any(i => i.IsPrimary))
-                .WithMessage("At least one image must be marked as primary.");
-
-
-            RuleFor(x => x.Discount)
-                .SetValidator(new CreateDiscountDtoValidator()!)
-                .When(x => x.Discount != null);
-        }
+        RuleForEach(x => x.Variants).SetValidator(new CreateProductVariantDtoValidator(unitOfWork));
     }
 }

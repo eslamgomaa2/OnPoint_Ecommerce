@@ -11,10 +11,15 @@ namespace Onpoint.Store.Application.Mappings
             CreateMap<Cart, CartDto>();
 
             CreateMap<CartItem, CartItemDto>()
-                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src =>
-                    src.Product != null ? src.Product.Name : "Unknown Product"))
-                .ForMember(dest => dest.ProductImageUrl, opt => opt.MapFrom(src =>
-                    src.Product != null && src.Product.Images.Any() ? src.Product.Images.First().ImageUrl : null));
+             .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product!.Name))
+               .ForMember(dest => dest.ProductImageUrl, opt => opt.MapFrom(src =>
+                  src.Product!.Images.FirstOrDefault(i => i.IsPrimary) != null
+                   ? src.Product.Images.First(i => i.IsPrimary).ImageUrl
+                     : null))
+     .ForMember(dest => dest.VariantDescription, opt => opt.MapFrom(src =>
+         src.ProductVariant != null
+             ? string.Join(", ", src.ProductVariant.AttributeValues.Select(av => av.Value))
+             : null));
         }
     }
 }

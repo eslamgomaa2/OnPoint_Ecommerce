@@ -93,5 +93,42 @@ namespace Onpoint.Store.Infrastructure.SeedingData
                 throw new Exception($"Failed to assign Cashier role: {errors}");
             }
         }
+        public static async Task SeedUserAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
+        {
+            const string cashierEmail = "User@Gmail.com";
+            const string cashierPassword = "User@123456";
+
+            var cashierExists = await userManager.FindByEmailAsync(cashierEmail);
+            if (cashierExists is not null)
+                return;
+
+
+
+            var cashier = new ApplicationUser
+            {
+                FirstName = "sondos",
+                LastName = "mohamed",
+                UserName = "sondos_mohamed",
+                Email = cashierEmail,
+                EmailConfirmed = true,
+                IsActive = true,
+
+            };
+
+            var result = await userManager.CreateAsync(cashier, cashierPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to seed cashier account: {errors}");
+            }
+
+            var roleResult = await userManager.AddToRoleAsync(cashier, "Customer");
+            if (!roleResult.Succeeded)
+            {
+                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to assign Cashier role: {errors}");
+            }
+        }
+
     }
 }

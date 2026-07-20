@@ -56,6 +56,11 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new ApplicationUserConfiguration());
             builder.ApplyConfiguration(new PosSessionConfiguration());
             builder.ApplyConfiguration(new PosSessionItemConfiguration());
+            builder.ApplyConfiguration(new DiscountConfiguration());
+            builder.ApplyConfiguration(new ProductVariantConfiguration());
+            builder.ApplyConfiguration(new VariantAttributeValueConfiguration());
+            builder.ApplyConfiguration(new ProductAttributeConfiguration());
+            builder.ApplyConfiguration(new ProductAttributeValueConfiguration());
 
 
             foreach (var entityType in builder.Model.GetEntityTypes())

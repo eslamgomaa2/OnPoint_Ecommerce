@@ -3,10 +3,10 @@
     public enum PaymentMethod
     {
         CashOnDelivery = 0,
-        Knet = 1,           // مطلوب جداً في الكويت
+        Knet = 1,
 
-        CreditCard = 2,     // فيزا/ماستركارد
-        BenefitPay = 3,     // محفظة بينفيت
+        CreditCard = 2,
+        BenefitPay = 3,
         ApplePay = 4,
         Cash = 5
     }

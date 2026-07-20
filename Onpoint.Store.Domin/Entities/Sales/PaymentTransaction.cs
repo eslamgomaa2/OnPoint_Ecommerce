@@ -1,4 +1,5 @@
 ﻿using Onpoint.Store.Domin.Common;
+using Onpoint.Store.Domin.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Onpoint.Store.Domin.Entities.Sales
@@ -11,10 +12,11 @@ namespace Onpoint.Store.Domin.Entities.Sales
         public virtual Order? Order { get; set; }
 
 
-        public string Provider { get; set; } = string.Empty; // "Knet", "Tap", "BenefitPay", "COD"
-        public string? GatewayTransactionId { get; set; } // الـ ID اللي بيرجعه البوابة (مهم جداً لعمل Reconcile)
+        public string Provider { get; set; } = string.Empty;
+        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.CashOnDelivery;
+        public string? GatewayTransactionId { get; set; }
 
-        public string Status { get; set; } = string.Empty; // "Pending", "Success", "Failed", "Cancelled"
+        public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
 
         [Column(TypeName = "decimal(18,3)")]
@@ -25,7 +27,7 @@ namespace Onpoint.Store.Domin.Entities.Sales
         public string? CardFirstSix { get; set; }
         public string? CardLastFour { get; set; }
 
-        // رسائل الخطأ من البوابة
+
         public string? ErrorCode { get; set; }
         public string? ErrorMessage { get; set; }
 

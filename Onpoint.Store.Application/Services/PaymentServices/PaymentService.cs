@@ -9,6 +9,7 @@ using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
+using System.Data;
 
 namespace Onpoint.Store.Application.Services.PaymentServices
 {
@@ -113,7 +114,6 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             await ProcessPaymentConfirmationAsync(invoiceIdOrPaymentId, ct);
         }
 
-        // ============ Status Check اليدوي (نفس اللوجيك، لكن بيرجع نتيجة واضحة للفرونت إند) ============
         public async Task<ServiceResult<PaymentStatusDto>> CheckPaymentStatusAsync(string invoiceId, CancellationToken ct = default)
         {
             var (order, finalStatus, message) = await ProcessPaymentConfirmationAsync(invoiceId, ct);
@@ -129,7 +129,6 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             });
         }
 
-        // ============ اللوجيك المشتركة الفعلية (بتتنادى من الاتنين فوق) ============
         private async Task<(Order? Order, string Status, string Message)> ProcessPaymentConfirmationAsync(string invoiceId, CancellationToken ct)
         {
             var status = await _myFatoorahClient.GetPaymentStatusAsync(invoiceId, "InvoiceId", ct);
@@ -137,7 +136,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             if (string.IsNullOrEmpty(status.CustomerReference) || !int.TryParse(status.CustomerReference, out var orderId))
                 return (null, "Unknown", "Could not resolve order from payment reference.");
 
-            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
                 var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId, ct);
@@ -161,7 +160,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
                     if (transaction != null)
                     {
                         transaction.GatewayTransactionId = status.InvoiceTransactions?.TransactionId;
-                        transaction.Status = "Success";
+                        transaction.Status = PaymentStatus.Success;
                         transaction.PaidAt = DateTime.UtcNow;
                         _unitOfWork.PaymentTransactions.Update(transaction);
                     }
@@ -186,7 +185,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
                 {
                     if (transaction != null)
                     {
-                        transaction.Status = "Failed";
+                        transaction.Status = PaymentStatus.Failed;
                         transaction.ErrorMessage = status.InvoiceTransactions?.Error;
                         _unitOfWork.PaymentTransactions.Update(transaction);
                         await _unitOfWork.SaveChangesAsync(ct);
@@ -226,7 +225,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             if (existing != null)
             {
                 existing.GatewayTransactionId = gatewayId;
-                existing.Status = "Pending";
+                existing.Status = PaymentStatus.Pending;
                 _unitOfWork.PaymentTransactions.Update(existing);
             }
             else
@@ -236,7 +235,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
                     OrderId = orderId,
                     Provider = provider,
                     GatewayTransactionId = gatewayId,
-                    Status = "Pending",
+                    Status = PaymentStatus.Pending,
                     Amount = amount,
                     CurrencyCode = "KWD"
                 }, ct);

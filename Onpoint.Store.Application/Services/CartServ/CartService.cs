@@ -20,14 +20,7 @@ namespace Onpoint.Store.Application.Services.CartServ
         private readonly IValidator<ApplyCouponDto> _applyCouponValidator;
         private readonly IConfiguration _configuration;
 
-        public CartService(
-            IUnitOfWork unitOfWork,
-            ServiceResultHandler resultHandler,
-            IMapper mapper,
-            IValidator<AddToCartDto> addToCartValidator,
-            IValidator<UpdateCartItemDto> updateItemValidator,
-            IValidator<ApplyCouponDto> applyCouponValidator,
-            IConfiguration configuration)
+        public CartService(IUnitOfWork unitOfWork, ServiceResultHandler resultHandler, IMapper mapper, IValidator<AddToCartDto> addToCartValidator, IValidator<UpdateCartItemDto> updateItemValidator, IValidator<ApplyCouponDto> applyCouponValidator, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _resultHandler = resultHandler;
@@ -38,17 +31,12 @@ namespace Onpoint.Store.Application.Services.CartServ
             _configuration = configuration;
         }
 
-
         public async Task<ServiceResult<CartDto>> GetUserCartAsync(int userId, CancellationToken ct = default)
         {
             var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
-
-            if (cart == null)
-                return _resultHandler.Success(new CartDto { CartId = 0 });
-
+            if (cart == null) return _resultHandler.Success(new CartDto { CartId = 0 });
             return _resultHandler.Success(MapToCartDto(cart));
         }
-
 
         public async Task<ServiceResult<CartDto>> AddToCartAsync(int userId, AddToCartDto dto, CancellationToken ct = default)
         {
@@ -63,28 +51,47 @@ namespace Onpoint.Store.Application.Services.CartServ
                 await _unitOfWork.SaveChangesAsync(ct);
             }
 
-            var product = await _unitOfWork.Products.GetByIdAsync(dto.ProductId, ct);
-            if (product == null)
-                throw new KeyNotFoundException("Product not found.");
+            var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(dto.ProductId, ct);
+            if (product == null) throw new KeyNotFoundException("Product not found.");
 
-            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == dto.ProductId);
+            decimal unitPrice;
+            string? variantDescription = null;
 
-            if (existingItem != null)
+            if (dto.ProductVariantId.HasValue)
             {
-                existingItem.Quantity += dto.Quantity;
+                var variant = product.Variants.FirstOrDefault(v => v.Id == dto.ProductVariantId.Value);
+                if (variant == null || !variant.IsActive) return _resultHandler.BadRequest<CartDto>("Selected variant is not available.");
+                unitPrice = PricingHelper.CalculateFinalPrice(product, variant);
+                variantDescription = string.Join(", ", variant.AttributeValues.Select(av => av.Value));
             }
             else
             {
-                cart.Items.Add(new CartItem
-                {
-                    ProductId = dto.ProductId,
-                    Quantity = dto.Quantity,
-                    UnitPrice = PricingHelper.CalculateFinalPrice(product)
-                });
+                if (product.Variants.Any(v => v.IsActive)) return _resultHandler.BadRequest<CartDto>("This product requires selecting a variant.");
+                unitPrice = PricingHelper.CalculateFinalPrice(product);
+            }
+
+            var defaultBranch = await _unitOfWork.Branches.FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, ct);
+            if (defaultBranch == null) return _resultHandler.BadRequest<CartDto>("Default online branch is not configured.");
+
+            var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(dto.ProductId, dto.ProductVariantId, defaultBranch.Id, ct);
+
+            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == dto.ProductId && i.ProductVariantId == dto.ProductVariantId);
+            var requestedTotalQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
+
+            if (stock == null || stock.AvailableQuantity < requestedTotalQuantity)
+                return _resultHandler.BadRequest<CartDto>("Not enough stock available.");
+
+            if (existingItem != null)
+            {
+                existingItem.Quantity = requestedTotalQuantity;
+                existingItem.UnitPrice = unitPrice;
+            }
+            else
+            {
+                cart.Items.Add(new CartItem { ProductId = dto.ProductId, ProductVariantId = dto.ProductVariantId, Quantity = dto.Quantity, UnitPrice = unitPrice });
             }
 
             await RecalculateDiscountAsync(cart, ct);
-
             await _unitOfWork.SaveChangesAsync(ct);
 
             var updatedCart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
@@ -103,12 +110,24 @@ namespace Onpoint.Store.Application.Services.CartServ
             if (item == null) return _resultHandler.NotFound<CartDto>("Item not found in cart.");
 
             if (dto.Quantity == 0)
+            {
                 cart.Items.Remove(item);
+            }
             else
+            {
+                var defaultBranch = await _unitOfWork.Branches.FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, ct);
+                if (defaultBranch == null) return _resultHandler.BadRequest<CartDto>("Default online branch is not configured.");
+
+
+                var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(item.ProductId, item.ProductVariantId, defaultBranch.Id, ct);
+
+                if (stock == null || stock.AvailableQuantity < dto.Quantity)
+                    return _resultHandler.BadRequest<CartDto>("Not enough stock available.");
+
                 item.Quantity = dto.Quantity;
+            }
 
             await RecalculateDiscountAsync(cart, ct);
-
             await _unitOfWork.SaveChangesAsync(ct);
 
             var updatedCart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
@@ -124,9 +143,7 @@ namespace Onpoint.Store.Application.Services.CartServ
             if (item == null) return _resultHandler.NotFound<string>("Item not found in cart.");
 
             cart.Items.Remove(item);
-
             await RecalculateDiscountAsync(cart, ct);
-
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Deleted<string>("Item removed from cart.");
@@ -138,12 +155,10 @@ namespace Onpoint.Store.Application.Services.CartServ
             if (cart == null) return _resultHandler.Success<string>("Cart not found.");
 
             cart.Items.Clear();
-
             cart.AppliedCouponCode = null;
             cart.DiscountAmount = 0;
 
             await _unitOfWork.SaveChangesAsync(ct);
-
             return _resultHandler.Success<string>("Cart cleared.");
         }
 
@@ -153,36 +168,19 @@ namespace Onpoint.Store.Application.Services.CartServ
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
 
             var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
+            if (cart == null || !cart.Items.Any()) return _resultHandler.BadRequest<CartDto>("Cart is empty. Add items before applying a coupon.");
 
-            if (cart == null || !cart.Items.Any())
-                return _resultHandler.BadRequest<CartDto>("Cart is empty. Add items before applying a coupon.");
+            var coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == dto.Code.ToUpper(), ct);
+            if (coupon == null) return _resultHandler.BadRequest<CartDto>("Invalid coupon code");
+            if (!coupon.IsActive) return _resultHandler.BadRequest<CartDto>("This coupon is no longer active");
+            if (coupon.StartDate > DateTime.Now || coupon.EndDate < DateTime.Now) return _resultHandler.BadRequest<CartDto>("This coupon has expired");
+            if (coupon.UsedCount >= coupon.MaxUses) return _resultHandler.BadRequest<CartDto>("This coupon has reached its maximum usage limit");
 
-            var coupon = await _unitOfWork.Coupons
-                .FirstOrDefaultAsync(c => c.Code == dto.Code.ToUpper(), ct);
+            decimal subTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity);
+            if (subTotal < coupon.MinOrderAmount) return _resultHandler.BadRequest<CartDto>($"Minimum order amount for this coupon is {coupon.MinOrderAmount} KWD");
 
-            if (coupon == null)
-                return _resultHandler.BadRequest<CartDto>("Invalid coupon code");
-
-            if (!coupon.IsActive)
-                return _resultHandler.BadRequest<CartDto>("This coupon is no longer active");
-
-            if (coupon.StartDate > DateTime.Now || coupon.EndDate < DateTime.Now)
-                return _resultHandler.BadRequest<CartDto>("This coupon has expired");
-
-            if (coupon.UsedCount >= coupon.MaxUses)
-                return _resultHandler.BadRequest<CartDto>("This coupon has reached its maximum usage limit");
-
-            decimal subTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity); // كان فيه Bug هنا (i.t)
-
-            if (subTotal < coupon.MinOrderAmount)
-                return _resultHandler.BadRequest<CartDto>($"Minimum order amount for this coupon is {coupon.MinOrderAmount} KWD");
-
-            decimal discountAmount = coupon.DiscountType == CouponType.Percentage
-                ? (subTotal * coupon.Value) / 100
-                : coupon.Value;
-
-            if (discountAmount > subTotal)
-                discountAmount = subTotal;
+            decimal discountAmount = coupon.DiscountType == CouponType.Percentage ? (subTotal * coupon.Value) / 100 : coupon.Value;
+            if (discountAmount > subTotal) discountAmount = subTotal;
 
             cart.AppliedCouponCode = coupon.Code;
             cart.DiscountAmount = discountAmount;
@@ -196,9 +194,7 @@ namespace Onpoint.Store.Application.Services.CartServ
         public async Task<ServiceResult<CartDto>> RemoveCouponAsync(int userId, CancellationToken ct = default)
         {
             var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
-
-            if (cart == null)
-                return _resultHandler.NotFound<CartDto>("Cart not found");
+            if (cart == null) return _resultHandler.NotFound<CartDto>("Cart not found");
 
             cart.AppliedCouponCode = null;
             cart.DiscountAmount = 0;
@@ -211,50 +207,19 @@ namespace Onpoint.Store.Application.Services.CartServ
 
         private async Task RecalculateDiscountAsync(Cart cart, CancellationToken ct = default)
         {
-            if (string.IsNullOrEmpty(cart.AppliedCouponCode))
-            {
-                cart.DiscountAmount = 0;
-                return;
-            }
+            if (string.IsNullOrEmpty(cart.AppliedCouponCode)) { cart.DiscountAmount = 0; return; }
+            if (!cart.Items.Any()) { cart.AppliedCouponCode = null; cart.DiscountAmount = 0; return; }
 
-            if (!cart.Items.Any())
-            {
-                cart.AppliedCouponCode = null;
-                cart.DiscountAmount = 0;
-                return;
-            }
+            var coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == cart.AppliedCouponCode, ct);
+            bool couponStillValid = coupon != null && coupon.IsActive && coupon.StartDate <= DateTime.Now && coupon.EndDate >= DateTime.Now && coupon.UsedCount < coupon.MaxUses;
 
-            var coupon = await _unitOfWork.Coupons
-                .FirstOrDefaultAsync(c => c.Code == cart.AppliedCouponCode, ct);
-
-            bool couponStillValid = coupon != null
-                && coupon.IsActive
-                && coupon.StartDate <= DateTime.Now
-                && coupon.EndDate >= DateTime.Now
-                && coupon.UsedCount < coupon.MaxUses;
-
-            if (!couponStillValid)
-            {
-                cart.AppliedCouponCode = null;
-                cart.DiscountAmount = 0;
-                return;
-            }
+            if (!couponStillValid) { cart.AppliedCouponCode = null; cart.DiscountAmount = 0; return; }
 
             decimal subTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity);
+            if (subTotal < coupon!.MinOrderAmount) { cart.AppliedCouponCode = null; cart.DiscountAmount = 0; return; }
 
-            if (subTotal < coupon!.MinOrderAmount)
-            {
-                cart.AppliedCouponCode = null;
-                cart.DiscountAmount = 0;
-                return;
-            }
-
-            decimal discountAmount = coupon.DiscountType == CouponType.Percentage
-                ? (subTotal * coupon.Value) / 100
-                : coupon.Value;
-
-            if (discountAmount > subTotal)
-                discountAmount = subTotal;
+            decimal discountAmount = coupon.DiscountType == CouponType.Percentage ? (subTotal * coupon.Value) / 100 : coupon.Value;
+            if (discountAmount > subTotal) discountAmount = subTotal;
 
             cart.DiscountAmount = discountAmount;
         }
@@ -266,11 +231,6 @@ namespace Onpoint.Store.Application.Services.CartServ
             return dto;
         }
 
-
-
-        private decimal GetShippingCost()
-        {
-            return _configuration.GetValue<decimal>("CartSettings:FixedShippingCost", 10.0m);
-        }
+        private decimal GetShippingCost() => _configuration.GetValue<decimal>("CartSettings:FixedShippingCost", 10.0m);
     }
 }

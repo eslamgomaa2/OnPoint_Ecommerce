@@ -15,8 +15,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
             return await _dbset
                 .Include(c => c.Items)
-                .ThenInclude(i => i.Product)
-                    .ThenInclude(p => p.Images.Where(img => img.IsPrimary))
+                    .ThenInclude(i => i.Product)
+                        .ThenInclude(p => p!.Images.Where(img => img.IsPrimary))
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.ProductVariant)
+                        .ThenInclude(v => v!.AttributeValues)
+                            .ThenInclude(av => av.ProductAttribute)
                 .FirstOrDefaultAsync(c => c.UserId == userId, ct);
         }
     }

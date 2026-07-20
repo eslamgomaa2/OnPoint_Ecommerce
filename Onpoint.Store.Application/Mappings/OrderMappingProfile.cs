@@ -9,8 +9,10 @@ namespace Onpoint.Store.Application.Mappings
         public OrderMappingProfile()
         {
             CreateMap<Order, OrderDto>()
-    .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems));
-            CreateMap<OrderItem, OrderItemDto>();
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems));
+
+            CreateMap<OrderItem, OrderItemDto>()
+                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice));
         }
     }
 }

@@ -4,6 +4,7 @@ using FluentValidation;
 using Onpoint.Store.Application.DTOs.Branch;
 using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
+using System.Data;
 
 namespace Onpoint.Store.Application.Services.BranchServ
 {
@@ -52,7 +53,7 @@ namespace Onpoint.Store.Application.Services.BranchServ
 
             var branch = _mapper.Map<Branch>(dto);
 
-            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
             {
@@ -83,7 +84,7 @@ namespace Onpoint.Store.Application.Services.BranchServ
             if (branch == null)
                 return _resultHandler.NotFound<BranchDto>("Branch not found");
 
-            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
             {
@@ -138,7 +139,7 @@ namespace Onpoint.Store.Application.Services.BranchServ
             if (branch.IsDefault)
                 return _resultHandler.Success(true);
 
-            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
             {

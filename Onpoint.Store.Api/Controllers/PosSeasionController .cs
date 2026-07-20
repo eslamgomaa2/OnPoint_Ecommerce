@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Onpoint.Store.Application.DTOs.Pos;
 using Onpoint.Store.Application.DTOs.PosSession;
 using Onpoint.Store.Application.Services.PosServ;
 using System.Security.Claims;
@@ -8,7 +9,7 @@ namespace Onpoint.Store.Api.Controllers
 {
     [ApiController]
     [Route("api/pos")]
-    [Authorize(Roles = "Cashier,BranchManager,SuperAdmin")]
+    [Authorize(Roles = "Cashier,SuperAdmin")]
     public class PosSeasionController : ControllerBase
     {
         private readonly IPosSessionService _posSessionService;
@@ -24,6 +25,12 @@ namespace Onpoint.Store.Api.Controllers
             if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out var userId))
                 throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
             return userId;
+        }
+        [HttpPost("scan-item")]
+        public async Task<IActionResult> ScanItem([FromBody] ScanPosItemDto dto, CancellationToken ct)
+        {
+            var result = await _posSessionService.ScanAndAddItemAsync(dto, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
         [HttpPost("sessions")]
         public async Task<IActionResult> CreateSession()
@@ -51,7 +58,7 @@ namespace Onpoint.Store.Api.Controllers
         [HttpPost("sessions/{sessionId}/items")]
         public async Task<IActionResult> AddItem(int sessionId, [FromBody] AddPosSessionItemDto dto)
         {
-            var result = await _posSessionService.AddItemAsync(sessionId, dto.ProductId, dto.Quantity);
+            var result = await _posSessionService.AddItemAsync(sessionId, dto.ProductId, dto.ProductVariantId, dto.Quantity);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
@@ -86,7 +93,7 @@ namespace Onpoint.Store.Api.Controllers
         [HttpPost("sessions/{sessionId}/complete")]
         public async Task<IActionResult> CompleteSession(int sessionId, [FromBody] CompletePosSessionDto dto)
         {
-            var result = await _posSessionService.CompleteSessionAsync(sessionId, dto.PaymentMethod);
+            var result = await _posSessionService.CompleteSessionAsync(sessionId, dto.PaymentMethod, dto.CustomerPhone);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
@@ -96,13 +103,15 @@ namespace Onpoint.Store.Api.Controllers
             var result = await _posSessionService.HoldSessionAsync(sessionId);
             return StatusCode((int)result.HttpStatusCode, result);
         }
+
         [HttpPost("sessions/{sessionId}/resume")]
         public async Task<IActionResult> ResumeSession(int sessionId)
         {
-            var cashierId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var cashierId = GetUserId();
             var result = await _posSessionService.ResumeSessionAsync(sessionId, cashierId);
             return StatusCode((int)result.HttpStatusCode, result);
         }
+
         [HttpPost("sessions/{sessionId}/cancel")]
         public async Task<IActionResult> CancelSession(int sessionId)
         {
