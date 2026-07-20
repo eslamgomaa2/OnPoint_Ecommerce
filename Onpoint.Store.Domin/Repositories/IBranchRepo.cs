@@ -4,5 +4,6 @@ namespace Onpoint.Store.Domin.Repositories
 {
     public interface IBranchRepo : IGenericRepository<Branch, int>
     {
+        Task<int> GetDefaultBranchIdAsync(CancellationToken ct = default);
     }
 }

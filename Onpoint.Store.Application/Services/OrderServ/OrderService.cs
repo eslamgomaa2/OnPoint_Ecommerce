@@ -4,8 +4,10 @@ using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
+using System.Data;
 
 namespace Onpoint.Store.Application.Services.OrderServ
 {
@@ -17,12 +19,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
         private readonly ServiceResultHandler _serviceResultHandler;
         private readonly IConfiguration _configuration;
 
-        public OrderService(
-            IUnitOfWork unitOfWork,
-            IMapper mapper,
-            IValidator<CreateOrderDto> createValidator,
-            ServiceResultHandler serviceResultHandler,
-            IConfiguration configuration)
+        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, IValidator<CreateOrderDto> createValidator, ServiceResultHandler serviceResultHandler, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -35,46 +32,34 @@ namespace Onpoint.Store.Application.Services.OrderServ
         {
             await _createValidator.ValidateAndThrowAsync(dto);
 
-            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
             {
                 var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId);
-
                 if (cart == null || !cart.Items.Any())
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     return _serviceResultHandler.BadRequest<OrderDto>("Cart is empty");
                 }
 
-
-                var defaultBranch = await _unitOfWork.Branches
-                    .FirstOrDefaultAsync(b => b.IsDefault && b.IsActive);
-
+                var defaultBranch = await _unitOfWork.Branches.FirstOrDefaultAsync(b => b.IsDefault && b.IsActive);
                 if (defaultBranch == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     return _serviceResultHandler.BadRequest<OrderDto>("Default online branch is not configured");
                 }
 
-                var productIds = cart.Items.Select(i => i.ProductId).ToList();
-                var products = await _unitOfWork.Products.GetByIdsAsync(productIds);
-                var stocks = await _unitOfWork.Stocks.GetByProductIdsAsync(productIds, defaultBranch.Id);
+                var stockKeys = cart.Items.Select(i => (i.ProductId, i.ProductVariantId)).Distinct().ToList();
+                var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, defaultBranch.Id);
 
                 foreach (var item in cart.Items)
                 {
-                    var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-                    if (product == null)
-                    {
-                        await _unitOfWork.RollbackTransactionAsync();
-                        return _serviceResultHandler.BadRequest<OrderDto>($"Product {item.ProductId} not found");
-                    }
-
-                    var stock = stocks.FirstOrDefault(s => s.ProductId == item.ProductId);
+                    var stock = stocks.FirstOrDefault(s => s.ProductId == item.ProductId && s.ProductVariantId == item.ProductVariantId);
                     if (stock == null || stock.AvailableQuantity < item.Quantity)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
-                        return _serviceResultHandler.BadRequest<OrderDto>($"Not enough stock for {product.Name}");
+                        return _serviceResultHandler.BadRequest<OrderDto>($"Not enough stock for {item.Product?.Name ?? "product"}");
                     }
                 }
 
@@ -85,11 +70,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 {
                     coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == cart.AppliedCouponCode);
 
-                    bool couponStillValid = coupon != null
-                        && coupon.IsActive
-                        && coupon.StartDate <= DateTime.Now
-                        && coupon.EndDate >= DateTime.Now
-                        && coupon.UsedCount < coupon.MaxUses;
+                    bool couponStillValid = coupon != null && coupon.IsActive && coupon.StartDate <= DateTime.UtcNow && coupon.EndDate >= DateTime.UtcNow && coupon.UsedCount < coupon.MaxUses;
 
                     if (!couponStillValid)
                     {
@@ -109,23 +90,23 @@ namespace Onpoint.Store.Application.Services.OrderServ
                     Status = OrderStatus.Pending,
                     BranchId = defaultBranch.Id,
                     Source = OrderSource.Online,
+                    CouponCode = coupon?.Code,
                     OrderItems = new List<OrderItem>()
                 };
 
                 decimal subTotal = 0;
                 foreach (var item in cart.Items)
                 {
-                    var product = products.First(p => p.Id == item.ProductId);
-
                     var orderItem = new OrderItem
                     {
                         ProductId = item.ProductId,
-                        ProductName = product.Name,
-                        ProductImageUrl = product.Images.FirstOrDefault()?.ImageUrl,
+                        ProductVariantId = item.ProductVariantId,
+                        ProductName = item.Product?.Name ?? string.Empty,
+                        ProductImageUrl = item.Product?.Images.FirstOrDefault()?.ImageUrl,
+                        VariantDescription = item.ProductVariant != null ? string.Join(", ", item.ProductVariant.AttributeValues.Select(av => av.Value)) : null,
                         Quantity = item.Quantity,
                         UnitPrice = item.UnitPrice
                     };
-
                     order.OrderItems.Add(orderItem);
                     subTotal += orderItem.TotalPrice;
                 }
@@ -138,33 +119,25 @@ namespace Onpoint.Store.Application.Services.OrderServ
                     if (order.SubTotal < coupon.MinOrderAmount)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
-                        return _serviceResultHandler.BadRequest<OrderDto>(
-                            $"Minimum order amount for this coupon is {coupon.MinOrderAmount}");
+                        return _serviceResultHandler.BadRequest<OrderDto>($"Minimum order amount for this coupon is {coupon.MinOrderAmount}");
                     }
 
-                    discountAmount = coupon.DiscountType == CouponType.Percentage
-                        ? (order.SubTotal * coupon.Value) / 100
-                        : coupon.Value;
-
-                    if (discountAmount > order.SubTotal)
-                        discountAmount = order.SubTotal;
-
+                    discountAmount = coupon.DiscountType == CouponType.Percentage ? (order.SubTotal * coupon.Value) / 100 : coupon.Value;
+                    if (discountAmount > order.SubTotal) discountAmount = order.SubTotal;
                     order.DiscountAmount = discountAmount;
                 }
 
                 order.TotalAmount = order.SubTotal + order.ShippingCost - order.DiscountAmount;
 
                 await _unitOfWork.Orders.AddAsync(order);
-                await _unitOfWork.SaveChangesAsync();
 
                 if (dto.PaymentMethod == PaymentMethod.CashOnDelivery)
                 {
-                    await FinalizeOrderAsync(order, cart, coupon, ct: default);
+                    await FinalizeOrderAsync(order, cart, coupon, default);
                     order.Status = OrderStatus.Processing;
-                    _unitOfWork.Orders.Update(order);
-                    await _unitOfWork.SaveChangesAsync();
                 }
 
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 var orderDto = _mapper.Map<OrderDto>(order);
@@ -177,16 +150,167 @@ namespace Onpoint.Store.Application.Services.OrderServ
             }
         }
 
+        public async Task<ServiceResult<bool>> ProcessPaymentSuccessAsync(int orderId, string transactionId)
+        {
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            try
+            {
+                var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId);
+                if (order == null) return _serviceResultHandler.NotFound<bool>("Order not found");
+                if (order.Status != OrderStatus.Pending) return _serviceResultHandler.BadRequest<bool>("Order is not pending");
+
+                if (order.Transactions.Any(t => t.Status == PaymentStatus.Success))
+                    return _serviceResultHandler.Success<bool>(true);
+
+                Coupon? coupon = null;
+                if (!string.IsNullOrEmpty(order.CouponCode))
+                    coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == order.CouponCode);
+
+                var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.UserId);
+
+                await FinalizeOrderAsync(order, cart, coupon, default);
+
+                order.Status = OrderStatus.Processing;
+                _unitOfWork.Orders.Update(order);
+
+                order.Transactions.Add(new PaymentTransaction
+                {
+                    OrderId = orderId,
+                    GatewayTransactionId = transactionId,
+                    Amount = order.TotalAmount,
+                    Status = PaymentStatus.Success,
+                    PaymentMethod = order.PaymentMethod,
+                    PaidAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return _serviceResultHandler.Success<bool>(true);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<ServiceResult<bool>> CancelOrderAsync(int orderId)
+        {
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            try
+            {
+                var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId);
+                if (order == null) return _serviceResultHandler.NotFound<bool>("Order not found");
+
+                if (order.Status == OrderStatus.Delivered)
+                    return _serviceResultHandler.BadRequest<bool>("Cannot cancel delivered order");
+
+                if (order.Status == OrderStatus.Processing || order.Status == OrderStatus.Shipped)
+                {
+                    var stockKeys = order.OrderItems.Select(i => (i.ProductId, i.ProductVariantId)).Distinct().ToList();
+                    var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, order.BranchId!.Value);
+
+                    foreach (var item in order.OrderItems)
+                    {
+                        var stock = stocks.FirstOrDefault(s => s.ProductId == item.ProductId && s.ProductVariantId == item.ProductVariantId);
+                        if (stock != null)
+                        {
+                            stock.Quantity += item.Quantity;
+                            _unitOfWork.Stocks.Update(stock);
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(order.CouponCode))
+                    {
+                        var coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == order.CouponCode);
+                        if (coupon != null && coupon.UsedCount > 0)
+                        {
+                            coupon.UsedCount--;
+                            _unitOfWork.Coupons.Update(coupon);
+                        }
+                    }
+                }
+
+                order.Status = OrderStatus.Cancelled;
+                _unitOfWork.Orders.Update(order);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return _serviceResultHandler.Success<bool>(true);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        public async Task<ServiceResult<bool>> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
+        {
+            if (newStatus == OrderStatus.Cancelled)
+            {
+                return await CancelOrderAsync(orderId);
+            }
+
+            var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId);
+            if (order == null) return _serviceResultHandler.NotFound<bool>("Order not found");
+
+            var validTransition = (order.Status, newStatus) switch
+            {
+                (OrderStatus.Pending, OrderStatus.Processing) => true,
+                (OrderStatus.Processing, OrderStatus.Shipped) => true,
+                (OrderStatus.Shipped, OrderStatus.Delivered) => true,
+                _ => false
+            };
+
+            if (!validTransition)
+                return _serviceResultHandler.BadRequest<bool>($"Invalid status transition from {order.Status} to {newStatus}");
+
+            order.Status = newStatus;
+            _unitOfWork.Orders.Update(order);
+            await _unitOfWork.SaveChangesAsync();
+
+            return _serviceResultHandler.Success<bool>(true);
+        }
+
+        public async Task<ServiceResult<IEnumerable<OrderDto>>> GetUserOrdersAsync(int userId)
+        {
+            var orders = await _unitOfWork.Orders.GetUserOrders(userId);
+            if (orders == null || !orders.Any()) return _serviceResultHandler.NotFound<IEnumerable<OrderDto>>("No orders found for this user");
+
+            var ordersDto = _mapper.Map<IEnumerable<OrderDto>>(orders);
+            return _serviceResultHandler.Success<IEnumerable<OrderDto>>(ordersDto);
+        }
+
+        public async Task<ServiceResult<OrderDto>> GetOrderAsync(int orderId)
+        {
+            var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId);
+            if (order == null) return _serviceResultHandler.NotFound<OrderDto>("Order not found");
+
+            return _serviceResultHandler.Success(_mapper.Map<OrderDto>(order));
+        }
+
+        private decimal GetShippingCost() => _configuration.GetValue<decimal>("CartSettings:FixedShippingCost", 10.0m);
+        private string GenerateOrderNumber() => $"ORD-{DateTime.UtcNow:yyyyMMddHHmmss}-{new Random().Next(1000, 9999)}";
+
         public async Task FinalizeOrderAsync(Order order, Cart? cart, Coupon? coupon, CancellationToken ct = default)
         {
-            var branchId = order.BranchId ?? await GetDefaultBranchIdAsync(ct);
+            var branchId = order.BranchId ?? await _unitOfWork.Branches.GetDefaultBranchIdAsync(ct);
 
-            var productIds = order.OrderItems.Select(i => i.ProductId).ToList();
-            var stocks = await _unitOfWork.Stocks.GetByProductIdsAsync(productIds, branchId, ct);
+            var stockKeys = order.OrderItems
+                .Select(i => (i.ProductId, i.ProductVariantId))
+                .Distinct()
+                .ToList();
+
+            var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, branchId, ct);
 
             foreach (var item in order.OrderItems)
             {
-                var stock = stocks.FirstOrDefault(s => s.ProductId == item.ProductId);
+                var stock = stocks.FirstOrDefault(s =>
+                    s.ProductId == item.ProductId && s.ProductVariantId == item.ProductVariantId);
 
                 if (stock is null)
                     throw new InvalidOperationException($"Stock record not found for product {item.ProductName}");
@@ -201,56 +325,15 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
             if (coupon != null)
             {
+                if (coupon.UsedCount >= coupon.MaxUses)
+                    throw new InvalidOperationException("This coupon has reached its maximum usage limit.");
+
                 coupon.UsedCount++;
                 _unitOfWork.Coupons.Update(coupon);
             }
 
             if (cart != null)
                 _unitOfWork.Carts.Remove(cart);
-        }
-
-        public async Task<ServiceResult<IEnumerable<OrderDto>>> GetUserOrdersAsync(int userId)
-        {
-            var orders = await _unitOfWork.Orders.GetUserOrders(userId);
-            if (orders == null || !orders.Any())
-                return _serviceResultHandler.NotFound<IEnumerable<OrderDto>>("No orders found for this user");
-
-            var ordersDto = _mapper.Map<IEnumerable<OrderDto>>(orders);
-            return _serviceResultHandler.Success<IEnumerable<OrderDto>>(ordersDto);
-        }
-
-        public async Task<ServiceResult<bool>> UpdateOrderStatusAsync(int id, OrderStatus status)
-        {
-            var order = await _unitOfWork.Orders.GetByIdAsync(id);
-            if (order == null)
-                return _serviceResultHandler.NotFound<bool>("Order not found");
-
-            order.Status = status;
-            _unitOfWork.Orders.Update(order);
-            await _unitOfWork.SaveChangesAsync();
-
-            return _serviceResultHandler.Success<bool>(true);
-        }
-
-        private async Task<int> GetDefaultBranchIdAsync(CancellationToken ct = default)
-        {
-            var defaultBranch = await _unitOfWork.Branches
-                .FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, ct);
-
-            if (defaultBranch == null)
-                throw new InvalidOperationException("Default online branch is not configured");
-
-            return defaultBranch.Id;
-        }
-
-        private decimal GetShippingCost()
-        {
-            return _configuration.GetValue<decimal>("CartSettings:FixedShippingCost", 10.0m);
-        }
-
-        private string GenerateOrderNumber()
-        {
-            return $"ORD-{DateTime.Now:yyyyMMddHHmmss}-{new Random().Next(1000, 9999)}";
         }
     }
 }

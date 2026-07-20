@@ -11,6 +11,7 @@ namespace Onpoint.Store.Domin.Entities
 
         [Required, MaxLength(120)]
         public string Slug { get; set; } = string.Empty;
+
         [Required]
         public string ImageUrl { get; set; } = string.Empty;
 
@@ -22,6 +23,8 @@ namespace Onpoint.Store.Domin.Entities
 
         public virtual ICollection<Product> Products { get; set; } = new List<Product>();
         public virtual ICollection<Category> SubCategories { get; set; } = new List<Category>();
-    }
 
+
+        public virtual ICollection<ProductAttribute> ProductAttributes { get; set; } = new List<ProductAttribute>();
+    }
 }

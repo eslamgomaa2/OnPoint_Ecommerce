@@ -1,16 +1,26 @@
 ﻿using Onpoint.Store.Domin.Common;
-using Onpoint.Store.Domin.Entities;
-using Onpoint.Store.Domin.Entities.Sales;
+using System.ComponentModel.DataAnnotations.Schema;
 
-public class PosSessionItem : BaseEntity
+namespace Onpoint.Store.Domin.Entities.Sales
 {
-    public int PosSessionId { get; set; }
-    public virtual PosSession? PosSession { get; set; }
-    public int ProductId { get; set; }
-    public virtual Product? Product { get; set; }
-    public string ProductName { get; set; } = string.Empty;
-    public string? ProductImageUrl { get; set; }
-    public decimal UnitPrice { get; set; }
-    public int Quantity { get; set; }
-    public decimal TotalPrice => UnitPrice * Quantity;
+    public class PosSessionItem : BaseEntity
+    {
+        public int PosSessionId { get; set; }
+        [ForeignKey(nameof(PosSessionId))]
+        public virtual PosSession? PosSession { get; set; }
+
+        public int ProductId { get; set; }
+        [ForeignKey(nameof(ProductId))]
+        public virtual Product? Product { get; set; }
+
+        public int? ProductVariantId { get; set; }
+        [ForeignKey(nameof(ProductVariantId))]
+        public virtual ProductVariant? ProductVariant { get; set; }
+
+        public string ProductName { get; set; } = string.Empty;
+        public string? VariantDescription { get; set; }
+        public string? ProductImageUrl { get; set; }
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; }
+    }
 }

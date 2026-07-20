@@ -13,10 +13,7 @@ namespace BuildingBlocks.Extensions
             {
                 options.AddPolicy("FrontendOnly", policy =>
                 {
-                    policy.WithOrigins(
-                "https://example.com"
-
-                          )
+                    policy.WithOrigins("https://example.com")
                           .AllowAnyHeader()
                           .AllowAnyMethod();
                 });

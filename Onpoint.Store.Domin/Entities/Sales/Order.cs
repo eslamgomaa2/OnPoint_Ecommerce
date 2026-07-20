@@ -20,11 +20,11 @@ namespace Onpoint.Store.Domin.Entities
         public string PhoneNumber { get; set; } = string.Empty;
 
 
-        public decimal SubTotal { get; set; } // السعر قبل الخصم والشحن
+        public decimal SubTotal { get; set; }
         public decimal ShippingCost { get; set; }
-        public decimal DiscountAmount { get; set; } // لو فيه كوبون
-        public decimal TotalAmount { get; set; } // المبلغ النهائي المطلوب دفعه
-
+        public decimal DiscountAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string? CouponCode { get; set; }
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public PaymentMethod PaymentMethod { get; set; }
         public OrderSource Source { get; set; } = OrderSource.Online;

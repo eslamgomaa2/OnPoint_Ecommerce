@@ -36,6 +36,8 @@ namespace Onpoint.Store.Infrastructure.Extensions
                 logger.LogInformation("Default accounts seeded successfully");
                 await SeedingAccounts.SeedCashierAsync(userManager, dbContext);
                 logger.LogInformation("Default accounts seeded successfully");
+                await SeedingAccounts.SeedUserAsync(userManager, dbContext);
+                logger.LogInformation("Default accounts seeded successfully");
 
 
             }

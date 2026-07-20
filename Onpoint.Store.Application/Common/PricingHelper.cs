@@ -6,13 +6,36 @@ namespace Onpoint.Store.Application.Common
     {
         public static decimal CalculateFinalPrice(Product product)
         {
-            var activeDiscount = product.Discounts?.FirstOrDefault(d =>
-                d.IsActive && d.StartDate <= DateTime.UtcNow && d.EndDate >= DateTime.UtcNow);
+            return CalculatePriceWithDiscount(product.Price, product);
+        }
 
-            if (activeDiscount != null)
-                return product.Price - (product.Price * (activeDiscount.DiscountPercentage / 100));
+        public static decimal CalculateFinalPrice(Product product, ProductVariant variant)
+        {
+            return CalculatePriceWithDiscount(variant.Price, product);
+        }
 
-            return product.Price;
+        private static decimal CalculatePriceWithDiscount(decimal basePrice, Product product)
+        {
+            var activeDiscount = GetActiveDiscount(product);
+
+            if (activeDiscount != null && activeDiscount.DiscountPercentage > 0)
+            {
+
+                decimal discountAmount = basePrice * (activeDiscount.DiscountPercentage / 100m);
+                return basePrice - discountAmount;
+            }
+
+            return basePrice;
+        }
+
+        private static Discount? GetActiveDiscount(Product product)
+        {
+            var now = DateTime.UtcNow;
+
+            return product.Discounts?.FirstOrDefault(d =>
+                d.IsActive &&
+                d.StartDate.ToUniversalTime() <= now &&
+                d.EndDate.ToUniversalTime() >= now);
         }
     }
 }

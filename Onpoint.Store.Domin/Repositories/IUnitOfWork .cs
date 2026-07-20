@@ -1,4 +1,6 @@
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities.Sales;
+using System.Data;
 
 namespace Onpoint.Store.Domin.Repositories
 {
@@ -20,12 +22,14 @@ namespace Onpoint.Store.Domin.Repositories
         IStockRepository Stocks { get; }
         IBranchRepo Branches { get; }
         IPosSessionRepository PosSessions { get; }
-
+        IProductVariantRepository ProductVariants { get; }
         IGenericRepository<PosSessionItem, int> PosSessionItems { get; }
+        IProductAttributeRepository ProductAttributes { get; }
+        IDiscountRepo Discounts { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-        Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+        Task BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken ct = default);
         Task CommitTransactionAsync(CancellationToken cancellationToken = default);
         Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
     }

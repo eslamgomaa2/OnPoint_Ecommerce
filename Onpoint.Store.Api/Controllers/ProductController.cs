@@ -1,5 +1,6 @@
 ﻿using BuildingBlocks.Results;
 using Microsoft.AspNetCore.Mvc;
+using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.Services.ProductServ;
 
@@ -39,9 +40,9 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpPut("[action]")]
-        public async Task<IActionResult> Update([FromBody] UpdateProductDto dto, CancellationToken ct = default)
+        public async Task<IActionResult> Update([FromQuery] int id, [FromBody] UpdateProductDto dto, CancellationToken ct = default)
         {
-            var result = await _productService.UpdateAsync(dto, ct);
+            var result = await _productService.UpdateAsync(id, dto, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
@@ -51,6 +52,13 @@ namespace Onpoint.Store.Api.Controllers
             var result = await _productService.DeleteAsync(id, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
+        [HttpGet("sku/{sku}")]
+        public async Task<IActionResult> GetBySku(string sku, CancellationToken ct = default)
+        {
+            var result = await _productService.GetBySkuAsync(sku, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
     }
 
 }

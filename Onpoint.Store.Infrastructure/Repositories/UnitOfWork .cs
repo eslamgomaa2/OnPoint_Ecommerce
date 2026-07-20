@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore.Storage;
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
+using System.Data;
 
 namespace Onpoint.Store.Infrastructure.Repositories
 {
@@ -26,6 +28,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IStockRepository? _stockRepository;
         private IBranchRepo? _branches;
         private IPosSessionRepository? _posSessions;
+        private IProductVariantRepository? _productVariantRepository;
+        private IProductAttributeRepository? _productAttributes;
+        private IDiscountRepo? _discounts;
+
 
         private IGenericRepository<PosSessionItem, int>? _posSessionItems;
 
@@ -48,7 +54,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IReviewRepository Reviews => _reviews ??= new ReviewRepository(_context);
         public IApplicationUserRepo ApplicationUsers => _applicationUsers ??= new ApplicationUserRepo(_context);
 
-
+        public IProductAttributeRepository ProductAttributes => _productAttributes ??= new ProductAttributeRepository(_context);
         public IStockRepository Stocks => _stockRepository ??= new StockRepository(_context);
 
         public IBranchRepo Branches => _branches ??= new BranchRepo(_context);
@@ -56,12 +62,16 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
         public IPosSessionRepository PosSessions => _posSessions ??= new PosSessionRepository(_context);
 
+        public IProductVariantRepository ProductVariants => _productVariantRepository ??= new ProductVariantRepository(_context);
+
+        public IDiscountRepo Discounts => _discounts ??= new DiscountRepo(_context);
+
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return await _context.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+        public async Task BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
         {
             _currentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
         }

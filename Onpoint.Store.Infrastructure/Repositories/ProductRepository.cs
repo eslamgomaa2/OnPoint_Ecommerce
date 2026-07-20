@@ -14,12 +14,38 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
         public async Task<Product?> GetWithDetailsAsync(int id, CancellationToken ct = default)
         {
-            return await _dbset
+            var product = await _dbset
                 .Include(p => p.Category)
                 .Include(p => p.Images.OrderBy(i => !i.IsPrimary))
                 .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow))
+                .Include(p => p.Variants.Where(v => v.IsActive))
+                    .ThenInclude(v => v.AttributeValues)
+                        .ThenInclude(av => av.ProductAttribute)
+                .Include(p => p.Variants.Where(v => v.IsActive))
+                    .ThenInclude(v => v.Stocks)
+                .Include(p => p.AttributeValues)
+                    .ThenInclude(av => av.ProductAttribute)
+                .FirstOrDefaultAsync(p => p.Id == id, ct);
+
+            return product;
+        }
+
+        public async Task<Product?> GetWithFullDetailsForAdminAsync(int id, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Include(p => p.Category)
+                .Include(p => p.Images)
+                .Include(p => p.Discounts)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.AttributeValues)
+                        .ThenInclude(av => av.ProductAttribute)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.Stocks)
+                .Include(p => p.AttributeValues)
+                    .ThenInclude(av => av.ProductAttribute)
                 .FirstOrDefaultAsync(p => p.Id == id, ct);
         }
+
         public async Task<List<Product>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default)
         {
             return await _dbset
@@ -27,6 +53,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .ToListAsync(ct);
         }
 
+        public async Task<Product?> GetByIdWithVariantsAsync(int id, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Include(p => p.Variants)
+                .FirstOrDefaultAsync(p => p.Id == id, ct);
+        }
         public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetFilteredPagedAsync(int? categoryId, string? searchTerm, int pageNumber, int pageSize, CancellationToken ct = default)
         {
             IQueryable<Product> query = _dbset.AsQueryable();
@@ -56,6 +88,27 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .ToListAsync(ct);
 
             return (items, totalCount);
+        }
+        public async Task<bool> SkuExistsAsync(string sku, int? excludeProductId = null, CancellationToken ct = default)
+        {
+            return await _dbset.AnyAsync(p => p.Sku == sku && (!excludeProductId.HasValue || p.Id != excludeProductId.Value), ct);
+        }
+
+        public async Task<Product?> GetBySkuAsync(string sku, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Include(p => p.Category)
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .FirstOrDefaultAsync(p => p.Sku == sku, ct);
+        }
+
+        public async Task<List<Product>> SearchBySkuAsync(string skuTerm, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Where(p => p.Sku.Contains(skuTerm) || p.Variants.Any(v => v.Sku.Contains(skuTerm)))
+                .Include(p => p.Variants)
+                .ToListAsync(ct);
         }
     }
 }
