@@ -22,7 +22,7 @@ namespace Onpoint.Store.Application.Mappings
                         ? src.Images.First(i => i.IsPrimary).ImageUrl
                         : null))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-                .ForMember(dest => dest.FinalPrice, opt => opt.MapFrom(src =>
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src =>
                     src.Discounts != null && src.Discounts.Any(d => d.IsActive && d.EndDate >= DateTime.UtcNow)
                         ? src.Price - (src.Price * src.Discounts.First(d => d.IsActive && d.EndDate >= DateTime.UtcNow).DiscountPercentage / 100)
                         : src.Price))

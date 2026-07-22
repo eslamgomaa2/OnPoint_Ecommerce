@@ -26,5 +26,9 @@
 		<ProjectReference Include="..\Onpoint.Store.Domin\Onpoint.Store.Domin.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Validators\Customer\" />
+	</ItemGroup>
+
 	<Target Name="SixLabors_ValidateLicense" BeforeTargets="CoreCompile" />
 </Project>

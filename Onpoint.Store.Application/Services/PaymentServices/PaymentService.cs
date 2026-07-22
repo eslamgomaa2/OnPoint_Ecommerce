@@ -149,7 +149,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
                 if (order.Status != OrderStatus.Pending)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    var alreadyStatus = order.Status == OrderStatus.Processing ? "Paid" : "Pending";
+                    var alreadyStatus = order.Status == OrderStatus.Pending ? "Paid" : "Pending";
                     return (order, alreadyStatus, "Order already processed.");
                 }
 
@@ -165,10 +165,10 @@ namespace Onpoint.Store.Application.Services.PaymentServices
                         _unitOfWork.PaymentTransactions.Update(transaction);
                     }
 
-                    order.Status = OrderStatus.Processing;
+                    order.Status = OrderStatus.Pending;
                     _unitOfWork.Orders.Update(order);
 
-                    var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.UserId, ct);
+                    var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.CustomerId, ct);
 
                     Coupon? coupon = null;
                     if (order.DiscountAmount > 0 && cart != null && !string.IsNullOrEmpty(cart.AppliedCouponCode))
@@ -212,9 +212,9 @@ namespace Onpoint.Store.Application.Services.PaymentServices
         private async Task<Order?> ValidateOrderForPaymentAsync(int userId, int orderId, CancellationToken ct)
         {
             var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId, ct);
-            if (order == null || order.UserId != userId) return null;
+            if (order == null || order.CustomerId != userId) return null;
             if (order.Status != OrderStatus.Pending) return null;
-            if (order.PaymentMethod == PaymentMethod.CashOnDelivery) return null;
+            if (order.PaymentMethod == PaymentMethod.Cash) return null;
             return order;
         }
 

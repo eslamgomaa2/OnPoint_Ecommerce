@@ -6,9 +6,14 @@ namespace Onpoint.Store.Application.DTOs.PosSession
     {
         public int Id { get; set; }
         public string OrderNumber { get; set; } = string.Empty;
+        public string? InvoiceNumber { get; set; }
         public decimal SubTotal { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal AmountReceived { get; set; }
+        public decimal Change { get; set; }
+        public string? CustomerName { get; set; }
         public OrderStatus Status { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
         public OrderSource Source { get; set; }

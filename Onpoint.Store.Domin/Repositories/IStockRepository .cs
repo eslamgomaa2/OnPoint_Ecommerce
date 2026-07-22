@@ -9,6 +9,8 @@ namespace Onpoint.Store.Domin.Repositories
         Task<int> GetLowStockCountAsync(int? branchId = null, CancellationToken ct = default);
         Task<Stock?> GetByProductVariantAndBranchAsync(int productId, int? productVariantId, int branchId, CancellationToken ct = default);
 
+        Task<int> GetProductsCountByBranchAsync(int? branchId, CancellationToken ct = default);
+        Task<int> GetMissingQuantityCountByBranchAsync(int? branchId, CancellationToken ct = default);
 
         Task<List<Stock>> GetByProductVariantsAndBranchAsync(IEnumerable<(int ProductId, int? ProductVariantId)> keys, int branchId, CancellationToken ct = default);
 

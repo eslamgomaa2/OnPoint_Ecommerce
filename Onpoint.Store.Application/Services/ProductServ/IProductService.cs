@@ -27,5 +27,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
 
         Task<ServiceResult<ProductDto>> GetBySkuAsync(string sku, CancellationToken ct = default);
+
     }
 }

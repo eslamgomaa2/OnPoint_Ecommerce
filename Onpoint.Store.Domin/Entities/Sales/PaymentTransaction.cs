@@ -13,7 +13,7 @@ namespace Onpoint.Store.Domin.Entities.Sales
 
 
         public string Provider { get; set; } = string.Empty;
-        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.CashOnDelivery;
+        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
         public string? GatewayTransactionId { get; set; }
 
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;

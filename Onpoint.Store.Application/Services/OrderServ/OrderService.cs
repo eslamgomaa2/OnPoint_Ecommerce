@@ -82,7 +82,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
                 var order = new Order
                 {
-                    UserId = userId,
+                    CustomerId = userId,
                     AddressId = dto.AddressId,
                     PhoneNumber = dto.PhoneNumber,
                     PaymentMethod = dto.PaymentMethod,
@@ -131,10 +131,10 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
                 await _unitOfWork.Orders.AddAsync(order);
 
-                if (dto.PaymentMethod == PaymentMethod.CashOnDelivery)
+                if (dto.PaymentMethod == PaymentMethod.Cash)
                 {
                     await FinalizeOrderAsync(order, cart, coupon, default);
-                    order.Status = OrderStatus.Processing;
+                    order.Status = OrderStatus.Pending;
                 }
 
                 await _unitOfWork.SaveChangesAsync();
@@ -167,11 +167,11 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 if (!string.IsNullOrEmpty(order.CouponCode))
                     coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == order.CouponCode);
 
-                var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.UserId);
+                var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.CustomerId);
 
                 await FinalizeOrderAsync(order, cart, coupon, default);
 
-                order.Status = OrderStatus.Processing;
+                order.Status = OrderStatus.Pending;
                 _unitOfWork.Orders.Update(order);
 
                 order.Transactions.Add(new PaymentTransaction
@@ -205,10 +205,10 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId);
                 if (order == null) return _serviceResultHandler.NotFound<bool>("Order not found");
 
-                if (order.Status == OrderStatus.Delivered)
+                if (order.Status == OrderStatus.Completed)
                     return _serviceResultHandler.BadRequest<bool>("Cannot cancel delivered order");
 
-                if (order.Status == OrderStatus.Processing || order.Status == OrderStatus.Shipped)
+                if (order.Status == OrderStatus.Pending)
                 {
                     var stockKeys = order.OrderItems.Select(i => (i.ProductId, i.ProductVariantId)).Distinct().ToList();
                     var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, order.BranchId!.Value);
@@ -234,7 +234,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
                     }
                 }
 
-                order.Status = OrderStatus.Cancelled;
+                order.Status = OrderStatus.Refunded;
                 _unitOfWork.Orders.Update(order);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -248,9 +248,10 @@ namespace Onpoint.Store.Application.Services.OrderServ
             }
         }
 
+
         public async Task<ServiceResult<bool>> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
         {
-            if (newStatus == OrderStatus.Cancelled)
+            if (newStatus == OrderStatus.Refunded)
             {
                 return await CancelOrderAsync(orderId);
             }
@@ -260,9 +261,8 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
             var validTransition = (order.Status, newStatus) switch
             {
-                (OrderStatus.Pending, OrderStatus.Processing) => true,
-                (OrderStatus.Processing, OrderStatus.Shipped) => true,
-                (OrderStatus.Shipped, OrderStatus.Delivered) => true,
+                (OrderStatus.Pending, OrderStatus.Pending) => true,
+                (OrderStatus.Pending, OrderStatus.Completed) => true,
                 _ => false
             };
 
@@ -335,5 +335,141 @@ namespace Onpoint.Store.Application.Services.OrderServ
             if (cart != null)
                 _unitOfWork.Carts.Remove(cart);
         }
+        public async Task<ServiceResult<PagedResult<OrderListItemDto>>> GetDashBoardPagedAsync(GetOrdersQueryDto query, int? branchId, CancellationToken ct = default)
+        {
+            var (items, totalCount) = await _unitOfWork.Orders.GetOrdersPagedAsync(
+                query.PageNumber, query.PageSize, query.SortBy, query.Descending, branchId, ct);
+
+            var dto = new PagedResult<OrderListItemDto>
+            {
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+                TotalCount = totalCount,
+                Items = items.Select(o => new OrderListItemDto
+                {
+                    Id = o.Id,
+                    OrderNumber = o.OrderNumber,
+                    OrderDate = o.CreatedAt,
+                    Status = o.Status,
+                    TotalAmount = o.TotalAmount
+                }).ToList()
+            };
+
+            return _serviceResultHandler.Success(dto);
+        }
+
+        public async Task<ServiceResult<DashBoardSummaryDto>> GetDasheBoardSummaryAsync(int? branchId, CancellationToken ct = default)
+        {
+            var total = await _unitOfWork.Orders.GetTotalOrdersCountAsync(branchId, ct);
+            var totalProducts = await _unitOfWork.Stocks.GetProductsCountByBranchAsync(branchId, ct);
+            var missingQuantity = await _unitOfWork.Stocks.GetMissingQuantityCountByBranchAsync(branchId, ct);
+
+            var dto = new DashBoardSummaryDto
+            {
+                TotalOrders = total,
+                NumberOfProducts = totalProducts,
+                MissingQuantity = missingQuantity
+            };
+
+            return _serviceResultHandler.Success(dto);
+        }
+
+        public async Task<ServiceResult<OrderDetailsDto>> GetOrderDetailsAsync(int id, int? branchId, CancellationToken ct = default)
+        {
+            var order = await _unitOfWork.Orders.GetOrderDetailsAsync(id, ct);
+            if (order is null)
+                return _serviceResultHandler.NotFound<OrderDetailsDto>("Order not found");
+
+            if (branchId.HasValue && order.BranchId != branchId.Value)
+                return _serviceResultHandler.Forbidden<OrderDetailsDto>("This order does not belong to your branch");
+
+            var dto = new OrderDetailsDto
+            {
+                Id = order.Id,
+                InvoiceNumber = order.Invoice?.InvoiceNumber ?? order.OrderNumber,
+                TotalAmount = order.TotalAmount,
+                Status = order.Status,
+                OrderDate = order.CreatedAt,
+                CustomerName = $"{order.Customer?.FName} {order.Customer?.LName}" ?? string.Empty,
+                CashierName = order.Cashier?.UserName ?? string.Empty,
+                BranchName = order.Branch?.Name,
+                PaymentMethod = order.PaymentMethod.ToString()
+            };
+
+            return _serviceResultHandler.Success(dto);
+        }
+
+
+
+
+
+        public async Task<ServiceResult<PagedResult<OrderDetailsDto>>> GetOrdersPagedAsync(OrdersPaginationRequest query, int? branchId, CancellationToken ct = default)
+        {
+            var (items, totalCount) = await _unitOfWork.Orders.GetOrdersPagedAsync(query.PageNumber, query.PageSize, query.SortBy, query.Descending, branchId, ct);
+
+            var dto = new PagedResult<OrderDetailsDto>
+            {
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+                TotalCount = totalCount,
+                Items = items.Select(o => new OrderDetailsDto
+                {
+                    Id = o.Id,
+                    InvoiceNumber = o.Invoice?.InvoiceNumber ?? o.OrderNumber,
+                    TotalAmount = o.TotalAmount,
+                    Status = o.Status,
+                    OrderDate = o.CreatedAt,
+                    CustomerName = $"{o.Customer?.FName} {o.Customer?.LName}" ?? string.Empty,
+                    CashierName = o.Cashier?.UserName ?? string.Empty,
+                    BranchName = o.Branch?.Name,
+                    PaymentMethod = o.PaymentMethod.ToString()
+                }).ToList()
+            };
+
+            return _serviceResultHandler.Success(dto);
+        }
+
+        public async Task<ServiceResult<OrdersSummaryDto>> GetOrdersSummaryAsync(
+            int? branchId, CancellationToken ct = default)
+        {
+            var total = await _unitOfWork.Orders.GetTotalOrdersCountAsync(branchId, ct);
+            var completed = await _unitOfWork.Orders.GetCompletedOrdersCountAsync(branchId, ct);
+            var pending = await _unitOfWork.Orders.GetPendingOrdersCountAsync(branchId, ct);
+            var revenue = await _unitOfWork.Orders.GetTotalRevenueAsync(branchId, ct);
+
+            var dto = new OrdersSummaryDto
+            {
+                TotalOrders = total,
+                Completed = completed,
+                Pending = pending,
+                TotalRevenue = revenue
+            };
+
+            return _serviceResultHandler.Success(dto);
+        }
+
+
+
+        public async Task<ServiceResult<bool>> UpdateOrderAsync(
+            int id, int? branchId, UpdateOrderDto dto, CancellationToken ct = default)
+        {
+            var order = await _unitOfWork.Orders.GetByIdAsync(id, ct);
+            if (order is null)
+                return _serviceResultHandler.NotFound<bool>("Order not found");
+
+            if (branchId.HasValue && order.BranchId != branchId.Value)
+                return _serviceResultHandler.Forbidden<bool>("This order does not belong to your branch");
+
+            order.Status = dto.Status;
+            order.PaymentMethod = dto.PaymentMethod;
+            order.Note = dto.Note;
+
+            _unitOfWork.Orders.Update(order);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return _serviceResultHandler.Success(true);
+        }
     }
+
 }
+

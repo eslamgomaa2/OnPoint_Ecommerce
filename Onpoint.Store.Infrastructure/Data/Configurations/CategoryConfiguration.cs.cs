@@ -8,12 +8,17 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<Category> builder)
         {
-            builder.HasIndex(c => c.Slug).IsUnique();
+            builder.HasIndex(c => c.Name)
+                    .IsUnique();
+            builder.Property(c => c.Name)
+                   .IsRequired()
+                   .HasMaxLength(100);
+            builder
+                .HasMany(c => c.Products)
+                .WithOne(p => p.Category)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(c => c.ParentCategory)
-                   .WithMany(c => c.SubCategories)
-                   .HasForeignKey(c => c.ParentCategoryId)
-                   .OnDelete(DeleteBehavior.Restrict);
             builder
           .HasMany(c => c.ProductAttributes)
           .WithMany(a => a.Categories)

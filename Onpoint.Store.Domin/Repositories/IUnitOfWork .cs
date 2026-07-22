@@ -6,6 +6,7 @@ namespace Onpoint.Store.Domin.Repositories
 {
     public interface IUnitOfWork
     {
+        ICustomerRepository Customers { get; }
         ICategoryRepository Categories { get; }
         IProductRepository Products { get; }
         ICartRepository Carts { get; }

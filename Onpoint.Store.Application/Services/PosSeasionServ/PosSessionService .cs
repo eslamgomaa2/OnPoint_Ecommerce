@@ -2,6 +2,7 @@
 using BuildingBlocks.Results;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Onpoint.Store.Application.DTOs.Pos;
 using Onpoint.Store.Application.DTOs.PosSession;
 using Onpoint.Store.Domin.Entities;
@@ -18,31 +19,212 @@ namespace Onpoint.Store.Application.Services.PosServ
         private readonly IMapper _mapper;
         private readonly IValidator<AddPosSessionItemDto> _addItemValidator;
         private readonly ServiceResultHandler _resultHandler;
+        private readonly IConfiguration _configuration;
 
-        public PosSessionService(IUnitOfWork unitOfWork, IMapper mapper, IValidator<AddPosSessionItemDto> addItemValidator, ServiceResultHandler resultHandler)
+        public PosSessionService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IValidator<AddPosSessionItemDto> addItemValidator,
+            ServiceResultHandler resultHandler,
+            IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _addItemValidator = addItemValidator;
             _resultHandler = resultHandler;
+            _configuration = configuration;
         }
+
+        private decimal GetTaxRate()
+        {
+            return _configuration.GetValue<decimal>("PosSettings:TaxRate", 0.08m);
+        }
+
+        private (decimal subTotal, decimal taxAmount, decimal total) CalculateTotals(PosSession session)
+        {
+            var subTotal = session.Items.Sum(i => i.UnitPrice * i.Quantity);
+            var taxRate = GetTaxRate();
+            var taxAmount = subTotal * taxRate;
+            var total = subTotal + taxAmount - session.DiscountAmount;
+            return (subTotal, taxAmount, total);
+        }
+
+        private async Task<PosSession?> GetSessionWithDetailsAsync(int sessionId)
+        {
+            return await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+        }
+
+        #region Session Management
+
+
+        public async Task<ServiceResult<PosSessionDto>> CreateSessionAsync(int cashierId, int branchId)
+        {
+            var cashier = await _unitOfWork.ApplicationUsers.GetByIdAsync(cashierId);
+            if (cashier == null || !cashier.IsActive || cashier.IsDeleted)
+                return _resultHandler.BadRequest<PosSessionDto>("Invalid cashier");
+
+            // Check if cashier already has an active session
+            var existing = await _unitOfWork.PosSessions.GetActiveSessionByCashierAsync(cashierId);
+            if (existing != null)
+                return _resultHandler.Success(_mapper.Map<PosSessionDto>(existing));
+
+            var session = new PosSession
+            {
+                CashierId = cashierId,
+                BranchId = branchId,
+                Status = PosSessionStatus.Active
+            };
+
+            await _unitOfWork.PosSessions.AddAsync(session);
+            await _unitOfWork.SaveChangesAsync();
+            return _resultHandler.Created(_mapper.Map<PosSessionDto>(session));
+        }
+
+        public async Task<ServiceResult<PosSessionDto>> GetSessionAsync(int sessionId)
+        {
+            var session = await GetSessionWithDetailsAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
+            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
+        }
+
+        public async Task<ServiceResult<PosSessionDto>> GetActiveSessionForCashierAsync(int cashierId)
+        {
+            var session = await _unitOfWork.PosSessions.GetActiveSessionByCashierAsync(cashierId);
+            if (session == null) return _resultHandler.NotFound<PosSessionDto>("No active session found");
+            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
+        }
+
+        public async Task<ServiceResult<bool>> HoldSessionAsync(int sessionId)
+        {
+            var session = await _unitOfWork.PosSessions.GetByIdAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<bool>("Session not found");
+            if (session.Status != PosSessionStatus.Active)
+                return _resultHandler.BadRequest<bool>("Session is not active");
+
+            session.Status = PosSessionStatus.OnHold;
+            _unitOfWork.PosSessions.Update(session);
+            await _unitOfWork.SaveChangesAsync();
+            return _resultHandler.Success(true);
+        }
+
+        public async Task<ServiceResult<PosSessionDto>> ResumeSessionAsync(int sessionId, int cashierId)
+        {
+            var session = await GetSessionWithDetailsAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
+            if (session.CashierId != cashierId)
+                return _resultHandler.BadRequest<PosSessionDto>("Session does not belong to this cashier");
+            if (session.Status == PosSessionStatus.Active)
+                return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
+            if (session.Status != PosSessionStatus.OnHold)
+                return _resultHandler.BadRequest<PosSessionDto>($"Cannot resume session with status: {session.Status}");
+
+            var activeSession = await _unitOfWork.PosSessions.GetActiveSessionByCashierAsync(cashierId);
+            if (activeSession != null && activeSession.Id != sessionId)
+            {
+                activeSession.Status = PosSessionStatus.OnHold;
+                _unitOfWork.PosSessions.Update(activeSession);
+            }
+
+            session.Status = PosSessionStatus.Active;
+            _unitOfWork.PosSessions.Update(session);
+            await _unitOfWork.SaveChangesAsync();
+
+            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
+        }
+
+        public async Task<ServiceResult<bool>> CancelSessionAsync(int sessionId)
+        {
+            var session = await _unitOfWork.PosSessions.GetByIdAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<bool>("Session not found");
+            if (session.Status == PosSessionStatus.Completed)
+                return _resultHandler.BadRequest<bool>("Cannot cancel completed session");
+
+            session.Status = PosSessionStatus.Cancelled;
+            _unitOfWork.PosSessions.Update(session);
+            await _unitOfWork.SaveChangesAsync();
+            return _resultHandler.Success(true);
+        }
+
+        public async Task<ServiceResult<PosSessionDto>> ClearSessionAsync(int sessionId)
+        {
+            var session = await GetSessionWithDetailsAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
+            if (session.Status != PosSessionStatus.Active)
+                return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
+
+            if (session.Items.Any())
+            {
+                _unitOfWork.PosSessionItems.RemoveRange(session.Items);
+                session.CouponCode = null;
+                session.DiscountAmount = 0;
+                session.CustomerId = null;
+                session.CustomerPhone = null;
+                session.AmountReceived = 0;
+                session.Change = 0;
+                _unitOfWork.PosSessions.Update(session);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            session = await GetSessionWithDetailsAsync(sessionId);
+            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
+        }
+
+        #endregion
+
+        #region Customer Management
+
+        public async Task<ServiceResult<PosSessionDto>> AssignCustomerToSessionAsync(int sessionId, int customerId)
+        {
+            var session = await GetSessionWithDetailsAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
+            if (session.Status != PosSessionStatus.Active)
+                return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
+
+            var customer = await _unitOfWork.Customers.GetByIdAsync(customerId);
+            if (customer == null) return _resultHandler.NotFound<PosSessionDto>("Customer not found");
+
+            session.CustomerId = customerId;
+            session.CustomerPhone = customer.Phone;
+            _unitOfWork.PosSessions.Update(session);
+            await _unitOfWork.SaveChangesAsync();
+
+            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
+        }
+
+        public async Task<ServiceResult<PosSessionDto>> AssignCustomerPhoneAsync(int sessionId, string phone)
+        {
+            var session = await GetSessionWithDetailsAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
+            if (session.Status != PosSessionStatus.Active)
+                return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
+
+            session.CustomerPhone = phone;
+            _unitOfWork.PosSessions.Update(session);
+            await _unitOfWork.SaveChangesAsync();
+
+            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
+        }
+
+
+        #endregion
+
+        #region Item Management
+
         public async Task<ServiceResult<PosSessionDto>> ScanAndAddItemAsync(ScanPosItemDto dto, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(dto.Code))
                 return _resultHandler.BadRequest<PosSessionDto>("Code cannot be empty.");
 
             var scannedCode = dto.Code.Trim();
-
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(dto.SessionId);
+            var session = await GetSessionWithDetailsAsync(dto.SessionId);
 
             if (session == null)
                 return _resultHandler.NotFound<PosSessionDto>("POS Session not found.");
-
             if (session.Status != PosSessionStatus.Active)
                 return _resultHandler.BadRequest<PosSessionDto>("POS Session is not active.");
 
             var variant = await _unitOfWork.ProductVariants.FirstOrDefaultAsync(
-                v => v.IsActive && (v.Barcode == scannedCode || v.QrCodeValue == scannedCode),
+                v => v.IsActive && (v.Barcode == scannedCode || v.QrCodeValue == scannedCode || v.Sku == scannedCode),
                 include: q => q.Include(v => v.Product!).ThenInclude(p => p.Images)
                                .Include(v => v.AttributeValues),
                 ct: ct
@@ -53,6 +235,7 @@ namespace Onpoint.Store.Application.Services.PosServ
             string productName;
             string? variantDescription = null;
             string? imageUrl = null;
+            string? sku = null;
             decimal price;
 
             if (variant != null)
@@ -63,7 +246,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                 price = variant.Price > 0 ? variant.Price : (variant.Product?.Price ?? 0);
                 imageUrl = variant.Product?.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
                            ?? variant.Product?.Images.FirstOrDefault()?.ImageUrl;
-
+                sku = variant.Sku ?? variant.Product?.Sku;
 
                 if (variant.AttributeValues != null && variant.AttributeValues.Any())
                 {
@@ -73,7 +256,7 @@ namespace Onpoint.Store.Application.Services.PosServ
             else
             {
                 var product = await _unitOfWork.Products.FirstOrDefaultAsync(
-                    p => (p.Barcode == scannedCode || p.QrCodeValue == scannedCode),
+                    p => (p.Barcode == scannedCode || p.QrCodeValue == scannedCode || p.Sku == scannedCode),
                     include: q => q.Include(p => p.Images),
                     ct: ct
                 );
@@ -86,6 +269,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                 price = product.Price;
                 imageUrl = product.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
                            ?? product.Images.FirstOrDefault()?.ImageUrl;
+                sku = product.Sku;
             }
 
             var existingItem = session.Items.FirstOrDefault(i =>
@@ -109,51 +293,22 @@ namespace Onpoint.Store.Application.Services.PosServ
                     UnitPrice = price,
                     Quantity = dto.Quantity
                 };
-
                 session.Items.Add(newItem);
             }
 
             await _unitOfWork.SaveChangesAsync(ct);
-
-            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
-        }
-        public async Task<ServiceResult<PosSessionDto>> CreateSessionAsync(int cashierId)
-        {
-            var cashier = await _unitOfWork.ApplicationUsers.GetByIdAsync(cashierId);
-            if (cashier == null || !cashier.IsActive || cashier.IsDeleted) return _resultHandler.BadRequest<PosSessionDto>("Invalid cashier");
-            if (!cashier.BranchId.HasValue) return _resultHandler.BadRequest<PosSessionDto>("Cashier not assigned to branch");
-
-            var existing = await _unitOfWork.PosSessions.GetActiveSessionByCashierAsync(cashierId);
-            if (existing != null) return _resultHandler.Success(_mapper.Map<PosSessionDto>(existing));
-
-            var session = new PosSession { CashierId = cashierId, BranchId = cashier.BranchId.Value, Status = PosSessionStatus.Active };
-            await _unitOfWork.PosSessions.AddAsync(session);
-            await _unitOfWork.SaveChangesAsync();
-            return _resultHandler.Created(_mapper.Map<PosSessionDto>(session));
-        }
-
-        public async Task<ServiceResult<PosSessionDto>> GetSessionAsync(int sessionId)
-        {
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
-            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
-            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
-        }
-
-        public async Task<ServiceResult<PosSessionDto>> GetActiveSessionForCashierAsync(int cashierId)
-        {
-            var session = await _unitOfWork.PosSessions.GetActiveSessionByCashierAsync(cashierId);
-            if (session == null) return _resultHandler.NotFound<PosSessionDto>("No active session found");
+            session = await GetSessionWithDetailsAsync(session.Id);
             return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
         }
 
         public async Task<ServiceResult<PosSessionDto>> AddItemAsync(int sessionId, int productId, int? productVariantId, int quantity)
         {
-            // 1. Validation
-            var validation = await _addItemValidator.ValidateAsync(new AddPosSessionItemDto { ProductId = productId, ProductVariantId = productVariantId, Quantity = quantity });
+            var validation = await _addItemValidator.ValidateAsync(
+                new AddPosSessionItemDto { ProductId = productId, ProductVariantId = productVariantId, Quantity = quantity });
             if (!validation.IsValid)
                 return _resultHandler.BadRequest<PosSessionDto>(string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)));
 
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            var session = await GetSessionWithDetailsAsync(sessionId);
             if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
             if (session.Status != PosSessionStatus.Active) return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
 
@@ -166,7 +321,6 @@ namespace Onpoint.Store.Application.Services.PosServ
                 variant = await _unitOfWork.ProductVariants.GetByIdAsync(productVariantId.Value);
                 if (variant == null || variant.ProductId != productId)
                     return _resultHandler.BadRequest<PosSessionDto>("Invalid product variant");
-
                 if (!variant.IsActive)
                     return _resultHandler.BadRequest<PosSessionDto>("Product variant is not active");
             }
@@ -174,9 +328,7 @@ namespace Onpoint.Store.Application.Services.PosServ
             {
                 bool hasActiveVariants = await _unitOfWork.ProductVariants.AnyAsync(v => v.ProductId == productId && v.IsActive);
                 if (hasActiveVariants)
-                {
                     return _resultHandler.BadRequest<PosSessionDto>("Please select a product variant.");
-                }
             }
 
             var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(productId, productVariantId, session.BranchId);
@@ -215,19 +367,17 @@ namespace Onpoint.Store.Application.Services.PosServ
                     UnitPrice = unitPrice,
                     Quantity = quantity
                 };
-
                 await _unitOfWork.PosSessionItems.AddAsync(item);
             }
 
             await _unitOfWork.SaveChangesAsync();
-
-            session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            session = await GetSessionWithDetailsAsync(sessionId);
             return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
         }
 
         public async Task<ServiceResult<PosSessionDto>> RemoveItemAsync(int sessionId, int itemId)
         {
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            var session = await GetSessionWithDetailsAsync(sessionId);
             if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
             if (session.Status != PosSessionStatus.Active) return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
 
@@ -237,7 +387,7 @@ namespace Onpoint.Store.Application.Services.PosServ
             _unitOfWork.PosSessionItems.Remove(item);
             await _unitOfWork.SaveChangesAsync();
 
-            session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            session = await GetSessionWithDetailsAsync(sessionId);
             return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
         }
 
@@ -245,7 +395,7 @@ namespace Onpoint.Store.Application.Services.PosServ
         {
             if (quantity <= 0) return _resultHandler.BadRequest<PosSessionDto>("Quantity must be greater than 0");
 
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            var session = await GetSessionWithDetailsAsync(sessionId);
             if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
             if (session.Status != PosSessionStatus.Active) return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
 
@@ -253,35 +403,47 @@ namespace Onpoint.Store.Application.Services.PosServ
             if (item == null) return _resultHandler.NotFound<PosSessionDto>("Item not found");
 
             var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(item.ProductId, item.ProductVariantId, session.BranchId);
-            if (stock == null || stock.AvailableQuantity < quantity) return _resultHandler.BadRequest<PosSessionDto>($"Insufficient stock. Available: {stock?.AvailableQuantity ?? 0}");
+            if (stock == null || stock.AvailableQuantity < quantity)
+                return _resultHandler.BadRequest<PosSessionDto>($"Insufficient stock. Available: {stock?.AvailableQuantity ?? 0}");
 
             item.Quantity = quantity;
             _unitOfWork.PosSessionItems.Update(item);
             await _unitOfWork.SaveChangesAsync();
 
-            session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            session = await GetSessionWithDetailsAsync(sessionId);
             return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
         }
 
+        #endregion
+
+        #region Coupon Management
+
         public async Task<ServiceResult<PosSessionDto>> ApplyCouponAsync(int sessionId, string couponCode)
         {
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
-            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
-            if (session.Status != PosSessionStatus.Active) return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
+            if (string.IsNullOrWhiteSpace(couponCode))
+                return _resultHandler.BadRequest<PosSessionDto>("Coupon code is required");
 
-            var coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == couponCode);
-            if (coupon == null) return _resultHandler.BadRequest<PosSessionDto>("Invalid coupon code");
 
-            var subTotal = session.Items.Sum(i => i.UnitPrice * i.Quantity);
-            bool valid = coupon.IsActive && coupon.StartDate <= DateTime.UtcNow && coupon.EndDate >= DateTime.UtcNow && coupon.UsedCount < coupon.MaxUses && subTotal >= coupon.MinOrderAmount;
-            if (!valid) return _resultHandler.BadRequest<PosSessionDto>("Coupon is not valid");
+            var coupon = await _unitOfWork.Coupons.GetByCodeAsync(couponCode);
+            if (coupon == null || !coupon.IsActive)
+                return _resultHandler.NotFound<PosSessionDto>("Coupon is invalid or expired");
 
-            var discount = coupon.DiscountType == CouponType.Percentage ? (subTotal * coupon.Value) / 100 : coupon.Value;
-            if (discount > subTotal) discount = subTotal;
+            var session = await GetSessionWithDetailsAsync(sessionId);
+            if (session == null)
+                return _resultHandler.NotFound<PosSessionDto>("Session not found");
 
-            session.CouponCode = couponCode;
-            session.DiscountAmount = discount;
-            _unitOfWork.PosSessions.Update(session);
+
+            decimal subTotal = session.Items.Sum(i => i.UnitPrice * i.Quantity);
+            decimal discountAmount = coupon.DiscountType == CouponType.Percentage
+                ? (subTotal * coupon.Value / 100)
+                : coupon.Value;
+
+
+            session.CouponCode = coupon.Code;
+            session.DiscountAmount = discountAmount;
+            session.UpdatedAt = DateTime.UtcNow;
+
+
             await _unitOfWork.SaveChangesAsync();
 
             return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
@@ -289,7 +451,7 @@ namespace Onpoint.Store.Application.Services.PosServ
 
         public async Task<ServiceResult<PosSessionDto>> RemoveCouponAsync(int sessionId)
         {
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            var session = await GetSessionWithDetailsAsync(sessionId);
             if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
 
             session.CouponCode = null;
@@ -300,13 +462,68 @@ namespace Onpoint.Store.Application.Services.PosServ
             return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
         }
 
-        public async Task<ServiceResult<PosOrderDto>> CompleteSessionAsync(int sessionId, PaymentMethod paymentMethod, string customerPhone)
+        #endregion
+
+        #region Receipt Preview
+
+        public async Task<ServiceResult<ReceiptPreviewDto>> PreviewReceiptAsync(int sessionId)
         {
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
+            var session = await GetSessionWithDetailsAsync(sessionId);
+            if (session == null) return _resultHandler.NotFound<ReceiptPreviewDto>("Session not found");
+            if (!session.Items.Any()) return _resultHandler.BadRequest<ReceiptPreviewDto>("Session has no items");
+
+            var (subTotal, taxAmount, total) = CalculateTotals(session);
+
+            var receipt = new ReceiptPreviewDto
+            {
+                InvoiceNumber = $"#INV-{DateTime.UtcNow:yyyyMMdd}-{session.Id:D4}",
+                Date = DateTime.UtcNow,
+                CashierName = session.Cashier?.UserName ?? "Unknown",
+                BranchName = session.Branch?.Name ?? "Main Store",
+                CustomerName = $"{session.Customer?.FName} {session.Customer?.LName}",
+                CustomerPhone = session.CustomerPhone,
+                Items = session.Items.Select(i => new ReceiptItemDto
+                {
+                    Name = i.ProductName,
+                    VariantDescription = i.VariantDescription,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                    TotalPrice = i.UnitPrice * i.Quantity
+                }).ToList(),
+                SubTotal = subTotal,
+                Discount = session.DiscountAmount,
+                Tax = taxAmount,
+                Total = total,
+                AmountReceived = session.AmountReceived,
+                Change = session.Change,
+                Payments = new List<PaymentSummaryDto>()
+            };
+
+            return _resultHandler.Success(receipt);
+        }
+
+        #endregion
+
+        #region Complete Session
+
+
+        public async Task<ServiceResult<PosOrderDto>> CompleteSessionAsync(int sessionId, CompletePosSessionDto dto)
+        {
+            var session = await GetSessionWithDetailsAsync(sessionId);
             if (session == null) return _resultHandler.NotFound<PosOrderDto>("Session not found");
             if (session.Status != PosSessionStatus.Active) return _resultHandler.BadRequest<PosOrderDto>("Session is not active");
             if (!session.Items.Any()) return _resultHandler.BadRequest<PosOrderDto>("Session has no items");
 
+            var (subTotal, taxAmount, total) = CalculateTotals(session);
+
+            var totalPayments = dto.Payments.Sum(p => p.Amount);
+            if (dto.Payments.Any() && Math.Abs(totalPayments - total) > 0.001m)
+                return _resultHandler.BadRequest<PosOrderDto>($"Payment amount ({totalPayments}) does not match total ({total})");
+            var cashPayment = dto.Payments.FirstOrDefault(p => p.Method == PaymentMethod.Cash);
+            if (cashPayment != null && cashPayment.Amount > 0 && dto.AmountReceived < cashPayment.Amount)
+            {
+                return _resultHandler.BadRequest<PosOrderDto>("Amount received is less than cash payment");
+            }
             await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
@@ -317,24 +534,17 @@ namespace Onpoint.Store.Application.Services.PosServ
                 foreach (var item in session.Items)
                 {
                     var stock = stocks.FirstOrDefault(s => s.ProductId == item.ProductId && s.ProductVariantId == item.ProductVariantId);
-
                     if (stock == null || stock.AvailableQuantity < item.Quantity)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
-
                         var variantInfo = item.ProductVariantId.HasValue ? $" (Variant: {item.VariantDescription})" : "";
                         var available = stock?.AvailableQuantity ?? 0;
-
                         return _resultHandler.BadRequest<PosOrderDto>(
-                            $"Insufficient stock for {item.ProductName}{variantInfo}. Available: {available}, Requested: {item.Quantity}"
-                        );
+                            $"Insufficient stock for {item.ProductName}{variantInfo}. Available: {available}, Requested: {item.Quantity}");
                     }
-
                     stock.Quantity -= item.Quantity;
                     _unitOfWork.Stocks.Update(stock);
                 }
-
-                var subTotal = session.Items.Sum(i => i.UnitPrice * i.Quantity);
 
                 var orderItems = session.Items.Select(i => new OrderItem
                 {
@@ -347,22 +557,61 @@ namespace Onpoint.Store.Application.Services.PosServ
                     UnitPrice = i.UnitPrice
                 }).ToList();
 
+                var primaryMethod = dto.Payments.Count == 1
+                    ? dto.Payments[0].Method
+                    : PaymentMethod.Cash;
+
                 var order = new Order
                 {
-                    UserId = session.CashierId,
-                    AddressId = null,
+                    CashierId = session.CashierId,
+                    CustomerId = session.CustomerId ?? 0,
                     OrderNumber = $"POS-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(1000, 9999)}",
-                    PhoneNumber = customerPhone,
-                    PaymentMethod = paymentMethod,
-                    Status = OrderStatus.Delivered,
+                    InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{session.Id:D4}",
+                    PhoneNumber = session.CustomerPhone ?? dto.CustomerPhone ?? string.Empty,
+                    PaymentMethod = primaryMethod,
+                    Status = OrderStatus.Completed,
                     Source = OrderSource.Pos,
                     BranchId = session.BranchId,
                     SubTotal = subTotal,
+                    TaxAmount = taxAmount,
                     ShippingCost = 0,
                     DiscountAmount = session.DiscountAmount,
-                    TotalAmount = subTotal - session.DiscountAmount,
-                    OrderItems = orderItems
+                    TotalAmount = total,
+                    AmountReceived = dto.AmountReceived,
+                    Change = dto.AmountReceived > total ? dto.AmountReceived - total : 0,
+                    OrderItems = orderItems,
+                    Note = dto.Note
                 };
+
+                if (dto.Payments.Any())
+                {
+                    foreach (var payment in dto.Payments)
+                    {
+                        var transaction = new PaymentTransaction
+                        {
+                            PaymentMethod = payment.Method,
+                            Amount = payment.Amount,
+                            CurrencyCode = "KWD",
+                            Status = PaymentStatus.Success,
+                            PaidAt = DateTime.UtcNow,
+                            Provider = "POS"
+                        };
+                        order.Transactions.Add(transaction);
+                    }
+                }
+                else
+                {
+                    var transaction = new PaymentTransaction
+                    {
+                        PaymentMethod = primaryMethod,
+                        Amount = total,
+                        CurrencyCode = "KWD",
+                        Status = PaymentStatus.Success,
+                        PaidAt = DateTime.UtcNow,
+                        Provider = "POS"
+                    };
+                    order.Transactions.Add(transaction);
+                }
 
                 if (!string.IsNullOrEmpty(session.CouponCode))
                 {
@@ -377,8 +626,11 @@ namespace Onpoint.Store.Application.Services.PosServ
                 await _unitOfWork.Orders.AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();
 
+                // Update session
                 session.Status = PosSessionStatus.Completed;
                 session.OrderId = order.Id;
+                session.AmountReceived = dto.AmountReceived;
+                session.Change = order.Change;
                 _unitOfWork.PosSessions.Update(session);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -392,46 +644,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                 throw;
             }
         }
-        public async Task<ServiceResult<bool>> HoldSessionAsync(int sessionId)
-        {
-            var session = await _unitOfWork.PosSessions.GetByIdAsync(sessionId);
-            if (session == null) return _resultHandler.NotFound<bool>("Session not found");
-            if (session.Status != PosSessionStatus.Active) return _resultHandler.BadRequest<bool>("Session is not active");
 
-            session.Status = PosSessionStatus.OnHold;
-            _unitOfWork.PosSessions.Update(session);
-            await _unitOfWork.SaveChangesAsync();
-            return _resultHandler.Success(true);
-        }
-
-        public async Task<ServiceResult<PosSessionDto>> ResumeSessionAsync(int sessionId, int cashierId)
-        {
-            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId);
-            if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
-            if (session.CashierId != cashierId) return _resultHandler.BadRequest<PosSessionDto>("Session does not belong to this cashier");
-            if (session.Status == PosSessionStatus.Active) return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
-            if (session.Status != PosSessionStatus.OnHold) return _resultHandler.BadRequest<PosSessionDto>($"Cannot resume session with status: {session.Status}");
-
-            var activeSession = await _unitOfWork.PosSessions.GetActiveSessionByCashierAsync(cashierId);
-            if (activeSession != null && activeSession.Id != sessionId) { activeSession.Status = PosSessionStatus.OnHold; _unitOfWork.PosSessions.Update(activeSession); }
-
-            session.Status = PosSessionStatus.Active;
-            _unitOfWork.PosSessions.Update(session);
-            await _unitOfWork.SaveChangesAsync();
-
-            return _resultHandler.Success(_mapper.Map<PosSessionDto>(session));
-        }
-
-        public async Task<ServiceResult<bool>> CancelSessionAsync(int sessionId)
-        {
-            var session = await _unitOfWork.PosSessions.GetByIdAsync(sessionId);
-            if (session == null) return _resultHandler.NotFound<bool>("Session not found");
-            if (session.Status == PosSessionStatus.Completed) return _resultHandler.BadRequest<bool>("Cannot cancel completed session");
-
-            session.Status = PosSessionStatus.Cancelled;
-            _unitOfWork.PosSessions.Update(session);
-            await _unitOfWork.SaveChangesAsync();
-            return _resultHandler.Success(true);
-        }
+        #endregion
     }
 }

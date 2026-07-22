@@ -308,7 +308,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 }
             }
 
-            // 8. حفظ تغيرات المخزون النهائية
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Created(_mapper.Map<ProductDto>(product));
@@ -329,7 +328,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (!hasStockInBranch)
                 return _resultHandler.BadRequest<ProductDto>("Product not available in this branch");
 
-            // Sku unique check لو اتغير
+
             if (!string.IsNullOrWhiteSpace(dto.Sku) && dto.Sku != existingProduct.Sku)
             {
                 if (await _unitOfWork.Products.SkuExistsAsync(dto.Sku, id, ct))
@@ -433,29 +432,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return dto;
         }
 
-        private async Task<string> GenerateSkuAsync(Product product, CancellationToken ct)
-        {
-            var category = await _unitOfWork.Categories.GetByIdAsync(product.CategoryId, ct);
-            var categoryPrefix = category?.Name?.Length >= 3
-                ? category.Name.Substring(0, 3).ToUpper()
-                : "GEN";
 
-            var namePrefix = product.Name?.Length >= 3
-                ? product.Name.Substring(0, 3).ToUpper()
-                : "PRD";
 
-            var random = new Random();
-            var sequence = random.Next(1000, 9999);
-
-            var sku = $"{categoryPrefix}-{namePrefix}-{sequence}";
-
-            if (await _unitOfWork.Products.SkuExistsAsync(sku))
-            {
-                sequence = random.Next(1000, 9999);
-                sku = $"{categoryPrefix}-{namePrefix}-{sequence}";
-            }
-
-            return sku;
-        }
     }
 }

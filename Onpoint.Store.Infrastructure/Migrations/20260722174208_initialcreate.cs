@@ -73,10 +73,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Slug = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
-                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ParentCategoryId = table.Column<int>(type: "int", nullable: true),
-                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
@@ -85,12 +82,6 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Categories", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Categories_Categories_ParentCategoryId",
-                        column: x => x.ParentCategoryId,
-                        principalTable: "Categories",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -198,6 +189,35 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Customers",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FName = table.Column<string>(type: "nvarchar(max)", maxLength: 5050, nullable: true),
+                    LName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Address = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Note = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    BranchId = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Customers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Customers_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Products",
                 columns: table => new
                 {
@@ -236,7 +256,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         column: x => x.CategoryId,
                         principalTable: "Categories",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -573,7 +593,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductId = table.Column<int>(type: "int", nullable: false),
-                    LanguageCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    LanguageCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     MetaTitle = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
@@ -692,18 +712,24 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<int>(type: "int", nullable: false),
+                    CashierId = table.Column<int>(type: "int", nullable: true),
+                    CustomerId = table.Column<int>(type: "int", nullable: false),
                     OrderNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    InvoiceNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AddressId = table.Column<int>(type: "int", nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SubTotal = table.Column<decimal>(type: "decimal(18,3)", nullable: false),
+                    TaxAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     ShippingCost = table.Column<decimal>(type: "decimal(18,3)", nullable: false),
                     DiscountAmount = table.Column<decimal>(type: "decimal(18,3)", nullable: false),
                     TotalAmount = table.Column<decimal>(type: "decimal(18,3)", nullable: false),
+                    AmountReceived = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Change = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CouponCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     PaymentMethod = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Source = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     BranchId = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -720,16 +746,22 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Orders_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_Orders_AspNetUsers_CashierId",
+                        column: x => x.CashierId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Orders_Branches_BranchId",
                         column: x => x.BranchId,
                         principalTable: "Branches",
                         principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Orders_Customers_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "Customers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -968,6 +1000,9 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     CustomerPhone = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CouponCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DiscountAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CustomerId = table.Column<int>(type: "int", nullable: true),
+                    AmountReceived = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Change = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     OrderId = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -989,6 +1024,11 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PosSessions_Customers_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "Customers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_PosSessions_Orders_OrderId",
                         column: x => x.OrderId,
@@ -1125,14 +1165,9 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Categories_ParentCategoryId",
+                name: "IX_Categories_Name",
                 table: "Categories",
-                column: "ParentCategoryId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Categories_Slug",
-                table: "Categories",
-                column: "Slug",
+                column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1145,6 +1180,11 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 table: "Coupons",
                 column: "Code",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Customers_BranchId",
+                table: "Customers",
+                column: "BranchId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Discounts_ProductId",
@@ -1188,9 +1228,14 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 column: "BranchId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_UserId",
+                name: "IX_Orders_CashierId",
                 table: "Orders",
-                column: "UserId");
+                column: "CashierId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Orders_CustomerId",
+                table: "Orders",
+                column: "CustomerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentTransactions_OrderId",
@@ -1230,6 +1275,11 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 name: "IX_PosSessions_CashierId_Status",
                 table: "PosSessions",
                 columns: new[] { "CashierId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PosSessions_CustomerId",
+                table: "PosSessions",
+                column: "CustomerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PosSessions_OrderId",
@@ -1474,6 +1524,9 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Addresses");
+
+            migrationBuilder.DropTable(
+                name: "Customers");
 
             migrationBuilder.DropTable(
                 name: "Brand");

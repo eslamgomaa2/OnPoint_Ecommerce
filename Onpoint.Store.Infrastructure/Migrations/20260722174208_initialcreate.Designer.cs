@@ -12,7 +12,7 @@ using Onpoint.Store.Infrastructure.Data.Context;
 namespace Onpoint.Store.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260721163902_initialcreate")]
+    [Migration("20260722174208_initialcreate")]
     partial class initialcreate
     {
         /// <inheritdoc />
@@ -522,12 +522,9 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -540,22 +537,12 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("ParentCategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ParentCategoryId");
-
-                    b.HasIndex("Slug")
+                    b.HasIndex("Name")
                         .IsUnique();
 
                     b.ToTable("Categories");
@@ -690,6 +677,59 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.ToTable("EmailVerificationOtps");
                 });
 
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Identity.Customer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FName")
+                        .HasMaxLength(5050)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LName")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("Customers");
+                });
+
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Invoice", b =>
                 {
                     b.Property<int>("Id")
@@ -763,8 +803,17 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<int?>("AddressId")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("AmountReceived")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int?>("BranchId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("CashierId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Change")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("CouponCode")
                         .HasColumnType("nvarchar(max)");
@@ -772,14 +821,24 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("OrderNumber")
                         .IsRequired()
@@ -810,14 +869,14 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<decimal>("SubTotal")
                         .HasColumnType("decimal(18,3)");
 
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -825,7 +884,9 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("CashierId");
+
+                    b.HasIndex("CustomerId");
 
                     b.ToTable("Orders");
                 });
@@ -1173,8 +1234,8 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.Property<string>("LanguageCode")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("MetaDescription")
                         .HasMaxLength(500)
@@ -1422,17 +1483,26 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("AmountReceived")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("BranchId")
                         .HasColumnType("int");
 
                     b.Property<int>("CashierId")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("Change")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("CouponCode")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
 
                     b.Property<string>("CustomerPhone")
                         .HasColumnType("nvarchar(max)");
@@ -1460,6 +1530,8 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("OrderId")
                         .IsUnique()
@@ -1779,16 +1851,6 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Navigation("ProductVariant");
                 });
 
-            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Category", b =>
-                {
-                    b.HasOne("Onpoint.Store.Domin.Entities.Category", "ParentCategory")
-                        .WithMany("SubCategories")
-                        .HasForeignKey("ParentCategoryId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("ParentCategory");
-                });
-
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Discount", b =>
                 {
                     b.HasOne("Onpoint.Store.Domin.Entities.Product", "Product")
@@ -1809,6 +1871,17 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Identity.Customer", b =>
+                {
+                    b.HasOne("Onpoint.Store.Domin.Entities.Branch", "Branch")
+                        .WithMany("Customers")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Invoice", b =>
@@ -1833,17 +1906,24 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .WithMany("Orders")
                         .HasForeignKey("BranchId");
 
-                    b.HasOne("Onpoint.Store.Domin.Entities.ApplicationUser", "User")
+                    b.HasOne("Onpoint.Store.Domin.Entities.ApplicationUser", "Cashier")
                         .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("CashierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Onpoint.Store.Domin.Entities.Identity.Customer", "Customer")
+                        .WithMany("Orders")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Branch");
 
-                    b.Navigation("ShippingAddress");
+                    b.Navigation("Cashier");
 
-                    b.Navigation("User");
+                    b.Navigation("Customer");
+
+                    b.Navigation("ShippingAddress");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.OrderItem", b =>
@@ -1881,7 +1961,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasOne("Onpoint.Store.Domin.Entities.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Brand");
@@ -2011,6 +2091,10 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Onpoint.Store.Domin.Entities.Identity.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId");
+
                     b.HasOne("Onpoint.Store.Domin.Entities.Order", "Order")
                         .WithOne()
                         .HasForeignKey("Onpoint.Store.Domin.Entities.Sales.PosSession", "OrderId")
@@ -2019,6 +2103,8 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Cashier");
+
+                    b.Navigation("Customer");
 
                     b.Navigation("Order");
                 });
@@ -2131,6 +2217,8 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 {
                     b.Navigation("Cashiers");
 
+                    b.Navigation("Customers");
+
                     b.Navigation("Orders");
                 });
 
@@ -2147,8 +2235,11 @@ namespace Onpoint.Store.Infrastructure.Migrations
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Category", b =>
                 {
                     b.Navigation("Products");
+                });
 
-                    b.Navigation("SubCategories");
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Identity.Customer", b =>
+                {
+                    b.Navigation("Orders");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Order", b =>

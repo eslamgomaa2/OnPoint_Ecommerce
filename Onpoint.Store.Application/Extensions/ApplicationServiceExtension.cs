@@ -21,6 +21,7 @@ using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration.Onpoin
 using Onpoint.Store.Application.Services.CodeGeneration.QrCodeGeneration;
 using Onpoint.Store.Application.Services.CodeGeneration.SkuGeneration;
 using Onpoint.Store.Application.Services.CouponServ;
+using Onpoint.Store.Application.Services.Customer;
 using Onpoint.Store.Application.Services.DiscountServ;
 using Onpoint.Store.Application.Services.InvoiceServ;
 using Onpoint.Store.Application.Services.MedioServices;
@@ -74,6 +75,7 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IBrandService, BrandService>();
             services.AddScoped<IShippingService, ShippingService>();
             services.AddScoped<IBranchManagerProductService, BranchManagerProductService>();
+            services.AddScoped<ICustomerService, CustomerService>();
 
 
 

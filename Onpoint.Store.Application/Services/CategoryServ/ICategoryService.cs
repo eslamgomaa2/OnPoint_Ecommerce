@@ -10,7 +10,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
         Task<ServiceResult<PagedResult<CategoryDto>>> GetPagedAsync(PaginationRequest request, CancellationToken ct = default);
         Task<ServiceResult<CategoryDto>> GetByIdAsync(int id, CancellationToken ct = default);
         Task<ServiceResult<CategoryDto>> CreateAsync(CreateCategoryDto dto, CancellationToken ct = default);
-        Task<ServiceResult<CategoryDto>> UpdateAsync(UpdateCategoryDto dto, CancellationToken ct = default);
+        Task<ServiceResult<CategoryDto>> UpdateAsync(int id, UpdateCategoryDto dto, CancellationToken ct = default);
         Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default);
     }
 }

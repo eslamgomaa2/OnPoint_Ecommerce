@@ -32,6 +32,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IProductAttributeRepository? _productAttributes;
         private IDiscountRepo? _discounts;
 
+        private ICustomerRepository? _customers;
+
 
         private IGenericRepository<PosSessionItem, int>? _posSessionItems;
 
@@ -67,6 +69,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IDiscountRepo Discounts => _discounts ??= new DiscountRepo(_context);
 
         public IBrandRepository Brands => _brands ??= new BrandRepository(_context);
+
+        public ICustomerRepository Customers => _customers ??= new CustomerRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

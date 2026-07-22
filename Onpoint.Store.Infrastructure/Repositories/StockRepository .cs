@@ -10,6 +10,23 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public StockRepository(ApplicationDbContext context) : base(context) { }
 
 
+        public async Task<int> GetProductsCountByBranchAsync(int? branchId, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Where(s => s.BranchId == branchId)
+                .Select(s => s.ProductId)
+                .Distinct()
+                .CountAsync(ct);
+        }
+
+        public async Task<int> GetMissingQuantityCountByBranchAsync(int? branchId, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Where(s => s.BranchId == branchId && (s.Quantity - s.ReservedQuantity) <= 0)
+                .Select(s => s.ProductId)
+                .Distinct()
+                .CountAsync(ct);
+        }
         public async Task<int> GetLowStockCountAsync(int? branchId = null, CancellationToken ct = default)
         {
             var query = _dbset.Where(s => s.Quantity <= s.MinimumStockLevel);
