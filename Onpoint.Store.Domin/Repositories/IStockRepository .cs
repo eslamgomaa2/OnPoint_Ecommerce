@@ -4,6 +4,9 @@ namespace Onpoint.Store.Domin.Repositories
 {
     public interface IStockRepository : IGenericRepository<Stock, int>
     {
+        Task<int> GetInStockCountAsync(int? branchId = null, CancellationToken ct = default);
+        Task<int> GetOutOfStockCountAsync(int? branchId = null, CancellationToken ct = default);
+        Task<int> GetLowStockCountAsync(int? branchId = null, CancellationToken ct = default);
         Task<Stock?> GetByProductVariantAndBranchAsync(int productId, int? productVariantId, int branchId, CancellationToken ct = default);
 
 
@@ -20,5 +23,6 @@ namespace Onpoint.Store.Domin.Repositories
 
         Task<IReadOnlyList<Stock>> GetAllByProductAsync(int productId, CancellationToken ct = default);
         Task<Stock?> GetByIdWithDetailsAsync(int id, CancellationToken ct = default);
+        Task<IReadOnlyList<Stock>> GetLowStockAsync(int? branchId = null, CancellationToken ct = default);
     }
 }

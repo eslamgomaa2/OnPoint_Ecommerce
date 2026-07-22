@@ -19,7 +19,7 @@ namespace Onpoint.Store.Application.Validators.ProductAttribute
                 .WithMessage("Key must be lowercase letters, numbers, hyphens, or underscores only.");
 
             RuleFor(x => x)
-                .MustAsync(async (dto, ct) => !await unitOfWork.ProductAttributes.KeyExistsAsync(dto.Key, dto.Id, ct))
+                .MustAsync(async (dto, ct) => !await unitOfWork.ProductAttributes.KeyExistsAsync(dto.Key, null, ct))
                 .WithMessage("An attribute with this key already exists.");
 
             RuleFor(x => x.ValueType).IsInEnum();

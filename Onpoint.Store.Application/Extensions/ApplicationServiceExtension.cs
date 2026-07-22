@@ -3,13 +3,16 @@ using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Onpoint.Store.Application.Common;
+using Onpoint.Store.Application.Interfaces;
 using Onpoint.Store.Application.Mappings;
 using Onpoint.Store.Application.Services.AddressServ;
 using Onpoint.Store.Application.Services.AuthServices;
 using Onpoint.Store.Application.Services.AuthServices.Email;
 using Onpoint.Store.Application.Services.AuthServices.Otp;
 using Onpoint.Store.Application.Services.AuthServices.Token;
+using Onpoint.Store.Application.Services.BranchManagerProductService;
 using Onpoint.Store.Application.Services.BranchServ;
+using Onpoint.Store.Application.Services.Brand;
 using Onpoint.Store.Application.Services.CartServ;
 using Onpoint.Store.Application.Services.CategoryServ;
 using Onpoint.Store.Application.Services.CodeGeneration;
@@ -31,6 +34,7 @@ using Onpoint.Store.Application.Services.ProductServ;
 using Onpoint.Store.Application.Services.ProductVariantServ;
 using Onpoint.Store.Application.Services.Profile;
 using Onpoint.Store.Application.Services.ReviewServ;
+using Onpoint.Store.Application.Services.ShippingServ;
 using Onpoint.Store.Application.Services.StockServ;
 using Onpoint.Store.Application.Services.WishlistServ;
 using System.Reflection;
@@ -67,6 +71,9 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IQrCodeService, QrCodeService>();
             services.AddScoped<IBarcodeService, BarcodeService>();
             services.AddScoped<IProductAttributeService, ProductAttributeService>();
+            services.AddScoped<IBrandService, BrandService>();
+            services.AddScoped<IShippingService, ShippingService>();
+            services.AddScoped<IBranchManagerProductService, BranchManagerProductService>();
 
 
 

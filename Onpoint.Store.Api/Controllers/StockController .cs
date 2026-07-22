@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Stock;
 using Onpoint.Store.Application.Services.StockServ;
 
@@ -6,6 +7,7 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "SuperAdmin,BranchManager")]
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
@@ -15,6 +17,28 @@ namespace Onpoint.Store.Api.Controllers
             _stockService = stockService;
         }
 
+        [HttpGet("low-stock/count")]
+        public async Task<IActionResult> GetLowStockCount([FromQuery] int? branchId, CancellationToken ct)
+        {
+            var result = await _stockService.GetLowStockCountAsync(branchId, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpGet("in-stock/count")]
+        public async Task<IActionResult> GetInStockCount([FromQuery] int? branchId, CancellationToken ct)
+        {
+            var result = await _stockService.GetInStockCountAsync(branchId, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpGet("out-of-stock/count")]
+        public async Task<IActionResult> GetOutOfStockCount([FromQuery] int? branchId, CancellationToken ct)
+        {
+            var result = await _stockService.GetOutOfStockCountAsync(branchId, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
         [HttpPost("[action]")]
         public async Task<IActionResult> Initialize([FromBody] InitializeStockDto dto, CancellationToken ct = default)
         {

@@ -26,6 +26,7 @@ namespace Onpoint.Store.Domin.Repositories
         IGenericRepository<PosSessionItem, int> PosSessionItems { get; }
         IProductAttributeRepository ProductAttributes { get; }
         IDiscountRepo Discounts { get; }
+        IBrandRepository Brands { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

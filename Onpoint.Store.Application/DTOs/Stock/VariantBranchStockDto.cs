@@ -4,5 +4,7 @@
     {
         public int BranchId { get; set; }
         public int Quantity { get; set; }
+        public int MinimumStockLevel { get; set; }
+
     }
 }

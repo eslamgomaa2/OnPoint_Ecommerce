@@ -33,7 +33,23 @@ namespace Onpoint.Store.Application.Services.StockServ
             _adjustValidator = adjustValidator;
             _transferValidator = transferValidator;
         }
+        public async Task<ServiceResult<int>> GetLowStockCountAsync(int? branchId = null, CancellationToken ct = default)
+        {
+            var count = await _unitOfWork.Stocks.GetLowStockCountAsync(branchId, ct);
+            return _resultHandler.Success(count);
+        }
 
+        public async Task<ServiceResult<int>> GetInStockCountAsync(int? branchId = null, CancellationToken ct = default)
+        {
+            var count = await _unitOfWork.Stocks.GetInStockCountAsync(branchId, ct);
+            return _resultHandler.Success(count);
+        }
+
+        public async Task<ServiceResult<int>> GetOutOfStockCountAsync(int? branchId = null, CancellationToken ct = default)
+        {
+            var count = await _unitOfWork.Stocks.GetOutOfStockCountAsync(branchId, ct);
+            return _resultHandler.Success(count);
+        }
         public async Task<ServiceResult<StockDto>> InitializeStockAsync(InitializeStockDto dto, CancellationToken ct = default)
         {
             var validation = await _initializeValidator.ValidateAsync(dto, ct);
@@ -201,10 +217,9 @@ namespace Onpoint.Store.Application.Services.StockServ
             _unitOfWork.Stocks.Update(stock);
         }
 
-        public async Task DecreaseStockAsync(
-            int productId, int? productVariantId, int branchId, int quantity, CancellationToken ct = default)
+        public async Task DecreaseStockAsync(int productId, int? productVariantId, int branchId, int quantity, CancellationToken ct = default)
         {
-            var stock = await _unitOfWork.Stocks.GetByProductAndBranchAsync(productId, productVariantId, branchId, ct);
+            var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(productId, productVariantId, branchId, ct);
 
             if (stock is null)
                 throw new InvalidOperationException("Stock record not found.");
@@ -214,6 +229,8 @@ namespace Onpoint.Store.Application.Services.StockServ
                     $"Insufficient physical stock. Quantity: {stock.Quantity}, Requested: {quantity}");
 
             stock.Quantity -= quantity;
+            stock.ReservedQuantity = Math.Max(0, stock.ReservedQuantity - quantity);
+
             _unitOfWork.Stocks.Update(stock);
         }
     }

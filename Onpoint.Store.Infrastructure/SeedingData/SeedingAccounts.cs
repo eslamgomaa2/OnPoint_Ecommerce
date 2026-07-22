@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Onpoint.Store.Domin.Entities;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Infrastructure.Data.Context;
 
 namespace Onpoint.Store.Infrastructure.SeedingData
@@ -95,38 +94,85 @@ namespace Onpoint.Store.Infrastructure.SeedingData
         }
         public static async Task SeedUserAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
         {
-            const string cashierEmail = "User@Gmail.com";
-            const string cashierPassword = "User@123456";
+            const string UserEmail = "User@Gmail.com";
+            const string UserPassword = "User@123456";
 
-            var cashierExists = await userManager.FindByEmailAsync(cashierEmail);
-            if (cashierExists is not null)
+            var userExists = await userManager.FindByEmailAsync(UserEmail);
+            if (userExists is not null)
                 return;
 
 
 
-            var cashier = new ApplicationUser
+            var user = new ApplicationUser
             {
-                FirstName = "sondos",
-                LastName = "mohamed",
-                UserName = "sondos_mohamed",
-                Email = cashierEmail,
+                FirstName = "User",
+                LastName = "test",
+                UserName = "User_test",
+                Email = UserEmail,
                 EmailConfirmed = true,
                 IsActive = true,
 
             };
 
-            var result = await userManager.CreateAsync(cashier, cashierPassword);
+            var result = await userManager.CreateAsync(user, UserPassword);
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                throw new Exception($"Failed to seed cashier account: {errors}");
+                throw new Exception($"Failed to seed user account: {errors}");
             }
 
-            var roleResult = await userManager.AddToRoleAsync(cashier, "Customer");
+            var roleResult = await userManager.AddToRoleAsync(user, "Customer");
             if (!roleResult.Succeeded)
             {
                 var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                throw new Exception($"Failed to assign Cashier role: {errors}");
+                throw new Exception($"Failed to assign Customer role: {errors}");
+            }
+        }
+        public static async Task SeedBranchManagerAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
+        {
+            const string BranchManagerEmail = "BranchManager@Gmail.com";
+            const string BranchManagerPassword = "BranchManager@123456";
+
+            var userExists = await userManager.FindByEmailAsync(BranchManagerEmail);
+            if (userExists is not null)
+                return;
+
+            var defaultBranch = await context.Branches.FirstOrDefaultAsync(b => b.IsDefault);
+            if (defaultBranch is null)
+            {
+                defaultBranch = new Branch
+                {
+                    Name = "Main Branch",
+                    IsActive = true,
+                    IsDefault = true
+                };
+                context.Branches.Add(defaultBranch);
+                await context.SaveChangesAsync();
+            }
+
+            var branchManager = new ApplicationUser
+            {
+                FirstName = "Branch",
+                LastName = "Manager",
+                UserName = "BranchManager",
+                Email = BranchManagerEmail,
+                EmailConfirmed = true,
+                IsActive = true,
+                BranchId = defaultBranch.Id
+            };
+
+            var result = await userManager.CreateAsync(branchManager, BranchManagerPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to seed branch manager account: {errors}");
+            }
+
+            var roleResult = await userManager.AddToRoleAsync(branchManager, "BranchManager");
+            if (!roleResult.Succeeded)
+            {
+                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to assign BranchManager role: {errors}");
             }
         }
 

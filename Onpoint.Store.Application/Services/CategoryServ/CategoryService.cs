@@ -2,6 +2,7 @@
 using BuildingBlocks.Results;
 using FluentValidation;
 using Onpoint.Store.Application.DTOs.Category;
+using Onpoint.Store.Application.Helpers;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 
@@ -71,6 +72,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
 
 
             var category = _mapper.Map<Category>(dto);
+            category.Slug = SlugHelper.GenerateSlug(dto.Name);
 
 
             await _unitOfWork.Categories.AddAsync(category, ct);
@@ -116,5 +118,6 @@ namespace Onpoint.Store.Application.Services.CategoryServ
 
             return _resultHandler.Deleted<string>();
         }
+
     }
 }

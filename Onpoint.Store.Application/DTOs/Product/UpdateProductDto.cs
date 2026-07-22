@@ -5,26 +5,13 @@ namespace Onpoint.Store.Application.DTOs.Product
     public class UpdateProductDto
     {
         public string Name { get; set; } = string.Empty;
-        public string Slug { get; set; } = string.Empty;
         public string? Description { get; set; }
         public decimal Price { get; set; }
+        public decimal Cost { get; set; }
         public int CategoryId { get; set; }
+        public int? BrandId { get; set; }
         public bool IsPopular { get; set; }
-        public ProductStatus Status { get; set; } = ProductStatus.Draft;
-
-        public string? Sku { get; set; }
-
-        public CodeGenerationMode? BarcodeMode { get; set; }
-        public string? Barcode { get; set; }
-
-        public CodeGenerationMode? QrCodeMode { get; set; }
-        public string? QrCodeValue { get; set; }
-
-        public List<CreateProductImageDto> Images { get; set; } = new();
-        public CreateDiscountDto? Discount { get; set; }
-
-        public List<UpdateProductVariantDto> Variants { get; set; } = new();
-        public List<CreateProductAttributeValueDto> Attributes { get; set; } = new();
-        public List<VariantBranchStockDto> BranchStocks { get; set; } = new();
+        public string Sku { get; set; } = string.Empty;
+        public ProductStatus Status { get; set; }
     }
 }

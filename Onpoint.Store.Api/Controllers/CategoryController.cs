@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Category;
 using Onpoint.Store.Application.Services.CategoryServ;
@@ -8,6 +9,7 @@ namespace Onpoint.Store.Api.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "SuperAdmin,BranchManager")]
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService _categoryService;

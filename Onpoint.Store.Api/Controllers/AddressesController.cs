@@ -8,7 +8,7 @@ namespace Onpoint.Store.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Customer")]
     public class AddressesController : ControllerBase
     {
         private readonly IAddressService _addressService;
