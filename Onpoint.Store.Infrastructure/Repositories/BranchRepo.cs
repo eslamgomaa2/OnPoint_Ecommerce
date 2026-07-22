@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
 

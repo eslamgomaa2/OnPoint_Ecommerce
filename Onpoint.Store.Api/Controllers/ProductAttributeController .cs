@@ -7,7 +7,7 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin,BranchManager")]
     public class ProductAttributeController : ControllerBase
     {
         private readonly IProductAttributeService _attributeService;
@@ -40,9 +40,9 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpPut("[action]")]
-        public async Task<IActionResult> Update(int Id, [FromBody] UpdateProductAttributeDto dto, CancellationToken ct = default)
+        public async Task<IActionResult> Update([FromQuery] int id, [FromBody] UpdateProductAttributeDto dto, CancellationToken ct = default)
         {
-            var result = await _attributeService.UpdateAsync(dto, ct);
+            var result = await _attributeService.UpdateAsync(id, dto, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 

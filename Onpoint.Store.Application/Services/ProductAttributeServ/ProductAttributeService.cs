@@ -65,13 +65,13 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             return _resultHandler.Created(_mapper.Map<ProductAttributeDto>(saved));
         }
 
-        public async Task<ServiceResult<ProductAttributeDto>> UpdateAsync(UpdateProductAttributeDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<ProductAttributeDto>> UpdateAsync(int id, UpdateProductAttributeDto dto, CancellationToken ct = default)
         {
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
                 throw new ValidationException(validationResult.Errors);
 
-            var existing = await _unitOfWork.ProductAttributes.GetByIdWithCategoriesAsync(dto.Id, ct);
+            var existing = await _unitOfWork.ProductAttributes.GetByIdWithCategoriesAsync(id, ct);
             if (existing is null)
                 return _resultHandler.NotFound<ProductAttributeDto>("Attribute not found.");
 

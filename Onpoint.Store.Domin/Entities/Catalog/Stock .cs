@@ -1,5 +1,4 @@
 ﻿using Onpoint.Store.Domin.Common;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Onpoint.Store.Domin.Entities
@@ -19,8 +18,11 @@ namespace Onpoint.Store.Domin.Entities
         public int BranchId { get; set; }
         public virtual Branch? Branch { get; set; }
 
+
         public int Quantity { get; set; }
         public int ReservedQuantity { get; set; }
+        public int MinimumStockLevel { get; set; } = 0;
+        public bool IsLowStock => Quantity <= MinimumStockLevel;
         public int AvailableQuantity => Quantity - ReservedQuantity;
     }
 }

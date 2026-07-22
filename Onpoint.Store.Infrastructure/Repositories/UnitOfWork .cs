@@ -11,7 +11,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
     {
         private readonly ApplicationDbContext _context;
         private IDbContextTransaction? _currentTransaction;
-
+        private IBrandRepository? _brands;
         private ICategoryRepository? _categories;
         private IProductRepository? _products;
         private ICartRepository? _carts;
@@ -65,6 +65,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IProductVariantRepository ProductVariants => _productVariantRepository ??= new ProductVariantRepository(_context);
 
         public IDiscountRepo Discounts => _discounts ??= new DiscountRepo(_context);
+
+        public IBrandRepository Brands => _brands ??= new BrandRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

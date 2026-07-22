@@ -20,17 +20,32 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
           .UsingEntity(j => j.ToTable("CategoryProductAttributes"));
         }
     }
-
-}
-public class DiscountConfiguration : IEntityTypeConfiguration<Discount>
-{
-    public void Configure(EntityTypeBuilder<Discount> builder)
+    public class DiscountConfiguration : IEntityTypeConfiguration<Discount>
     {
-        builder.HasOne(d => d.Product)
-               .WithMany(p => p.Discounts)
-               .HasForeignKey(d => d.ProductId)
-               .OnDelete(DeleteBehavior.Cascade);
+        public void Configure(EntityTypeBuilder<Discount> builder)
+        {
+            builder.HasOne(d => d.Product)
+                   .WithMany(p => p.Discounts)
+                   .HasForeignKey(d => d.ProductId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
+
+        }
 
     }
+    public class BrandConfiguration : IEntityTypeConfiguration<Brand>
+    {
+        public void Configure(EntityTypeBuilder<Brand> builder)
+        {
+            builder.HasIndex(b => b.Slug)
+                   .IsUnique();
+
+            builder.HasMany(b => b.Products)
+                   .WithOne(p => p.Brand)
+                   .HasForeignKey(p => p.BrandId)
+                   .OnDelete(DeleteBehavior.SetNull);
+        }
+    }
+
 }
+

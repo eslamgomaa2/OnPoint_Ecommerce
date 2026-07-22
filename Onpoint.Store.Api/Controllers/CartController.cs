@@ -8,7 +8,7 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "SuperAdmin,BranchManager")]
     public class CartController : ControllerBase
     {
         private readonly ICartService _cartService;

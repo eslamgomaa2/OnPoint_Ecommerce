@@ -2,7 +2,7 @@
 using BuildingBlocks.Results;
 using FluentValidation;
 using Onpoint.Store.Application.DTOs.Branch;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 using System.Data;
 

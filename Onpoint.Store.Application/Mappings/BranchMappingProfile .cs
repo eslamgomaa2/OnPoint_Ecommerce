@@ -1,7 +1,7 @@
 ﻿
 using AutoMapper;
 using Onpoint.Store.Application.DTOs.Branch;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Application.Mappings
 {

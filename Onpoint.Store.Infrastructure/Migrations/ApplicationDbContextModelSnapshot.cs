@@ -235,7 +235,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ApplicationUser", b =>
@@ -337,6 +337,92 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Branch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDefault")
+                        .IsUnique()
+                        .HasFilter("[IsDefault] = 1");
+
+                    b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Brand", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Brand");
+                });
+
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Cart", b =>
                 {
                     b.Property<int>("Id")
@@ -371,7 +457,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Carts", (string)null);
+                    b.ToTable("Carts");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.CartItem", b =>
@@ -419,7 +505,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[ProductVariantId] IS NOT NULL");
 
-                    b.ToTable("CartItems", (string)null);
+                    b.ToTable("CartItems");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Category", b =>
@@ -469,7 +555,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Coupon", b =>
@@ -524,7 +610,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("Coupons", (string)null);
+                    b.ToTable("Coupons");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Discount", b =>
@@ -563,7 +649,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("Discounts", (string)null);
+                    b.ToTable("Discounts");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.EmailVerificationOtp", b =>
@@ -598,7 +684,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("EmailVerificationOtps", (string)null);
+                    b.ToTable("EmailVerificationOtps");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Invoice", b =>
@@ -660,7 +746,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Invoices", (string)null);
+                    b.ToTable("Invoices");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Order", b =>
@@ -738,7 +824,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.OrderItem", b =>
@@ -794,7 +880,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ProductVariantId");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Product", b =>
@@ -812,8 +898,14 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<string>("BarcodeImagePath")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("BrandId")
+                        .HasColumnType("int");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("Cost")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -868,6 +960,8 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[Barcode] IS NOT NULL");
 
+                    b.HasIndex("BrandId");
+
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("Sku")
@@ -876,7 +970,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductAttribute", b =>
@@ -919,7 +1013,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("ProductAttribute", (string)null);
+                    b.ToTable("ProductAttribute");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductAttributeValue", b =>
@@ -960,7 +1054,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("ProductId", "ProductAttributeId")
                         .IsUnique();
 
-                    b.ToTable("ProductAttributeValue", (string)null);
+                    b.ToTable("ProductAttributeValue");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductImage", b =>
@@ -998,7 +1092,111 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductImages", (string)null);
+                    b.ToTable("ProductImages");
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductShipping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("HeightCm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFragile")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsHazardous")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("LengthCm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ShippingClass")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("WeightKg")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("WidthCm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique();
+
+                    b.ToTable("ProductShippings", (string)null);
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("MetaDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("MetaTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "LanguageCode")
+                        .IsUnique();
+
+                    b.ToTable("ProductTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductVariant", b =>
@@ -1058,7 +1256,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Sku")
                         .IsUnique();
 
-                    b.ToTable("ProductVariant", (string)null);
+                    b.ToTable("ProductVariant");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.RefreshToken", b =>
@@ -1089,7 +1287,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Review", b =>
@@ -1134,49 +1332,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ProductId", "IsApproved");
 
-                    b.ToTable("Reviews", (string)null);
-                });
-
-            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities.Branch", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsDefault")
-                        .IsUnique()
-                        .HasFilter("[IsDefault] = 1");
-
-                    b.ToTable("Branches", (string)null);
+                    b.ToTable("Reviews");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PaymentTransaction", b =>
@@ -1252,7 +1408,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[OrderId1] IS NOT NULL");
 
-                    b.ToTable("PaymentTransactions", (string)null);
+                    b.ToTable("PaymentTransactions");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PosSession", b =>
@@ -1308,7 +1464,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("CashierId", "Status");
 
-                    b.ToTable("PosSessions", (string)null);
+                    b.ToTable("PosSessions");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PosSessionItem", b =>
@@ -1366,7 +1522,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[ProductVariantId] IS NOT NULL");
 
-                    b.ToTable("PosSessionItems", (string)null);
+                    b.ToTable("PosSessionItems");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Stock", b =>
@@ -1388,6 +1544,9 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<int>("MinimumStockLevel")
+                        .HasColumnType("int");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
@@ -1414,7 +1573,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[ProductVariantId] IS NOT NULL");
 
-                    b.ToTable("Stocks", (string)null);
+                    b.ToTable("Stocks");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.VariantAttributeValue", b =>
@@ -1455,7 +1614,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("ProductVariantId", "ProductAttributeId")
                         .IsUnique();
 
-                    b.ToTable("VariantAttributeValue", (string)null);
+                    b.ToTable("VariantAttributeValue");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Wishlist", b =>
@@ -1491,7 +1650,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("UserId", "ProductId")
                         .IsUnique();
 
-                    b.ToTable("Wishlists", (string)null);
+                    b.ToTable("Wishlists");
                 });
 
             modelBuilder.Entity("CategoryProductAttribute", b =>
@@ -1573,7 +1732,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ApplicationUser", b =>
                 {
-                    b.HasOne("Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities.Branch", "Branch")
+                    b.HasOne("Onpoint.Store.Domin.Entities.Branch", "Branch")
                         .WithMany("Cashiers")
                         .HasForeignKey("BranchId");
 
@@ -1667,7 +1826,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .HasForeignKey("AddressId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities.Branch", "Branch")
+                    b.HasOne("Onpoint.Store.Domin.Entities.Branch", "Branch")
                         .WithMany("Orders")
                         .HasForeignKey("BranchId");
 
@@ -1711,11 +1870,18 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Product", b =>
                 {
+                    b.HasOne("Onpoint.Store.Domin.Entities.Brand", "Brand")
+                        .WithMany("Products")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Onpoint.Store.Domin.Entities.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Brand");
 
                     b.Navigation("Category");
                 });
@@ -1743,6 +1909,28 @@ namespace Onpoint.Store.Infrastructure.Migrations
                 {
                     b.HasOne("Onpoint.Store.Domin.Entities.Product", "Product")
                         .WithMany("Images")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductShipping", b =>
+                {
+                    b.HasOne("Onpoint.Store.Domin.Entities.Product", "Product")
+                        .WithOne("Shipping")
+                        .HasForeignKey("Onpoint.Store.Domin.Entities.ProductShipping", "ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductTranslation", b =>
+                {
+                    b.HasOne("Onpoint.Store.Domin.Entities.Product", "Product")
+                        .WithMany("Translations")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1808,7 +1996,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PosSession", b =>
                 {
-                    b.HasOne("Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities.Branch", "Branch")
+                    b.HasOne("Onpoint.Store.Domin.Entities.Branch", "Branch")
                         .WithMany()
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1860,7 +2048,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Stock", b =>
                 {
-                    b.HasOne("Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities.Branch", "Branch")
+                    b.HasOne("Onpoint.Store.Domin.Entities.Branch", "Branch")
                         .WithMany()
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1936,6 +2124,18 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Navigation("RefreshTokens");
                 });
 
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Branch", b =>
+                {
+                    b.Navigation("Cashiers");
+
+                    b.Navigation("Orders");
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Brand", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Cart", b =>
                 {
                     b.Navigation("Items");
@@ -1967,7 +2167,11 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.Navigation("Images");
 
+                    b.Navigation("Shipping");
+
                     b.Navigation("Stocks");
+
+                    b.Navigation("Translations");
 
                     b.Navigation("Variants");
                 });
@@ -1984,13 +2188,6 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Navigation("AttributeValues");
 
                     b.Navigation("Stocks");
-                });
-
-            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities.Branch", b =>
-                {
-                    b.Navigation("Cashiers");
-
-                    b.Navigation("Orders");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PosSession", b =>

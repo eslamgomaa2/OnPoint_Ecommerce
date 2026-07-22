@@ -1,5 +1,4 @@
 ﻿using Onpoint.Store.Domin.Common;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Enums;
 
 namespace Onpoint.Store.Domin.Entities.Sales

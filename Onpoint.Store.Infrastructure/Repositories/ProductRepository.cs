@@ -5,8 +5,8 @@ using Onpoint.Store.Infrastructure.Data.Context;
 
 namespace Onpoint.Store.Infrastructure.Repositories
 {
-
     public class ProductRepository : GenericRepository<Product, int>, IProductRepository
+
     {
         public ProductRepository(ApplicationDbContext context) : base(context)
         {
@@ -16,8 +16,11 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
             var product = await _dbset
                 .Include(p => p.Category)
+                .Include(p => p.Brand)
+                .Include(p => p.Translations)
                 .Include(p => p.Images.OrderBy(i => !i.IsPrimary))
                 .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow))
+                .Include(p => p.Stocks)
                 .Include(p => p.Variants.Where(v => v.IsActive))
                     .ThenInclude(v => v.AttributeValues)
                         .ThenInclude(av => av.ProductAttribute)
@@ -29,13 +32,23 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
             return product;
         }
-
+        public async Task<Product?> GetWithStocksForBranchCheckAsync(int id, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Include(p => p.Stocks)
+                .Include(p => p.Variants.Where(v => v.IsActive))
+                    .ThenInclude(v => v.Stocks)
+                .FirstOrDefaultAsync(p => p.Id == id, ct);
+        }
         public async Task<Product?> GetWithFullDetailsForAdminAsync(int id, CancellationToken ct = default)
         {
             return await _dbset
                 .Include(p => p.Category)
+                .Include(p => p.Brand)
+                .Include(p => p.Translations)
                 .Include(p => p.Images)
                 .Include(p => p.Discounts)
+                .Include(p => p.Stocks)
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.AttributeValues)
                         .ThenInclude(av => av.ProductAttribute)
@@ -59,26 +72,38 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(p => p.Variants)
                 .FirstOrDefaultAsync(p => p.Id == id, ct);
         }
-        public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetFilteredPagedAsync(int? categoryId, string? searchTerm, int pageNumber, int pageSize, CancellationToken ct = default)
+
+        public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetFilteredPagedAsync(
+            int? categoryId, string? searchTerm, int? branchId, int pageNumber, int pageSize, CancellationToken ct = default)
         {
             IQueryable<Product> query = _dbset.AsQueryable();
-            query = query.Include(p => p.Images.Where(i => i.IsPrimary));
-
+            query = query
+                .Include(p => p.Images.Where(i => i.IsPrimary))
+                .Include(p => p.Category)
+                .Include(p => p.Brand)
+                .Include(p => p.Translations)
+                .Include(p => p.Stocks)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.Stocks);
 
             if (categoryId.HasValue && categoryId.Value > 0)
-            {
                 query = query.Where(p => p.CategoryId == categoryId.Value);
-            }
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(p => p.Name.Contains(searchTerm) ||
-                                         (p.Description != null && p.Description.Contains(searchTerm)));
+                                          p.Sku.Contains(searchTerm) ||
+                                          (p.Description != null && p.Description.Contains(searchTerm)));
             }
 
+            if (branchId.HasValue)
+            {
+                query = query.Where(p =>
+                    p.Stocks.Any(s => s.BranchId == branchId.Value && s.ProductVariantId == null) ||
+                    p.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId.Value)));
+            }
 
             int totalCount = await query.CountAsync(ct);
-
 
             var items = await query
                 .OrderByDescending(p => p.IsPopular)
@@ -89,6 +114,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
             return (items, totalCount);
         }
+
         public async Task<bool> SkuExistsAsync(string sku, int? excludeProductId = null, CancellationToken ct = default)
         {
             return await _dbset.AnyAsync(p => p.Sku == sku && (!excludeProductId.HasValue || p.Id != excludeProductId.Value), ct);

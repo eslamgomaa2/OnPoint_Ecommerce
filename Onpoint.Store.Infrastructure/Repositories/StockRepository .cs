@@ -9,6 +9,36 @@ namespace Onpoint.Store.Infrastructure.Repositories
     {
         public StockRepository(ApplicationDbContext context) : base(context) { }
 
+
+        public async Task<int> GetLowStockCountAsync(int? branchId = null, CancellationToken ct = default)
+        {
+            var query = _dbset.Where(s => s.Quantity <= s.MinimumStockLevel);
+
+            if (branchId.HasValue)
+                query = query.Where(s => s.BranchId == branchId.Value);
+
+            return await query.CountAsync(ct);
+        }
+
+        public async Task<int> GetInStockCountAsync(int? branchId = null, CancellationToken ct = default)
+        {
+            var query = _dbset.Where(s => s.Quantity > 0);
+
+            if (branchId.HasValue)
+                query = query.Where(s => s.BranchId == branchId.Value);
+
+            return await query.CountAsync(ct);
+        }
+
+        public async Task<int> GetOutOfStockCountAsync(int? branchId = null, CancellationToken ct = default)
+        {
+            var query = _dbset.Where(s => s.Quantity <= 0);
+
+            if (branchId.HasValue)
+                query = query.Where(s => s.BranchId == branchId.Value);
+
+            return await query.CountAsync(ct);
+        }
         public async Task<Stock?> GetByProductVariantAndBranchAsync(int productId, int? productVariantId, int branchId, CancellationToken ct = default)
             => await _dbset.FirstOrDefaultAsync(s =>
                 s.ProductId == productId &&
@@ -69,5 +99,20 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(s => s.ProductVariant)
                     .ThenInclude(v => v!.AttributeValues)
                 .FirstOrDefaultAsync(s => s.Id == id, ct);
+        public async Task<IReadOnlyList<Stock>> GetLowStockAsync(int? branchId = null, CancellationToken ct = default)
+        {
+            var query = _dbset
+                .Include(s => s.Product)
+                .Include(s => s.Branch)
+                .Include(s => s.ProductVariant)
+                    .ThenInclude(v => v!.AttributeValues)
+                .Where(s => s.Quantity <= s.MinimumStockLevel);
+
+            if (branchId.HasValue)
+                query = query.Where(s => s.BranchId == branchId.Value);
+
+            return await query.ToListAsync(ct);
+        }
+
     }
 }

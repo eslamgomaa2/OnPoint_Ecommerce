@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Coupon;
 using Onpoint.Store.Application.Services.CouponServ;
@@ -7,6 +8,7 @@ namespace Onpoint.Store.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "SuperAdmin")]
     public class CouponController : ControllerBase
     {
         private readonly ICouponService _couponService;

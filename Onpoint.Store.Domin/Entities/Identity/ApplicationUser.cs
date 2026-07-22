@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Onpoint.Store.Domin.Entities

@@ -1,6 +1,5 @@
 ﻿using Onpoint.Store.Domin.Common;
 using Onpoint.Store.Domin.Entities.Sales;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 

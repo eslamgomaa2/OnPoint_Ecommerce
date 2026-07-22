@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Onpoint.Store.Domin.Entities;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Infrastructure.Data.Configurations
 {
@@ -36,6 +35,16 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                    .WithOne(av => av.Product)
                    .HasForeignKey(av => av.ProductId)
                    .OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne(p => p.Shipping)
+                    .WithOne(s => s.Product)
+                    .HasForeignKey<ProductShipping>(s => s.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            builder.Property(p => p.Cost).HasColumnType("decimal(18,2)");
+
+            builder.HasMany(p => p.Translations)
+                    .WithOne(t => t.Product)
+                    .HasForeignKey(t => t.ProductId)
+                     .OnDelete(DeleteBehavior.Cascade);
         }
     }
 
@@ -115,6 +124,49 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
 
             builder.HasIndex(s => new { s.ProductId, s.ProductVariantId, s.BranchId })
                    .IsUnique();
+        }
+
+    }
+    public class ProductShippingConfiguration : IEntityTypeConfiguration<ProductShipping>
+    {
+        public void Configure(EntityTypeBuilder<ProductShipping> builder)
+        {
+            builder.ToTable("ProductShippings");
+            builder.HasKey(x => x.Id);
+
+            builder.Property(x => x.WeightKg).HasColumnType("decimal(18,3)");
+            builder.Property(x => x.LengthCm).HasColumnType("decimal(18,2)");
+            builder.Property(x => x.WidthCm).HasColumnType("decimal(18,2)");
+            builder.Property(x => x.HeightCm).HasColumnType("decimal(18,2)");
+            builder.Property(x => x.ShippingClass).HasMaxLength(50);
+
+            builder.HasOne(x => x.Product)
+                .WithOne(p => p.Shipping)
+                .HasForeignKey<ProductShipping>(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+
+
+    }
+    public class ProductTranslationConfiguration : IEntityTypeConfiguration<ProductTranslation>
+    {
+        public void Configure(EntityTypeBuilder<ProductTranslation> builder)
+        {
+            builder.ToTable("ProductTranslations");
+            builder.HasKey(x => x.Id);
+
+            builder.Property(x => x.LanguageCode).HasMaxLength(10).IsRequired();
+            builder.Property(x => x.Name).HasMaxLength(200);
+            builder.Property(x => x.MetaTitle).HasMaxLength(200);
+            builder.Property(x => x.MetaDescription).HasMaxLength(500);
+
+            // Unique: ProductId + LanguageCode
+            builder.HasIndex(x => new { x.ProductId, x.LanguageCode }).IsUnique();
+
+            builder.HasOne(x => x.Product)
+                .WithMany(p => p.Translations)
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

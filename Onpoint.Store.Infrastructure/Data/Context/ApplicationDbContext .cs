@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Onpoint.Store.Domin.Common;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
-using Onpoint.Store.Domin.Entities.Sales.Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Infrastructure.Data.Configurations;
 using System.Reflection;
 namespace Onpoint.Store.Infrastructure.Data.Context
@@ -17,6 +16,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<Discount> Discounts { get; set; }
+        public DbSet<ProductShipping> ProductShippings { get; set; }
         public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
@@ -30,6 +30,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<EmailVerificationOtp> EmailVerificationOtps { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Stock> Stocks { get; set; }
+        public DbSet<ProductTranslation> ProductTranslations { get; set; }
         public DbSet<Branch> Branches { get; set; }
         public DbSet<PosSession> PosSessions { get; set; }
         public DbSet<PosSessionItem> PosSessionItems { get; set; }
@@ -61,6 +62,9 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new VariantAttributeValueConfiguration());
             builder.ApplyConfiguration(new ProductAttributeConfiguration());
             builder.ApplyConfiguration(new ProductAttributeValueConfiguration());
+            builder.ApplyConfiguration(new BrandConfiguration());
+            builder.ApplyConfiguration(new ProductShippingConfiguration());
+            builder.ApplyConfiguration(new ProductTranslationConfiguration());
 
 
             foreach (var entityType in builder.Model.GetEntityTypes())

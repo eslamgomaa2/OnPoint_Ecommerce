@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.PaymentTransaction;
 using Onpoint.Store.Application.Services.PaymentTransactionServ;
@@ -7,6 +8,7 @@ namespace Onpoint.Store.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "SuperAdmin,BranchManager")]
     public class PaymentTransactionsController : ControllerBase
     {
         private readonly IPaymentTransactionService _paymentService;
