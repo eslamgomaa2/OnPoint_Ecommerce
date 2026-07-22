@@ -3,7 +3,7 @@
     public class CreateCategoryDto
     {
         public string Name { get; set; } = string.Empty;
-        public int? ParentCategoryId { get; set; }
-        public int DisplayOrder { get; set; }
+        public string? Description { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }

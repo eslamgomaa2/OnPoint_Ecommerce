@@ -1,4 +1,5 @@
 ﻿using Onpoint.Store.Domin.Common;
+using Onpoint.Store.Domin.Entities.Identity;
 using Onpoint.Store.Domin.Enums;
 
 namespace Onpoint.Store.Domin.Entities.Sales
@@ -14,6 +15,10 @@ namespace Onpoint.Store.Domin.Entities.Sales
         public string? CouponCode { get; set; }
         public decimal DiscountAmount { get; set; }
         public virtual ICollection<PosSessionItem> Items { get; set; } = new List<PosSessionItem>();
+        public int? CustomerId { get; set; }
+        public virtual Customer? Customer { get; set; }
+        public decimal AmountReceived { get; set; }
+        public decimal Change { get; set; }
         public int? OrderId { get; set; }
         public virtual Order? Order { get; set; }
     }

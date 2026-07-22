@@ -9,7 +9,9 @@ namespace Onpoint.Store.Application.Mappings
         public CategoryMappingProfile()
         {
 
-            CreateMap<Category, CategoryDto>();
+            CreateMap<Category, CategoryDto>()
+            .ForMember(dest => dest.ProductsCount, opt => opt.MapFrom(src => src.Products.Count));
+
 
             CreateMap<CreateCategoryDto, Category>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())

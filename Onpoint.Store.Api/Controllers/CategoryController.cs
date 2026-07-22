@@ -48,9 +48,9 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpPut("[action]")]
-        public async Task<IActionResult> Update([FromBody] UpdateCategoryDto dto, CancellationToken ct = default)
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoryDto dto, CancellationToken ct = default)
         {
-            var result = await _categoryService.UpdateAsync(dto, ct);
+            var result = await _categoryService.UpdateAsync(id, dto, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 

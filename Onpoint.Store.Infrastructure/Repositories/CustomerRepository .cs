@@ -1,0 +1,67 @@
+﻿
+using Microsoft.EntityFrameworkCore;
+using Onpoint.Store.Domin.Entities.Identity;
+using Onpoint.Store.Domin.Repositories;
+using Onpoint.Store.Infrastructure.Data.Context;
+
+namespace Onpoint.Store.Infrastructure.Repositories
+{
+    public class CustomerRepository : GenericRepository<Customer, int>, ICustomerRepository
+    {
+        public CustomerRepository(ApplicationDbContext context) : base(context)
+        {
+        }
+
+        public async Task<(IReadOnlyList<Customer> Items, int TotalCount)> GetPagedAsync(int branchId, string? search, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default)
+        {
+            IQueryable<Customer> query = _dbset
+                .AsNoTracking()
+                .Include(c => c.Orders)
+                .Where(c => c.BranchId == branchId && !c.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                query = query.Where(c =>
+                    (c.FName != null && c.FName.ToLower().Contains(term)) ||
+                    (c.LName != null && c.LName.ToLower().Contains(term)) ||
+                    (c.Email != null && c.Email.ToLower().Contains(term)) ||
+                    (c.Phone != null && c.Phone.Contains(term)));
+            }
+
+            if (isActive.HasValue)
+                query = query.Where(c => c.IsActive == isActive.Value);
+
+            var totalCount = await query.CountAsync(ct);
+
+            var items = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, totalCount);
+        }
+
+        public async Task<Customer?> GetByIdWithOrdersAsync(int id, int branchId, CancellationToken ct = default)
+            => await _dbset
+                .AsNoTracking()
+                .Include(c => c.Orders)
+                .FirstOrDefaultAsync(c => c.Id == id && c.BranchId == branchId && !c.IsDeleted, ct);
+
+        public async Task<(int TotalCustomers, int Active, int NewThisMonth)> GetCustomerCountsAsync(
+            int branchId,
+            CancellationToken ct = default)
+        {
+            var now = DateTime.UtcNow;
+            var baseQuery = _dbset.AsNoTracking().Where(c => c.BranchId == branchId && !c.IsDeleted);
+
+            var totalCustomers = await baseQuery.CountAsync(ct);
+            var active = await baseQuery.CountAsync(c => c.IsActive, ct);
+            var newThisMonth = await baseQuery.CountAsync(
+                c => c.CreatedAt.Year == now.Year && c.CreatedAt.Month == now.Month, ct);
+
+            return (totalCustomers, active, newThisMonth);
+        }
+    }
+}

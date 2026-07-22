@@ -7,8 +7,7 @@ namespace Onpoint.Store.Application.Validators.Category
     {
         public UpdateCategoryDtoValidator()
         {
-            RuleFor(x => x.Id)
-                .GreaterThan(0).WithMessage("Valid Category ID is required.");
+
 
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Category Name is required.")

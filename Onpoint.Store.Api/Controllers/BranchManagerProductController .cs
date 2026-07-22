@@ -36,7 +36,6 @@ namespace Onpoint.Store.Api.Controllers
         public async Task<IActionResult> GetFilteredPaged(
             [FromQuery] PaginationRequest request,
             [FromQuery] int? categoryId = null,
-            [FromQuery] string? searchTerm = null,
             [FromQuery] LanguageCode? lang = null,
             CancellationToken ct = default)
         {
@@ -45,7 +44,7 @@ namespace Onpoint.Store.Api.Controllers
                 return Unauthorized(new { message = "BranchId not found in token" });
 
             var result = await _branchManagerProductService.GetFilteredPagedAsync(
-                branchId.Value, request, categoryId, searchTerm, lang, ct);
+                branchId.Value, request, categoryId, request.SearchTerm, lang, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 

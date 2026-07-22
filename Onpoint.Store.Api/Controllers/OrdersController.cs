@@ -10,7 +10,7 @@ namespace Onpoint.Store.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Customer")]
+    [Authorize]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -43,5 +43,11 @@ namespace Onpoint.Store.API.Controllers
             var result = await _orderService.UpdateOrderStatusAsync(id, dto);
             return StatusCode((int)result.HttpStatusCode, result);
         }
+
+
+
+
+
+
     }
 }

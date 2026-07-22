@@ -9,11 +9,13 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<Order> builder)
         {
-
             builder.Property(o => o.SubTotal).HasColumnType("decimal(18,3)");
             builder.Property(o => o.ShippingCost).HasColumnType("decimal(18,3)");
             builder.Property(o => o.DiscountAmount).HasColumnType("decimal(18,3)");
             builder.Property(o => o.TotalAmount).HasColumnType("decimal(18,3)");
+
+            builder.Property(o => o.Note)
+                   .HasMaxLength(1000);
 
             builder.HasMany(o => o.OrderItems)
                    .WithOne(i => i.Order)
@@ -29,10 +31,21 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                    .WithOne(i => i.Order)
                    .HasForeignKey<Invoice>(i => i.OrderId)
                    .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasMany(o => o.Transactions)
                   .WithOne(pt => pt.Order)
                   .HasForeignKey(pt => pt.OrderId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(o => o.Customer)
+                   .WithMany(c => c.Orders)
+                   .HasForeignKey(o => o.CustomerId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(o => o.Cashier)
+                   .WithMany()
+                   .HasForeignKey(o => o.CashierId)
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 

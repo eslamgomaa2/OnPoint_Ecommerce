@@ -1,14 +1,14 @@
 ﻿using AutoMapper;
 using BuildingBlocks.Results;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using Onpoint.Store.Application.DTOs.Category;
-using Onpoint.Store.Application.Helpers;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
+using System.Linq.Expressions;
 
 namespace Onpoint.Store.Application.Services.CategoryServ
 {
-
     public class CategoryService : ICategoryService
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -33,15 +33,34 @@ namespace Onpoint.Store.Application.Services.CategoryServ
 
         public async Task<ServiceResult<IReadOnlyList<CategoryDto>>> GetAllAsync(CancellationToken ct = default)
         {
-            var categories = await _unitOfWork.Categories.GetAllAsync(ct);
+            var categories = await _unitOfWork.Categories.GetAllAsync(
+                include: q => q.Include(c => c.Products),
+                ct: ct);
+
             return _resultHandler.Success(_mapper.Map<IReadOnlyList<CategoryDto>>(categories));
         }
 
         public async Task<ServiceResult<PagedResult<CategoryDto>>> GetPagedAsync(PaginationRequest request, CancellationToken ct = default)
         {
+            Expression<Func<Category, bool>>? predicate = null;
+
+            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+            {
+                var term = request.SearchTerm.Trim();
+                predicate = c => c.Name.Contains(term);
+            }
+
+            if (request.IsActive.HasValue)
+            {
+                Expression<Func<Category, bool>> statusPredicate = c => c.IsActive == request.IsActive.Value;
+                predicate = predicate is null ? statusPredicate : CombineAnd(predicate, statusPredicate);
+            }
+
             var (items, totalCount) = await _unitOfWork.Categories.GetPagedAsync(
                 request.PageNumber,
                 request.PageSize,
+                predicate: predicate,
+                include: q => q.Include(c => c.Products),
                 orderBy: q => q.OrderBy(c => c.Name),
                 ct: ct
             );
@@ -70,27 +89,21 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             if (!validationResult.IsValid)
                 throw new FluentValidation.ValidationException(validationResult.Errors);
 
-
             var category = _mapper.Map<Category>(dto);
-            category.Slug = SlugHelper.GenerateSlug(dto.Name);
-
 
             await _unitOfWork.Categories.AddAsync(category, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-
             return _resultHandler.Created(_mapper.Map<CategoryDto>(category));
         }
 
-        public async Task<ServiceResult<CategoryDto>> UpdateAsync(UpdateCategoryDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<CategoryDto>> UpdateAsync(int id, UpdateCategoryDto dto, CancellationToken ct = default)
         {
-
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
                 throw new FluentValidation.ValidationException(validationResult.Errors);
 
-
-            var existingCategory = await _unitOfWork.Categories.GetByIdAsync(dto.Id, ct);
+            var existingCategory = await _unitOfWork.Categories.GetByIdAsync(id, ct);
             if (existingCategory is null)
                 return _resultHandler.NotFound<CategoryDto>("Category not found to update");
 
@@ -109,7 +122,6 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             if (category is null)
                 return _resultHandler.NotFound<string>("Category not found to delete");
 
-
             category.IsDeleted = true;
             category.UpdatedAt = DateTime.UtcNow;
 
@@ -119,5 +131,15 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             return _resultHandler.Deleted<string>();
         }
 
+        private static Expression<Func<T, bool>> CombineAnd<T>(
+            Expression<Func<T, bool>> left,
+            Expression<Func<T, bool>> right)
+        {
+            var param = Expression.Parameter(typeof(T));
+            var body = Expression.AndAlso(
+                Expression.Invoke(left, param),
+                Expression.Invoke(right, param));
+            return Expression.Lambda<Func<T, bool>>(body, param);
+        }
     }
 }

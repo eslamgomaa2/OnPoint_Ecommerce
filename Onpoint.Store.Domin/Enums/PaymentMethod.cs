@@ -2,12 +2,12 @@
 {
     public enum PaymentMethod
     {
-        CashOnDelivery = 0,
-        Knet = 1,
-
-        CreditCard = 2,
-        BenefitPay = 3,
-        ApplePay = 4,
-        Cash = 5
+        Cash = 0,
+        Visa = 1,
+        MasterCard = 2,
+        Wallet = 3,
+        CreditCard = 4,
+        DebitCard = 5,
+        GiftCard = 6
     }
 }

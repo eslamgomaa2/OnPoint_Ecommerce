@@ -1,121 +1,203 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Pos;
 using Onpoint.Store.Application.DTOs.PosSession;
 using Onpoint.Store.Application.Services.PosServ;
 using System.Security.Claims;
 
-namespace Onpoint.Store.Api.Controllers
+namespace Onpoint.Store.API.Controllers
 {
     [ApiController]
-    [Route("api/pos")]
-    [Authorize(Roles = "Cashier,BranchManager,SuperAdmin")]
-    public class PosSeasionController : ControllerBase
+    [Route("api/[controller]")]
+    [Authorize(Roles = "Cashier,Admin,Manager")]
+    public class PosSessionController : ControllerBase
     {
         private readonly IPosSessionService _posSessionService;
 
-        public PosSeasionController(IPosSessionService posSessionService)
+        public PosSessionController(IPosSessionService posSessionService)
         {
             _posSessionService = posSessionService;
         }
 
-        private int GetUserId()
+
+        private (int UserId, int? BranchId) GetUserAndBranchId()
         {
-            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
-            if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out var userId))
+            var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            var branchClaim = User.FindFirstValue("BranchId");
+
+            if (string.IsNullOrEmpty(userClaim) || !int.TryParse(userClaim, out var userId))
                 throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
-            return userId;
+
+            int? branchId = int.TryParse(branchClaim, out var bId) ? bId : null;
+
+            return (userId, branchId);
         }
-        [HttpPost("scan-item")]
-        public async Task<IActionResult> ScanItem([FromBody] ScanPosItemDto dto, CancellationToken ct)
+
+        // ==================== SESSION MANAGEMENT ====================
+
+        [HttpPost("create")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> CreateSession()
         {
-            var result = await _posSessionService.ScanAndAddItemAsync(dto, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-        [HttpPost("sessions")]
-        public async Task<IActionResult> CreateSession()
-        {
-            var cashierId = GetUserId();
-            var result = await _posSessionService.CreateSessionAsync(cashierId);
+            var (userId, branchId) = GetUserAndBranchId();
+
+            if (!branchId.HasValue)
+                return BadRequest(new ServiceResult<PosSessionDto>
+                {
+
+                    Message = "Cashier is not assigned to a branch."
+                });
+
+            var result = await _posSessionService.CreateSessionAsync(userId, branchId.Value);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpGet("sessions/active")]
-        public async Task<IActionResult> GetActiveSession()
-        {
-            var cashierId = GetUserId();
-            var result = await _posSessionService.GetActiveSessionForCashierAsync(cashierId);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
 
-        [HttpGet("sessions/{sessionId}")]
-        public async Task<IActionResult> GetSession(int sessionId)
+        [HttpGet("{sessionId}")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> GetSession(int sessionId)
         {
             var result = await _posSessionService.GetSessionAsync(sessionId);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpPost("sessions/{sessionId}/items")]
-        public async Task<IActionResult> AddItem(int sessionId, [FromBody] AddPosSessionItemDto dto)
+
+        [HttpGet("active")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> GetActiveSession()
         {
-            var result = await _posSessionService.AddItemAsync(sessionId, dto.ProductId, dto.ProductVariantId, dto.Quantity);
+            var (userId, _) = GetUserAndBranchId();
+            var result = await _posSessionService.GetActiveSessionForCashierAsync(userId);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpDelete("sessions/{sessionId}/items/{itemId}")]
-        public async Task<IActionResult> RemoveItem(int sessionId, int itemId)
-        {
-            var result = await _posSessionService.RemoveItemAsync(sessionId, itemId);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
 
-        [HttpPut("sessions/{sessionId}/items/{itemId}")]
-        public async Task<IActionResult> UpdateItemQuantity(int sessionId, int itemId, [FromBody] UpdatePosSessionItemDto dto)
-        {
-            var result = await _posSessionService.UpdateItemQuantityAsync(sessionId, itemId, dto.Quantity);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-
-        [HttpPost("sessions/{sessionId}/apply-coupon")]
-        public async Task<IActionResult> ApplyCoupon(int sessionId, [FromBody] string couponCode)
-        {
-            var result = await _posSessionService.ApplyCouponAsync(sessionId, couponCode);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-
-        [HttpPost("sessions/{sessionId}/remove-coupon")]
-        public async Task<IActionResult> RemoveCoupon(int sessionId)
-        {
-            var result = await _posSessionService.RemoveCouponAsync(sessionId);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-
-        [HttpPost("sessions/{sessionId}/complete")]
-        public async Task<IActionResult> CompleteSession(int sessionId, [FromBody] CompletePosSessionDto dto)
-        {
-            var result = await _posSessionService.CompleteSessionAsync(sessionId, dto.PaymentMethod, dto.CustomerPhone);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-
-        [HttpPost("sessions/{sessionId}/hold")]
-        public async Task<IActionResult> HoldSession(int sessionId)
+        [HttpPost("{sessionId}/hold")]
+        public async Task<ActionResult<ServiceResult<bool>>> HoldSession(int sessionId)
         {
             var result = await _posSessionService.HoldSessionAsync(sessionId);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpPost("sessions/{sessionId}/resume")]
-        public async Task<IActionResult> ResumeSession(int sessionId)
+
+        [HttpPost("{sessionId}/resume")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> ResumeSession(int sessionId)
         {
-            var cashierId = GetUserId();
-            var result = await _posSessionService.ResumeSessionAsync(sessionId, cashierId);
+            var (userId, _) = GetUserAndBranchId();
+            var result = await _posSessionService.ResumeSessionAsync(sessionId, userId);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpPost("sessions/{sessionId}/cancel")]
-        public async Task<IActionResult> CancelSession(int sessionId)
+
+        [HttpPost("{sessionId}/cancel")]
+        public async Task<ActionResult<ServiceResult<bool>>> CancelSession(int sessionId)
         {
             var result = await _posSessionService.CancelSessionAsync(sessionId);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpPost("{sessionId}/clear")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> ClearSession(int sessionId)
+        {
+            var result = await _posSessionService.ClearSessionAsync(sessionId);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+        // ==================== ITEM MANAGEMENT ====================
+
+
+        [HttpPost("scan")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> ScanItem([FromBody] ScanPosItemDto dto)
+        {
+            var result = await _posSessionService.ScanAndAddItemAsync(dto);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpPost("{sessionId}/items")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AddItem(
+          [FromQuery] int sessionId,
+            [FromQuery] int productId,
+            [FromQuery] int? productVariantId,
+            [FromQuery] int quantity = 1)
+        {
+            var result = await _posSessionService.AddItemAsync(sessionId, productId, productVariantId, quantity);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+        [HttpDelete("{sessionId}/items/{itemId}")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> RemoveItem(int sessionId, int itemId)
+        {
+            var result = await _posSessionService.RemoveItemAsync(sessionId, itemId);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpPut("{sessionId}/items/{itemId}/quantity")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> UpdateItemQuantity(
+            int sessionId,
+            int itemId,
+            [FromBody] UpdatePosSessionItemDto dto)
+        {
+            var result = await _posSessionService.UpdateItemQuantityAsync(sessionId, itemId, dto.Quantity);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+        // ==================== CUSTOMER MANAGEMENT ====================
+
+
+        [HttpPost("{sessionId}/customer/{customerId}")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AssignCustomer(int sessionId, int customerId)
+        {
+            var result = await _posSessionService.AssignCustomerToSessionAsync(sessionId, customerId);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpPost("{sessionId}/customer-phone")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AssignCustomerPhone(
+            int sessionId,
+            [FromBody] string phone)
+        {
+            var result = await _posSessionService.AssignCustomerPhoneAsync(sessionId, phone);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        // ==================== COUPON MANAGEMENT ====================
+
+
+        [HttpPost("{sessionId}/coupon")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> ApplyCoupon(
+            int sessionId,
+            [FromBody] string couponCode)
+        {
+            var result = await _posSessionService.ApplyCouponAsync(sessionId, couponCode);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpDelete("{sessionId}/coupon")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> RemoveCoupon(int sessionId)
+        {
+            var result = await _posSessionService.RemoveCouponAsync(sessionId);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+        // ==================== PAYMENT & COMPLETION ====================
+
+
+        [HttpGet("{sessionId}/receipt-preview")]
+        public async Task<ActionResult<ServiceResult<ReceiptPreviewDto>>> PreviewReceipt(int sessionId)
+        {
+            var result = await _posSessionService.PreviewReceiptAsync(sessionId);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
+
+
+        [HttpPost("{sessionId}/complete")]
+        public async Task<IActionResult> CompleteSession(int sessionId, [FromBody] CompletePosSessionDto dto)
+        {
+            var result = await _posSessionService.CompleteSessionAsync(sessionId, dto);
             return StatusCode((int)result.HttpStatusCode, result);
         }
     }

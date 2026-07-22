@@ -1,4 +1,5 @@
 ﻿using Onpoint.Store.Domin.Common;
+using Onpoint.Store.Domin.Entities.Identity;
 
 
 namespace Onpoint.Store.Domin.Entities
@@ -14,6 +15,8 @@ namespace Onpoint.Store.Domin.Entities
 
         public ICollection<ApplicationUser> Cashiers { get; set; } = new List<ApplicationUser>();
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+        public ICollection<Customer> Customers { get; set; } = new List<Customer>();
+
     }
 }
 

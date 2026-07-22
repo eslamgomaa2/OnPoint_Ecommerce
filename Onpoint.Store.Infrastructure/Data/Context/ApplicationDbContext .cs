@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Onpoint.Store.Domin.Common;
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities.Identity;
 using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Infrastructure.Data.Configurations;
 using System.Reflection;
@@ -34,6 +35,8 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<Branch> Branches { get; set; }
         public DbSet<PosSession> PosSessions { get; set; }
         public DbSet<PosSessionItem> PosSessionItems { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -65,6 +68,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new BrandConfiguration());
             builder.ApplyConfiguration(new ProductShippingConfiguration());
             builder.ApplyConfiguration(new ProductTranslationConfiguration());
+            builder.ApplyConfiguration(new CustomerConfiguration());
 
 
             foreach (var entityType in builder.Model.GetEntityTypes())
