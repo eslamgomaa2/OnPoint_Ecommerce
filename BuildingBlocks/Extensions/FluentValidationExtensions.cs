@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+
 namespace BuildingBlocks.Extensions
 {
     public static class FluentValidationExtensions
@@ -40,7 +41,7 @@ namespace BuildingBlocks.Extensions
                         Succeeded = false,
                         Message = "Data validation failed.",
                         Data = validationModel,
-                        HttpStatusCode = System.Net.HttpStatusCode.UnprocessableEntity
+                        HttpStatusCode = (int)System.Net.HttpStatusCode.UnprocessableEntity
                     };
 
                     return new UnprocessableEntityObjectResult(response);

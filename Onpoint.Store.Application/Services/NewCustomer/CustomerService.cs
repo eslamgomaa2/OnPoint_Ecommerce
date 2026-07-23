@@ -1,5 +1,4 @@
-﻿
-using AutoMapper;
+﻿using AutoMapper;
 using BuildingBlocks.Results;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -32,19 +31,18 @@ namespace Onpoint.Store.Application.Services.Customer
             _resultHandler = resultHandler;
         }
 
-        public async Task<ServiceResult<PagedResult<CustomerListItemDto>>> GetAllAsync(int branchId, string? search, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default)
+        public async Task<ServiceResult<PagedResult<CustomerListItemDto>>> GetAllAsync(
+            int branchId,
+            string? search,
+            bool? isActive,
+            int pageNumber,
+            int pageSize,
+            CancellationToken ct = default)
         {
             var (items, totalCount) = await _unitOfWork.Customers.GetPagedAsync(branchId, search, isActive, pageNumber, pageSize, ct);
 
-            var dtos = _mapper.Map<IEnumerable<CustomerListItemDto>>(items);
-
-            var result = new PagedResult<CustomerListItemDto>
-            {
-                Items = dtos.ToList(),
-                TotalCount = totalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
+            var dtos = _mapper.Map<IReadOnlyList<CustomerListItemDto>>(items);
+            var result = PagedResult<CustomerListItemDto>.Create(dtos, totalCount, pageNumber, pageSize);
 
             return _resultHandler.Success(result);
         }
@@ -55,8 +53,7 @@ namespace Onpoint.Store.Application.Services.Customer
             if (customer is null)
                 return _resultHandler.NotFound<CustomerDetailsDto>("Customer not found.");
 
-            var dto = _mapper.Map<CustomerDetailsDto>(customer);
-            return _resultHandler.Success(dto);
+            return _resultHandler.Success(_mapper.Map<CustomerDetailsDto>(customer));
         }
 
         public async Task<ServiceResult<CustomerStatsDto>> GetStatsAsync(int branchId, CancellationToken ct = default)
@@ -80,10 +77,7 @@ namespace Onpoint.Store.Application.Services.Customer
 
         public async Task<ServiceResult<CustomerDetailsDto>> CreateAsync(CreateCustomerDto dto, int branchId, CancellationToken ct = default)
         {
-            var validationResult = await _createValidator.ValidateAsync(dto, ct);
-            if (!validationResult.IsValid)
-                return _resultHandler.BadRequest<CustomerDetailsDto>(
-                    string.Join(" | ", validationResult.Errors.Select(e => e.ErrorMessage)));
+            await _createValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
             var customer = _mapper.Map<CustomerEntity>(dto);
             customer.BranchId = branchId;
@@ -97,29 +91,20 @@ namespace Onpoint.Store.Application.Services.Customer
 
         public async Task<ServiceResult<CustomerDetailsDto>> UpdateAsync(int id, UpdateCustomerDto dto, int branchId, CancellationToken ct = default)
         {
-            var validationResult = await _updateValidator.ValidateAsync(dto, ct);
-            if (!validationResult.IsValid)
-                return _resultHandler.BadRequest<CustomerDetailsDto>(
-                    string.Join(" | ", validationResult.Errors.Select(e => e.ErrorMessage)));
+            await _updateValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
             var customer = await _unitOfWork.Customers.GetByIdAsync(id, ct);
             if (customer is null || customer.BranchId != branchId || customer.IsDeleted)
                 return _resultHandler.NotFound<CustomerDetailsDto>("Customer not found.");
 
-            customer.FName = dto.FName;
-            customer.LName = dto.LName;
-            customer.Phone = dto.Phone;
-            customer.Email = dto.Email;
-            customer.Address = dto.Address;
-            customer.IsActive = dto.IsActive;
+            _mapper.Map(dto, customer);
             customer.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.Customers.Update(customer);
             await _unitOfWork.SaveChangesAsync(ct);
 
             var updated = await _unitOfWork.Customers.GetByIdWithOrdersAsync(id, branchId, ct);
-            var result = _mapper.Map<CustomerDetailsDto>(updated);
-            return _resultHandler.Success(result);
+            return _resultHandler.Success(_mapper.Map<CustomerDetailsDto>(updated));
         }
 
         public async Task<ServiceResult<bool>> DeleteAsync(int id, int branchId, CancellationToken ct = default)

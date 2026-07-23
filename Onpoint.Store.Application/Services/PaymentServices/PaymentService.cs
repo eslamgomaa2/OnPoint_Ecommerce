@@ -13,14 +13,11 @@ using System.Data;
 
 namespace Onpoint.Store.Application.Services.PaymentServices
 {
-
-
     public class PaymentService : IPaymentService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IOrderService orderService;
-
 
         private readonly ServiceResultHandler _resultHandler;
         private readonly IMyFatoorahClient _myFatoorahClient;
@@ -49,7 +46,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
                 return _resultHandler.NotFound<List<PaymentMethodDto>>("Order not found.");
 
             var methods = await _myFatoorahClient.InitiatePaymentAsync(order.TotalAmount, "KWD", ct);
-            return _resultHandler.Success(methods);
+            return _resultHandler.Success<List<PaymentMethodDto>>(methods);
         }
 
         public async Task<ServiceResult<ExecutePaymentResultDto>> PayViaHostedAsync(int userId, PayViaHostedDto dto, CancellationToken ct = default)
@@ -77,7 +74,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
 
             await SaveOrUpdatePendingTransactionAsync(order.Id, "MyFatoorah", result.InvoiceId, order.TotalAmount, ct);
 
-            return _resultHandler.Success(result);
+            return _resultHandler.Success<ExecutePaymentResultDto>(result);
         }
 
         public async Task<ServiceResult<ExecutePaymentResultDto>> PayViaEmbeddedAsync(int userId, PayViaEmbeddedDto dto, CancellationToken ct = default)
@@ -105,9 +102,8 @@ namespace Onpoint.Store.Application.Services.PaymentServices
 
             await SaveOrUpdatePendingTransactionAsync(order.Id, "MyFatoorah", result.InvoiceId, order.TotalAmount, ct);
 
-            return _resultHandler.Success(result);
+            return _resultHandler.Success<ExecutePaymentResultDto>(result);
         }
-
 
         public async Task HandleWebhookNotificationAsync(string invoiceIdOrPaymentId, CancellationToken ct = default)
         {
@@ -121,12 +117,14 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             if (order == null)
                 return _resultHandler.NotFound<PaymentStatusDto>("Order not found for this invoice.");
 
-            return _resultHandler.Success(new PaymentStatusDto
+            var dto = new PaymentStatusDto
             {
                 OrderId = order.Id,
                 Status = finalStatus,
                 Message = message
-            });
+            };
+
+            return _resultHandler.Success<PaymentStatusDto>(dto);
         }
 
         private async Task<(Order? Order, string Status, string Message)> ProcessPaymentConfirmationAsync(string invoiceId, CancellationToken ct)
@@ -208,7 +206,6 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             }
         }
 
-
         private async Task<Order?> ValidateOrderForPaymentAsync(int userId, int orderId, CancellationToken ct)
         {
             var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId, ct);
@@ -245,4 +242,3 @@ namespace Onpoint.Store.Application.Services.PaymentServices
         }
     }
 }
-

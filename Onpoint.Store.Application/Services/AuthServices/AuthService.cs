@@ -33,8 +33,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
 
-
-
         public AuthService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
@@ -102,9 +100,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
             await _userManager.AddToRoleAsync(user, "Customer");
 
-
             await GenerateVerificationLinkAndSendEmailAsync(user, "Onpoint Store - Verify Your Email");
-
 
             return _resultHandler.Success<string>("Registration successful. Please check your email to verify your account.");
         }
@@ -118,7 +114,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
             if (user == null)
                 return _resultHandler.Unauthorized<AuthResponseDto>();
 
-
             if (await _userManager.IsLockedOutAsync(user))
             {
                 var message = user.LockoutEscalationLevel >= 1
@@ -127,10 +122,12 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
                 return _resultHandler.BadRequest<AuthResponseDto>(message);
             }
+
             if (!user.EmailConfirmed)
             {
                 return _resultHandler.BadRequest<AuthResponseDto>("You Must Verify your Account");
             }
+
             var passwordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
             if (!passwordValid)
             {
@@ -142,7 +139,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
                     if (user.LockoutEscalationLevel == 0)
                     {
-
                         lockoutDuration = TimeSpan.FromHours(1);
                         user.LockoutEscalationLevel = 1;
                     }
@@ -187,24 +183,20 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 Role = primaryRole
             });
         }
+
         public async Task<ServiceResult<string>> ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken ct = default)
         {
-
             var validation = await _confirmEmailValidator.ValidateAsync(dto, ct);
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
 
-
             var user = await _userManager.FindByEmailAsync(dto.Email);
             if (user == null)
-                throw new KeyNotFoundException("User not found.");
-
+                return _resultHandler.NotFound<string>("User not found.");
 
             if (user.EmailConfirmed)
                 return _resultHandler.BadRequest<string>("Email is already confirmed.");
 
-
             var decodedToken = WebUtility.UrlDecode(dto.Token);
-
 
             var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
 
@@ -214,13 +206,13 @@ namespace Onpoint.Store.Application.Services.AuthServices
             }
 
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            throw new ValidationException(errors);
+            return _resultHandler.BadRequest<string>(errors);
         }
-        public async Task<ServiceResult<string>> ResendOtpAsync(ResendOtpDto dto, CancellationToken ct)
+
+        public async Task<ServiceResult<string>> ResendOtpAsync(ResendOtpDto dto, CancellationToken ct = default)
         {
             var validation = await _resendotpvalidator.ValidateAsync(dto, ct);
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
-
 
             var email = dto.Email.Trim().ToLowerInvariant();
             var user = await _userManager.FindByEmailAsync(email);
@@ -230,15 +222,14 @@ namespace Onpoint.Store.Application.Services.AuthServices
             if (user is null)
             {
                 _logger.LogWarning("Resend OTP attempt for unregistered email: {Email}", email);
-                return _resultHandler.Success(genericMessage);
+                return _resultHandler.Success<string>(genericMessage);
             }
 
             if (!user.EmailConfirmed)
-                return _resultHandler.Success(genericMessage);
+                return _resultHandler.Success<string>(genericMessage);
 
             if (!user.IsActive)
                 return _resultHandler.BadRequest<string>("This account is inactive. Please contact support.");
-
 
             bool isEmailSent = await GenerateOtpAndSendEmailAsync(user, "Forget Password");
 
@@ -246,10 +237,10 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.BadRequest<string>("An error occurred while sending the email. Please try again later.");
 
             _logger.LogInformation("otp code resent to user {UserId}", user.Id);
-            return _resultHandler.Success("A new otp code has been sent to your email.");
+            return _resultHandler.Success<string>("A new otp code has been sent to your email.");
         }
 
-        public async Task<ServiceResult<string>> ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken ct)
+        public async Task<ServiceResult<string>> ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken ct = default)
         {
             var validation = await _forgetpasswordvalidator.ValidateAsync(dto, ct);
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
@@ -257,18 +248,16 @@ namespace Onpoint.Store.Application.Services.AuthServices
             var email = dto.Email.Trim().ToLowerInvariant();
             var user = await _userManager.FindByEmailAsync(email);
 
-
             const string genericMessage = "If the email is registered and active, a password reset code will be sent shortly.";
 
             if (user is null)
             {
                 _logger.LogWarning("Forgot password attempt for unregistered email: {Email}", email);
-                return _resultHandler.Success(genericMessage);
+                return _resultHandler.Success<string>(genericMessage);
             }
 
             if (!user.EmailConfirmed || !user.IsActive)
-                return _resultHandler.Success(genericMessage);
-
+                return _resultHandler.Success<string>(genericMessage);
 
             bool isEmailSent = await GenerateOtpAndSendEmailAsync(user, "Password Reset");
 
@@ -276,11 +265,10 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.BadRequest<string>("An error occurred while sending the email. Please try again later.");
 
             _logger.LogInformation("Password reset code sent to user {UserId}", user.Id);
-            return _resultHandler.Success(genericMessage);
+            return _resultHandler.Success<string>(genericMessage);
         }
 
-
-        public async Task<ServiceResult<PasswordResetTokenResponseDto>> VerifyResetCodeAsync(VerifyResetCodeDto dto, CancellationToken ct)
+        public async Task<ServiceResult<PasswordResetTokenResponseDto>> VerifyResetCodeAsync(VerifyResetCodeDto dto, CancellationToken ct = default)
         {
             var validation = await _verifyresetcodevalidator.ValidateAsync(dto, ct);
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
@@ -300,7 +288,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.BadRequest<PasswordResetTokenResponseDto>("Invalid email, incorrect code, or code has expired.");
             }
 
-
             string resetToken;
             try
             {
@@ -308,10 +295,8 @@ namespace Onpoint.Store.Application.Services.AuthServices
             }
             catch (Exception ex)
             {
-                var fullMessage = $"{ex.GetType().FullName}: {ex.Message}";
-                if (ex.InnerException != null)
-                    fullMessage += $" | INNER: {ex.InnerException.Message}";
-                return _resultHandler.BadRequest<PasswordResetTokenResponseDto>(fullMessage);
+                _logger.LogError(ex, "An error occurred while generating password reset token for user {UserId}", user.Id);
+                return _resultHandler.BadRequest<PasswordResetTokenResponseDto>("An error occurred while generating the password reset token. Please try again.");
             }
 
             var response = new PasswordResetTokenResponseDto
@@ -323,7 +308,8 @@ namespace Onpoint.Store.Application.Services.AuthServices
             _logger.LogInformation("Password reset token issued for user {UserId}", user.Id);
             return _resultHandler.Success(response);
         }
-        public async Task<ServiceResult<string>> ResetPasswordAsync(ResetPasswordDto dto, CancellationToken ct)
+
+        public async Task<ServiceResult<string>> ResetPasswordAsync(ResetPasswordDto dto, CancellationToken ct = default)
         {
             var validation = await _resetpasswordvalidator.ValidateAsync(dto, ct);
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
@@ -332,11 +318,10 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
             var user = await _userManager.Users
                   .Include(u => u.RefreshTokens)
-                  .FirstOrDefaultAsync(u => u.Email == email);
+                  .FirstOrDefaultAsync(u => u.Email == email, ct);
 
             if (user is null || !user.IsActive || !user.EmailConfirmed)
                 return _resultHandler.BadRequest<string>("Invalid reset data.");
-
 
             var resetResult = await _userManager.ResetPasswordAsync(user, dto.ResetToken, dto.NewPassword);
 
@@ -355,7 +340,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
             await _userManager.UpdateSecurityStampAsync(user);
             await _userManager.UpdateAsync(user);
 
-
             try
             {
                 var body = $@"
@@ -369,14 +353,13 @@ namespace Onpoint.Store.Application.Services.AuthServices
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send password change notification to {Email}", user.Email);
-
             }
 
             _logger.LogInformation("Password reset successfully for user {UserId}", user.Id);
-            return _resultHandler.Success("Password has been changed successfully. Please login with your new password.");
+            return _resultHandler.Success<string>("Password has been changed successfully. Please login with your new password.");
         }
 
-        public async Task<ServiceResult<bool>> DeleteMyAccountAsync(int userId)
+        public async Task<ServiceResult<bool>> DeleteMyAccountAsync(int userId, CancellationToken ct = default)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user is null) return _resultHandler.NotFound<bool>("User not found");
@@ -398,33 +381,27 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
             string plainOtp = otpResult.Data!;
 
-
             var body = BuildEmailBody(user.FirstName, plainOtp, EmailTemplateType.OtpVerification);
 
             var res = await ExecuteEmailSendingAsync(user.Email!, subject, body, "otp");
             return res;
         }
 
-
         private async Task<bool> GenerateVerificationLinkAndSendEmailAsync(ApplicationUser user, string subject)
         {
-
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-
-            var encodedToken = WebUtility.UrlEncode(token);
-
+            var encodedToken = WebUtility.UrlDecode(token);
 
             var frontendUrl = _configuration["Frontend:BaseUrl"];
             var verificationLink = $"{frontendUrl}/verify-email?token={encodedToken}";
 
-
             var body = BuildEmailBody(user.FirstName, verificationLink, EmailTemplateType.EmailVerificationLink);
-
 
             var res = await ExecuteEmailSendingAsync(user.Email, subject, body, "verification");
             return res;
         }
+
         private async Task<bool> ExecuteEmailSendingAsync(string? email, string subject, string body, string logType)
         {
             try
@@ -471,6 +448,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 _ => throw new ArgumentOutOfRangeException(nameof(templateType), $"Unexpected template type: {templateType}")
             };
         }
+
         private async Task EnsureRoleExistsAsync(string roleName)
         {
             if (!await _roleManager.RoleExistsAsync(roleName))

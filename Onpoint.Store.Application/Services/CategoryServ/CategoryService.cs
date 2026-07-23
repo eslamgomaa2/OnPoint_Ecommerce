@@ -85,9 +85,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
 
         public async Task<ServiceResult<CategoryDto>> CreateAsync(CreateCategoryDto dto, CancellationToken ct = default)
         {
-            var validationResult = await _createValidator.ValidateAsync(dto, ct);
-            if (!validationResult.IsValid)
-                throw new FluentValidation.ValidationException(validationResult.Errors);
+            await _createValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
             var category = _mapper.Map<Category>(dto);
 
@@ -99,9 +97,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
 
         public async Task<ServiceResult<CategoryDto>> UpdateAsync(int id, UpdateCategoryDto dto, CancellationToken ct = default)
         {
-            var validationResult = await _updateValidator.ValidateAsync(dto, ct);
-            if (!validationResult.IsValid)
-                throw new FluentValidation.ValidationException(validationResult.Errors);
+            await _updateValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
             var existingCategory = await _unitOfWork.Categories.GetByIdAsync(id, ct);
             if (existingCategory is null)
@@ -139,6 +135,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             var body = Expression.AndAlso(
                 Expression.Invoke(left, param),
                 Expression.Invoke(right, param));
+
             return Expression.Lambda<Func<T, bool>>(body, param);
         }
     }

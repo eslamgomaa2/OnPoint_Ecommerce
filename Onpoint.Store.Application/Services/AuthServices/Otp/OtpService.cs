@@ -29,7 +29,6 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
                 old.IsUsed = true;
             }
 
-
             var code = GenerateNumericCode.Generate(OtpLength);
 
             var otp = new EmailVerificationOtp
@@ -45,13 +44,11 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
             await _unitOfWork.EmailVerificationOtpRepo.AddAsync(otp);
             await _unitOfWork.SaveChangesAsync();
 
-
-            return _resultHandler.Success(code);
+            return _resultHandler.Success<string>(code);
         }
 
         public async Task<ServiceResult<bool>> VerifyOtpAsync(int userId, string code)
         {
-
             var otp = await _unitOfWork.EmailVerificationOtpRepo.GetLastUnusedOtpAsync(userId);
 
             if (otp is null)
@@ -59,12 +56,10 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
                 return _resultHandler.NotFound<bool>("No valid verification code found. Please request a new one.");
             }
 
-
             if (otp.ExpiresAt < DateTime.UtcNow)
             {
                 return _resultHandler.BadRequest<bool>("Verification code has expired. Please request a new one.");
             }
-
 
             if (otp.AttemptCount >= MaxAttempts)
             {
@@ -73,14 +68,12 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
                 return _resultHandler.BadRequest<bool>("Maximum number of attempts exceeded. Please request a new code.");
             }
 
-
             if (!string.Equals(otp.OtpCodeHash, HashingHelper.Hash(code.Trim()), StringComparison.Ordinal))
             {
                 otp.AttemptCount++;
                 await _unitOfWork.SaveChangesAsync();
                 return _resultHandler.BadRequest<bool>("Invalid verification code.");
             }
-
 
             otp.IsUsed = true;
             await _unitOfWork.SaveChangesAsync();
@@ -95,7 +88,6 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
             if (lastOtp is null)
                 return _resultHandler.Success<bool>(true);
 
-
             if (DateTime.UtcNow - lastOtp.CreatedAt < ResendCooldown)
             {
                 return _resultHandler.BadRequest<bool>("Please wait before requesting a new code.");
@@ -103,10 +95,5 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
 
             return _resultHandler.Success<bool>(true);
         }
-
-
-
-
-
     }
 }

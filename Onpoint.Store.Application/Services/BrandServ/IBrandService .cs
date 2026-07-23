@@ -6,13 +6,14 @@ namespace Onpoint.Store.Application.Services.Brand
 {
     public interface IBrandService
     {
-        Task<ServiceResult<IEnumerable<ProductDto>>> GetProductsByBrandIdAsync(int brandId);
-        Task<ServiceResult<IEnumerable<BrandDto>>> GetAllAsync();
-        Task<ServiceResult<BrandDto>> GetByIdAsync(int id);
-        Task<ServiceResult<(IReadOnlyList<BrandDto> Items, int TotalCount)>> GetFilteredPagedAsync(string? searchTerm, bool? isActive, int pageNumber, int pageSize);
-        Task<ServiceResult<BrandDto>> CreateAsync(CreateBrandDto dto);
-        Task<ServiceResult<BrandDto>> UpdateAsync(int id, UpdateBrandDto dto);
-        Task<ServiceResult<bool>> ToggleActiveAsync(int id);
-        Task<ServiceResult<bool>> DeleteAsync(int id);
+        Task<ServiceResult<IEnumerable<ProductDto>>> GetProductsByBrandIdAsync(int brandId, CancellationToken ct = default);
+        Task<ServiceResult<IEnumerable<BrandDto>>> GetAllAsync(CancellationToken ct = default);
+        Task<ServiceResult<BrandDto>> GetByIdAsync(int id, CancellationToken ct = default);
+        Task<ServiceResult<(IReadOnlyList<BrandDto> Items, int TotalCount)>> GetFilteredPagedAsync(
+            string? searchTerm, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default);
+        Task<ServiceResult<BrandDto>> CreateAsync(CreateBrandDto dto, CancellationToken ct = default);
+        Task<ServiceResult<BrandDto>> UpdateAsync(int id, UpdateBrandDto dto, CancellationToken ct = default);
+        Task<ServiceResult<bool>> ToggleActiveAsync(int id, CancellationToken ct = default);
+        Task<ServiceResult<bool>> DeleteAsync(int id, CancellationToken ct = default);
     }
 }

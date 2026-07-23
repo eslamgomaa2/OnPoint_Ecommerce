@@ -1,5 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Auth;
 using Onpoint.Store.Application.Services.AuthServices;
 using Onpoint.Store.Application.Services.AuthServices.ExternalAuthService;
@@ -23,18 +22,20 @@ namespace Onpoint.Store.API.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterDto dto, CancellationToken ct = default)
         {
             var result = await _authService.RegisterAsync(dto, ct);
-            return result.Succeeded ? Ok(result) : BadRequest(result);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
+
         [HttpPost("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto, CancellationToken ct = default)
         {
-            var result = await _authService.ConfirmEmailAsync(dto);
-            return result.Succeeded ? Ok(result) : BadRequest(result);
+            var result = await _authService.ConfirmEmailAsync(dto, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
+
         [HttpPost("external-login")]
-        public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto dto)
+        public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto dto, CancellationToken ct = default)
         {
-            var result = await _externalAuthService.ExternalLoginAsync(dto);
+            var result = await _externalAuthService.ExternalLoginAsync(dto, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
@@ -42,39 +43,35 @@ namespace Onpoint.Store.API.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto dto, CancellationToken ct = default)
         {
             var result = await _authService.LoginAsync(dto, ct);
-            return result.Succeeded ? Ok(result) : BadRequest(result);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
-
 
         [HttpPost("resend-otp")]
         public async Task<IActionResult> ResendOtp([FromBody] ResendOtpDto dto, CancellationToken ct = default)
         {
             var result = await _authService.ResendOtpAsync(dto, ct);
-            return result.Succeeded ? Ok(result) : BadRequest(result);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
-
 
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto, CancellationToken ct = default)
         {
-            var result = await _authService.ForgotPasswordAsync(dto);
-            return result.Succeeded ? Ok(result) : BadRequest(result);
+            var result = await _authService.ForgotPasswordAsync(dto, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
-
 
         [HttpPost("verify-reset-code")]
-        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeDto dto)
+        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeDto dto, CancellationToken ct = default)
         {
-            var result = await _authService.VerifyResetCodeAsync(dto);
-            return result.Succeeded ? Ok(result) : BadRequest(result);
+            var result = await _authService.VerifyResetCodeAsync(dto, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
 
-
         [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto, CancellationToken ct = default)
         {
-            var result = await _authService.ResetPasswordAsync(dto);
-            return result.Succeeded ? Ok(result) : BadRequest(result);
+            var result = await _authService.ResetPasswordAsync(dto, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
         }
     }
 }

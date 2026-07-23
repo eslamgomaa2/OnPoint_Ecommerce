@@ -72,18 +72,29 @@ namespace Onpoint.Store.Application.Services.ProductServ
         }
 
         public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
-            int branchId, PaginationRequest request, int? categoryId = null, string? searchTerm = null, LanguageCode? languageCode = null, CancellationToken ct = default)
+            int branchId,
+            PaginationRequest request,
+            int? categoryId = null,
+            string? searchTerm = null,
+            LanguageCode? languageCode = null,
+            CancellationToken ct = default)
         {
             var (items, totalCount) = await _unitOfWork.Products.GetFilteredPagedAsync(
                 categoryId, searchTerm, branchId, request.PageNumber, request.PageSize, ct);
 
-            var dtoItems = items.Select(p => ApplyTranslation(MapWithBranchStock(p, branchId), p, languageCode)).ToList();
+            var dtoItems = items
+                .Select(p => ApplyTranslation(MapWithBranchStock(p, branchId), p, languageCode))
+                .ToList();
 
             var pagedResult = PagedResult<ProductDto>.Create(dtoItems, totalCount, request.PageNumber, request.PageSize);
             return _resultHandler.Success(pagedResult);
         }
 
-        public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int branchId, int id, LanguageCode? languageCode = null, CancellationToken ct = default)
+        public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(
+            int branchId,
+            int id,
+            LanguageCode? languageCode = null,
+            CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             if (product is null)
@@ -119,7 +130,10 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return _resultHandler.Success(dto);
         }
 
-        public async Task<ServiceResult<ProductDto>> CreateAsync(int branchId, CreateProductByBranchManagerDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<ProductDto>> CreateAsync(
+            int branchId,
+            CreateProductByBranchManagerDto dto,
+            CancellationToken ct = default)
         {
             var validationResult = await _createValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
@@ -132,7 +146,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
             }
 
             var product = _mapper.Map<Product>(dto);
-
             product.Stocks.Clear();
 
             if (product.Translations?.Any() == true)
@@ -162,6 +175,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
                     FileName = $"barcode_{product.Barcode}.png",
                     FileContent = barcodeStream
                 }, ct);
+
                 if (barcodeUploadResult.Succeeded)
                     product.BarcodeImagePath = barcodeUploadResult.Data;
             }
@@ -179,11 +193,12 @@ namespace Onpoint.Store.Application.Services.ProductServ
                     FileName = $"qrcode_{product.Sku}.png",
                     FileContent = qrStream
                 }, ct);
+
                 if (qrUploadResult.Succeeded)
                     product.QrCodeImagePath = qrUploadResult.Data;
             }
 
-            // 4. الخصم (Discount)
+            // الخصم (Discount)
             if (dto.Discount != null)
             {
                 product.Discounts.Add(new Discount
@@ -197,7 +212,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             var variantTracker = new List<(CreateProductVariantByBranchManagerDto Dto, ProductVariant Entity)>();
 
-            // 5. إنشاء الـ Variants
+            // إنشاء الـ Variants
             if (dto.Variants?.Any() == true)
             {
                 product.Variants.Clear();
@@ -226,6 +241,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
                             FileName = $"barcode_var_{variant.Sku}.png",
                             FileContent = barcodeStream
                         }, ct);
+
                         if (barcodeUploadResult.Succeeded)
                             variant.BarcodeImagePath = barcodeUploadResult.Data;
                     }
@@ -243,6 +259,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
                             FileName = $"qrcode_var_{variant.Sku}.png",
                             FileContent = qrStream
                         }, ct);
+
                         if (qrUploadResult.Succeeded)
                             variant.QrCodeImagePath = qrUploadResult.Data;
                     }
@@ -267,7 +284,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             await _unitOfWork.Products.AddAsync(product, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            // 7. إضافة المخزون (Stock)
+            // إضافة المخزون (Stock)
             if (variantTracker.Any())
             {
                 foreach (var (vDto, savedVariant) in variantTracker)
@@ -312,7 +329,12 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return _resultHandler.Created(_mapper.Map<ProductDto>(product));
         }
-        public async Task<ServiceResult<ProductDto>> UpdateAsync(int branchId, int id, UpdateProductDto dto, CancellationToken ct = default)
+
+        public async Task<ServiceResult<ProductDto>> UpdateAsync(
+            int branchId,
+            int id,
+            UpdateProductDto dto,
+            CancellationToken ct = default)
         {
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
@@ -328,7 +350,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (!hasStockInBranch)
                 return _resultHandler.BadRequest<ProductDto>("Product not available in this branch");
 
-
             if (!string.IsNullOrWhiteSpace(dto.Sku) && dto.Sku != existingProduct.Sku)
             {
                 if (await _unitOfWork.Products.SkuExistsAsync(dto.Sku, id, ct))
@@ -336,7 +357,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
                 existingProduct.Sku = dto.Sku;
             }
-
 
             existingProduct.Name = dto.Name;
             existingProduct.Slug = SlugHelper.GenerateSlug(dto.Name);
@@ -431,8 +451,5 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return dto;
         }
-
-
-
     }
 }

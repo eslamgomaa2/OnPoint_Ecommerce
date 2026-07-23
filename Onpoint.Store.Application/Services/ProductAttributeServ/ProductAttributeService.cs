@@ -31,7 +31,7 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
         public async Task<ServiceResult<List<ProductAttributeDto>>> GetAllAsync(CancellationToken ct = default)
         {
             var attributes = await _unitOfWork.ProductAttributes.GetAllWithCategoriesAsync(ct);
-            return _resultHandler.Success(_mapper.Map<List<ProductAttributeDto>>(attributes));
+            return _resultHandler.Success<List<ProductAttributeDto>>(_mapper.Map<List<ProductAttributeDto>>(attributes));
         }
 
         public async Task<ServiceResult<ProductAttributeDto>> GetByIdAsync(int id, CancellationToken ct = default)
@@ -40,7 +40,7 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             if (attribute is null)
                 return _resultHandler.NotFound<ProductAttributeDto>("Attribute not found.");
 
-            return _resultHandler.Success(_mapper.Map<ProductAttributeDto>(attribute));
+            return _resultHandler.Success<ProductAttributeDto>(_mapper.Map<ProductAttributeDto>(attribute));
         }
 
         public async Task<ServiceResult<ProductAttributeDto>> CreateAsync(CreateProductAttributeDto dto, CancellationToken ct = default)
@@ -62,7 +62,7 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             await _unitOfWork.SaveChangesAsync(ct);
 
             var saved = await _unitOfWork.ProductAttributes.GetByIdWithCategoriesAsync(attribute.Id, ct);
-            return _resultHandler.Created(_mapper.Map<ProductAttributeDto>(saved));
+            return _resultHandler.Created<ProductAttributeDto>(_mapper.Map<ProductAttributeDto>(saved));
         }
 
         public async Task<ServiceResult<ProductAttributeDto>> UpdateAsync(int id, UpdateProductAttributeDto dto, CancellationToken ct = default)
@@ -79,7 +79,6 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             existing.Key = dto.Key;
             existing.ValueType = dto.ValueType;
 
-
             existing.Categories.Clear();
             if (dto.CategoryIds.Any())
             {
@@ -93,7 +92,7 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             _unitOfWork.ProductAttributes.Update(existing);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Success(_mapper.Map<ProductAttributeDto>(existing));
+            return _resultHandler.Success<ProductAttributeDto>(_mapper.Map<ProductAttributeDto>(existing));
         }
 
         public async Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default)

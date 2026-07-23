@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Results;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Product;
@@ -56,7 +55,6 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateProductDto dto, CancellationToken ct)
         {
             var result = await productService.UpdateAsync(id, dto, ct);
@@ -64,14 +62,12 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpGet("sku/{sku}")]
-        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> GetBySku(string sku, CancellationToken ct = default)
         {
             var result = await productService.GetBySkuAsync(sku, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
         [HttpDelete("{id}")]
-        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var result = await productService.DeleteAsync(id, ct);

@@ -7,23 +7,23 @@ namespace Onpoint.Store.Application.Services.OrderServ
 {
     public interface IOrderService
     {
-        Task<ServiceResult<PagedResult<OrderListItemDto>>> GetDashBoardPagedAsync(GetOrdersQueryDto query, int? branchId, CancellationToken ct = default);
-
-        Task<ServiceResult<OrderDetailsDto>> GetOrderDetailsAsync(int id, int? branchId, CancellationToken ct = default);
-        Task<ServiceResult<bool>> UpdateOrderAsync(int id, int? branchId, UpdateOrderDto dto, CancellationToken ct = default);
+        // Dashboard & Management
+        Task<ServiceResult<PagedResult<OrderListItemDto>>> GetDashboardPagedAsync(GetOrdersQueryDto query, int? branchId, CancellationToken ct = default);
         Task<ServiceResult<PagedResult<OrderDetailsDto>>> GetOrdersPagedAsync(OrdersPaginationRequest query, int? branchId, CancellationToken ct = default);
-
-        //
-        Task<ServiceResult<DashBoardSummaryDto>> GetDasheBoardSummaryAsync(int? branchId, CancellationToken ct = default);
+        Task<ServiceResult<OrderDetailsDto>> GetOrderDetailsAsync(int id, int? branchId, CancellationToken ct = default);
+        Task<ServiceResult<DashBoardSummaryDto>> GetDashboardSummaryAsync(int? branchId, CancellationToken ct = default);
         Task<ServiceResult<OrdersSummaryDto>> GetOrdersSummaryAsync(int? branchId, CancellationToken ct = default);
+        Task<ServiceResult<bool>> UpdateOrderAsync(int id, int? branchId, UpdateOrderDto dto, CancellationToken ct = default);
+        Task<ServiceResult<bool>> UpdateOrderStatusAsync(int orderId, OrderStatus status, CancellationToken ct = default);
 
+        // User Operations & Checkout
+        Task<ServiceResult<OrderDto>> CheckoutAsync(int userId, CreateOrderDto dto, CancellationToken ct = default);
+        Task<ServiceResult<bool>> ProcessPaymentSuccessAsync(int orderId, string transactionId, CancellationToken ct = default);
+        Task<ServiceResult<bool>> CancelOrderAsync(int orderId, CancellationToken ct = default);
+        Task<ServiceResult<IEnumerable<OrderDto>>> GetUserOrdersAsync(int userId, CancellationToken ct = default);
+        Task<ServiceResult<OrderDto>> GetOrderAsync(int orderId, CancellationToken ct = default);
 
-        Task<ServiceResult<OrderDto>> CheckoutAsync(int userId, CreateOrderDto dto);
-        Task<ServiceResult<bool>> ProcessPaymentSuccessAsync(int orderId, string transactionId);
-        Task<ServiceResult<bool>> CancelOrderAsync(int orderId);
-        Task<ServiceResult<bool>> UpdateOrderStatusAsync(int orderId, OrderStatus status);
-        Task<ServiceResult<IEnumerable<OrderDto>>> GetUserOrdersAsync(int userId);
-        Task<ServiceResult<OrderDto>> GetOrderAsync(int orderId);
+        // Internal Processing
         Task FinalizeOrderAsync(Order order, Cart? cart, Coupon? coupon, CancellationToken ct = default);
     }
 }

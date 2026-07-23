@@ -4,7 +4,6 @@ using BuildingBlocks.Results;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using System.Text.Json;
 
 namespace BuildingBlocks.Middlewares
@@ -37,23 +36,33 @@ namespace BuildingBlocks.Middlewares
         {
             context.Response.ContentType = "application/json";
 
+            // 1. FluentValidation Exceptions
             if (exception is ValidationException validationEx)
             {
-                var errorsModel = new ValidationResultModel(validationEx.Errors);
+                var errorMessages = validationEx.Errors
+                    .Select(e => e.ErrorMessage)
+                    .Distinct()
+                    .ToList();
 
-                var response = new ServiceResult<ValidationResultModel>
+                string combinedMessage = errorMessages.Count > 0
+                    ? string.Join(" | ", errorMessages)
+                    : GetLocalizedMessage(localization, "Errors.ValidationFailed");
+
+                var response = new ServiceResult<object>
                 {
                     Succeeded = false,
-                    Message = GetLocalizedMessage(localization, "Errors.ValidationFailed"),
-                    Data = errorsModel,
-                    HttpStatusCode = HttpStatusCode.UnprocessableEntity
+                    Message = combinedMessage,
+                    Data = null,
+                    Errors = errorMessages,
+                    HttpStatusCode = StatusCodes.Status400BadRequest
                 };
 
-                context.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsync(JsonSerializer.Serialize(response, GetJsonOptions()));
                 return;
             }
 
+            // 2. Managed Exceptions
             var (statusCode, localizationKey) = GetExceptionDetails(exception);
             string message = GetLocalizedMessage(localization, localizationKey);
 
@@ -61,7 +70,9 @@ namespace BuildingBlocks.Middlewares
             {
                 Succeeded = false,
                 Message = message,
-                HttpStatusCode = (HttpStatusCode)statusCode
+                Data = null,
+                Errors = new List<string> { message },
+                HttpStatusCode = statusCode
             };
 
             context.Response.StatusCode = statusCode;
@@ -84,12 +95,21 @@ namespace BuildingBlocks.Middlewares
         {
             return exception switch
             {
+                // Authentication & Account Exceptions
+                UserNotFoundException _ => (StatusCodes.Status401Unauthorized, "Errors.UserNotFound"),
                 UnauthorizedAccessException _ => (StatusCodes.Status401Unauthorized, "Errors.Unauthorized"),
-                KeyNotFoundException _ => (StatusCodes.Status404NotFound, "Errors.NotFound"),
+                AccountInactiveException _ => (StatusCodes.Status402PaymentRequired, "Errors.AccountInactive"),
+
+                // Bad Request Errors (400)
                 InvalidImageException _ => (StatusCodes.Status400BadRequest, "Business.InvalidImage"),
                 ArgumentException _ => (StatusCodes.Status400BadRequest, "Errors.ValidationFailed"),
                 InvalidOperationException _ => (StatusCodes.Status400BadRequest, "Errors.ValidationFailed"),
+
+                // Not Found & Timeouts
+                KeyNotFoundException _ => (StatusCodes.Status404NotFound, "Errors.NotFound"),
                 TimeoutException _ => (StatusCodes.Status504GatewayTimeout, "Errors.GenericError"),
+
+                // Internal Server Error Fallback (500)
                 _ => (StatusCodes.Status500InternalServerError, "Errors.GenericError")
             };
         }

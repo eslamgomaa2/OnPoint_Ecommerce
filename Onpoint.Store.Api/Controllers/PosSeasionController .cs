@@ -10,7 +10,7 @@ namespace Onpoint.Store.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Cashier,Admin,Manager")]
+    [Authorize(Roles = "Cashier,SuperAdmin,BranchManager")]
     public class PosSessionController : ControllerBase
     {
         private readonly IPosSessionService _posSessionService;

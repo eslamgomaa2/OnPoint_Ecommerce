@@ -7,7 +7,7 @@ namespace Onpoint.Store.API.Controllers
 {
     [ApiController]
     [Route("api/shipping")]
-    [Authorize]
+
     public class ShippingController : ControllerBase
     {
         private readonly IShippingService _shippingService;
