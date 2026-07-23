@@ -18,7 +18,8 @@ builder.Services.AddFluentValidationConfiguration(new[]
 {
     typeof(ApplicationServiceExtension).Assembly
 });
-builder.Services.AddSwaggerConfiguration();
+builder.Services.AddSwaggerGen();
+//builder.Services.AddSwaggerConfiguration();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 // Infrastructure 
@@ -38,9 +39,9 @@ var cloudinaryAccount = new CloudinaryDotNet.Account(
 builder.Services.AddSingleton(new CloudinaryDotNet.Cloudinary(cloudinaryAccount));
 
 var app = builder.Build();
-await app.MigrateDatabaseAsync();
+//await app.MigrateDatabaseAsync();
 
-// Middlewares
+
 app.UseGlobalExceptionHandler();
 app.UseRequestLocalizationConfiguration();
 
@@ -49,8 +50,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseCors("FrontendOnly");
+app.UseSwagger();
+app.UseSwaggerUI();
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
