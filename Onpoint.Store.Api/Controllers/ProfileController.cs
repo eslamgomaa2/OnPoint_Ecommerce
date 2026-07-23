@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.Services.Profile;
 using System.Security.Claims;
 
@@ -7,7 +6,7 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+
     public class ProfileController : ControllerBase
     {
         private readonly IProfileServices _profileServices;

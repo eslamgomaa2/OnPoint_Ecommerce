@@ -42,6 +42,7 @@ namespace BuildingBlocks.Extensions
                 {
                     OnAuthenticationFailed = context =>
                     {
+                        Console.WriteLine($"JWT auth failed: {context.Exception.GetType().Name} - {context.Exception.Message}");
                         if (context.Exception is SecurityTokenExpiredException)
                             context.Response.Headers.Append("Token-Expired", "true");
                         return Task.CompletedTask;
@@ -52,9 +53,12 @@ namespace BuildingBlocks.Extensions
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                         context.Response.ContentType = "application/json";
 
-                        var message = context.AuthenticateFailure is SecurityTokenExpiredException
-                            ? "Token has expired"
-                            : "Unauthorized - invalid or missing token";
+                        var message = context.AuthenticateFailure switch
+                        {
+                            SecurityTokenExpiredException => "Token has expired",
+                            null => "Unauthorized - invalid or missing token",
+                            _ => context.AuthenticateFailure.Message
+                        };
 
                         var payload = JsonSerializer.Serialize(new { message });
                         await context.Response.WriteAsync(payload);

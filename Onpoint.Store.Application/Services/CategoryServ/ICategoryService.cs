@@ -3,7 +3,6 @@ using Onpoint.Store.Application.DTOs.Category;
 
 namespace Onpoint.Store.Application.Services.CategoryServ
 {
-
     public interface ICategoryService
     {
         Task<ServiceResult<IReadOnlyList<CategoryDto>>> GetAllAsync(CancellationToken ct = default);

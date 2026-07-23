@@ -10,7 +10,7 @@ namespace Onpoint.Store.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "User")]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;

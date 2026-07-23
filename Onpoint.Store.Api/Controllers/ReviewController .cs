@@ -8,7 +8,7 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+
     public class ReviewController : ControllerBase
     {
         private readonly IReviewService _reviewService;

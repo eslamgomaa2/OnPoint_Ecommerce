@@ -8,10 +8,10 @@ namespace Onpoint.Store.Application.Services.BranchManagerProductService
     public interface IBranchManagerProductService
     {
         Task<ServiceResult<ProductDashboardDto>> GetDashboardCountsAsync(int branchId, CancellationToken ct = default);
-        Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(int branchId, PaginationRequest request, int? categoryId, string? searchTerm, LanguageCode? languageCode, CancellationToken ct);
-        Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int branchId, int id, LanguageCode? languageCode, CancellationToken ct);
-        Task<ServiceResult<ProductDto>> CreateAsync(int branchId, CreateProductByBranchManagerDto dto, CancellationToken ct);
-        Task<ServiceResult<ProductDto>> UpdateAsync(int branchId, int id, UpdateProductDto dto, CancellationToken ct);
-        Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct);
+        Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(int branchId, PaginationRequest request, int? categoryId, string? searchTerm, LanguageCode? languageCode, CancellationToken ct = default);
+        Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int branchId, int id, LanguageCode? languageCode, CancellationToken ct = default);
+        Task<ServiceResult<ProductDto>> CreateAsync(int branchId, CreateProductByBranchManagerDto dto, CancellationToken ct = default);
+        Task<ServiceResult<ProductDto>> UpdateAsync(int branchId, int id, UpdateProductDto dto, CancellationToken ct = default);
+        Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default);
     }
 }

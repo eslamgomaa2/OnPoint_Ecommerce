@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Results;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.Services.OrderServ;
@@ -10,7 +9,6 @@ namespace Onpoint.Store.Api.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "BranchManager")]
     public class DashboardController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -24,7 +22,7 @@ namespace Onpoint.Store.Api.Controllers
         public async Task<ActionResult<ServiceResult<PagedResult<OrderListItemDto>>>> GetOrders([FromQuery] GetOrdersQueryDto query, CancellationToken ct)
         {
             var (_, branchId) = GetUserAndBranchId();
-            var result = await _orderService.GetDashBoardPagedAsync(query, branchId, ct);
+            var result = await _orderService.GetDashboardPagedAsync(query, branchId, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 

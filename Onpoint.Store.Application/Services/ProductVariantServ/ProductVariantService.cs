@@ -50,7 +50,10 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
         {
             var validationResult = await _addValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
-                throw new ValidationException(validationResult.Errors);
+            {
+                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
+                return _resultHandler.BadRequest<ProductVariantDto>(errors);
+            }
 
             var product = await _unitOfWork.Products.GetWithFullDetailsForAdminAsync(productId, ct);
             if (product is null)
@@ -75,7 +78,7 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
 
                 var upload = await _imageStorageService.UploadImageAsync(stream, $"{variant.Sku}-barcode.png", ct);
                 if (!upload.Succeeded)
-                    throw new InvalidOperationException(upload.Message ?? "Failed to upload variant barcode image.");
+                    return _resultHandler.BadRequest<ProductVariantDto>(upload.Message ?? "Failed to upload variant barcode image.");
 
                 variant.BarcodeImagePath = upload.Data!;
             }
@@ -90,7 +93,7 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
 
                 var qrUpload = await _imageStorageService.UploadImageAsync(qrStream, $"{variant.Sku}-qr.png", ct);
                 if (!qrUpload.Succeeded)
-                    throw new InvalidOperationException(qrUpload.Message ?? "Failed to upload variant QR image.");
+                    return _resultHandler.BadRequest<ProductVariantDto>(qrUpload.Message ?? "Failed to upload variant QR image.");
 
                 variant.QrCodeImagePath = qrUpload.Data!;
             }
@@ -112,7 +115,10 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
         {
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
-                throw new ValidationException(validationResult.Errors);
+            {
+                var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
+                return _resultHandler.BadRequest<ProductVariantDto>(errors);
+            }
 
             var variant = await _unitOfWork.ProductVariants.GetByIdWithDetailsAsync(variantId, ct);
             if (variant is null || variant.ProductId != productId)
@@ -141,7 +147,7 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
 
                     var upload = await _imageStorageService.UploadImageAsync(stream, $"{variant.Sku}-barcode.png", ct);
                     if (!upload.Succeeded)
-                        throw new InvalidOperationException(upload.Message ?? "Failed to upload variant barcode image.");
+                        return _resultHandler.BadRequest<ProductVariantDto>(upload.Message ?? "Failed to upload variant barcode image.");
 
                     variant.BarcodeImagePath = upload.Data!;
                 }
@@ -157,7 +163,7 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
 
                 var qrUpload = await _imageStorageService.UploadImageAsync(qrStream, $"{variant.Sku}-qr.png", ct);
                 if (!qrUpload.Succeeded)
-                    throw new InvalidOperationException(qrUpload.Message ?? "Failed to upload variant QR image.");
+                    return _resultHandler.BadRequest<ProductVariantDto>(qrUpload.Message ?? "Failed to upload variant QR image.");
 
                 variant.QrCodeImagePath = qrUpload.Data!;
             }

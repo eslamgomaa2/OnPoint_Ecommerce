@@ -31,7 +31,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 {
                     Succeeded = false,
                     Message = uploadResult.Error.Message,
-                    HttpStatusCode = System.Net.HttpStatusCode.InternalServerError
+                    HttpStatusCode = (int)System.Net.HttpStatusCode.InternalServerError
                 };
             }
 
@@ -40,7 +40,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 Succeeded = true,
                 Data = uploadResult.SecureUrl.ToString(),
                 Message = "Image uploaded successfully.",
-                HttpStatusCode = System.Net.HttpStatusCode.Created
+                HttpStatusCode = (int)System.Net.HttpStatusCode.Created
             };
         }
     }

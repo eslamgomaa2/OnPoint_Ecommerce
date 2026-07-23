@@ -2,6 +2,6 @@
 {
     public class InvalidImageException : Exception
     {
-        public InvalidImageException(string message) : base(message) { }
+        public InvalidImageException(string message = "Invalid image provided.") : base(message) { }
     }
 }

@@ -28,46 +28,34 @@ namespace Onpoint.Store.Application.Services.DiscountServ
 
         public async Task<ServiceResult<DiscountDto>> AddDiscountAsync(AddDiscountDto dto, CancellationToken ct = default)
         {
-            var validationResult = await _addValidator.ValidateAsync(dto, ct);
-            if (!validationResult.IsValid)
-                throw new ValidationException(validationResult.Errors);
+            await _addValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
-            var discount = new Discount
-            {
-                ProductId = dto.ProductId,
-                DiscountPercentage = dto.DiscountPercentage,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
-                IsActive = true
-            };
+            var product = await _unitOfWork.Products.GetByIdAsync(dto.ProductId, ct);
+            if (product is null)
+                return _resultHandler.NotFound<DiscountDto>("Product not found.");
+
+            var discount = _mapper.Map<Discount>(dto);
+            discount.IsActive = true;
 
             await _unitOfWork.Discounts.AddAsync(discount, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            var product = await _unitOfWork.Products.GetByIdAsync(dto.ProductId, ct);
-
             var resultDto = _mapper.Map<DiscountDto>(discount);
-            resultDto.ProductName = product?.Name ?? string.Empty;
+            resultDto.ProductName = product.Name;
 
             return _resultHandler.Created(resultDto);
         }
 
         public async Task<ServiceResult<List<DiscountDto>>> GetByProductAsync(int productId, CancellationToken ct = default)
         {
+            var product = await _unitOfWork.Products.GetByIdAsync(productId, ct);
+            if (product is null)
+                return _resultHandler.NotFound<List<DiscountDto>>("Product not found.");
+
             var discounts = await _unitOfWork.Discounts.GetDiscountsByProductAsync(productId, ct);
 
-            var product = await _unitOfWork.Products.GetByIdAsync(productId, ct);
-
-            var dtos = discounts.Select(d => new DiscountDto
-            {
-                Id = d.Id,
-                ProductId = d.ProductId,
-                ProductName = product?.Name ?? string.Empty,
-                DiscountPercentage = d.DiscountPercentage,
-                StartDate = d.StartDate,
-                EndDate = d.EndDate,
-                IsActive = d.IsActive
-            }).ToList();
+            var dtos = _mapper.Map<List<DiscountDto>>(discounts);
+            dtos.ForEach(d => d.ProductName = product.Name);
 
             return _resultHandler.Success(dtos);
         }

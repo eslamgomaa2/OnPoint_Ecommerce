@@ -7,7 +7,6 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "SuperAdmin,BranchManager")]
     public class DiscountController : ControllerBase
     {
         private readonly IDiscountService _discountService;
