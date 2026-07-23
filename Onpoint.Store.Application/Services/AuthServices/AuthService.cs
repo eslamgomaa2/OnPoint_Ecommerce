@@ -194,7 +194,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
 
 
-            var user = await _userManager.FindByIdAsync(dto.UserId.ToString());
+            var user = await _userManager.FindByEmailAsync(dto.Email);
             if (user == null)
                 throw new KeyNotFoundException("User not found.");
 
@@ -416,7 +416,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
 
             var frontendUrl = _configuration["Frontend:BaseUrl"];
-            var verificationLink = $"{frontendUrl}/verify-email?userId={user.Id}&token={encodedToken}";
+            var verificationLink = $"{frontendUrl}/verify-email?token={encodedToken}";
 
 
             var body = BuildEmailBody(user.FirstName, verificationLink, EmailTemplateType.EmailVerificationLink);

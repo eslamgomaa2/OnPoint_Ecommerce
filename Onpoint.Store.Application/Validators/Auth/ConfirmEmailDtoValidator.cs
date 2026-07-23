@@ -7,8 +7,9 @@ namespace Onpoint.Store.Application.Validators.Auth
     {
         public ConfirmEmailDtoValidator()
         {
-            RuleFor(x => x.UserId)
-                .GreaterThan(0).WithMessage("Invalid User ID.");
+            RuleFor(x => x.Email)
+                .NotEmpty().WithMessage("Email is required.")
+                .EmailAddress().WithMessage("Invalid email format.");
 
             RuleFor(x => x.Token)
                 .NotEmpty().WithMessage("Verification token is required.");

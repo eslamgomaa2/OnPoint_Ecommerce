@@ -37,8 +37,9 @@ namespace Onpoint.Store.Application.Services.AuthServices.Email
                 email.Body = builder.ToMessageBody();
 
                 using var smtp = new SmtpClient();
+                smtp.CheckCertificateRevocation = false;
+                // smtp.ServerCertificateValidationCallback = (s, c, h, e) => true;
 
-                smtp.ServerCertificateValidationCallback = (s, c, h, e) => true;
 
                 await smtp.ConnectAsync(_mailSettings.SmtpHost, _mailSettings.SmtpPort, SecureSocketOptions.StartTls);
 
