@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Onpoint.Store.Domin.Enums;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Onpoint.Store.Domin.Entities
@@ -21,6 +22,9 @@ namespace Onpoint.Store.Domin.Entities
         public DateTime ExpiresAt { get; set; }
         [Required]
         public bool IsUsed { get; set; } = false;
+
+        [Required]
+        public OtpPurpose otpPurpose { get; set; }
 
         public int AttemptCount { get; set; } = 0;
 

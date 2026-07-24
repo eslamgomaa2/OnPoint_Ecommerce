@@ -92,10 +92,26 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<Branch> builder)
         {
+            builder.HasKey(b => b.Id);
+
+            builder.HasOne(b => b.Manager)
+                   .WithMany()
+                   .HasForeignKey(b => b.ManagerId)
+                   .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasMany(b => b.Cashiers)
+                   .WithOne(u => u.Branch)
+                   .HasForeignKey(u => u.BranchId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasIndex(b => b.IsDefault)
                    .IsUnique()
                    .HasFilter("[IsDefault] = 1");
 
+            builder.HasIndex(b => b.IsActive);
+            builder.HasIndex(b => b.IsDeleted);
+            builder.HasIndex(b => b.ManagerId);
+            builder.HasIndex(b => b.Name);
         }
     }
     public class StockConfiguration : IEntityTypeConfiguration<Stock>

@@ -12,6 +12,7 @@ using Onpoint.Store.Application.Services.AuthServices.Otp;
 using Onpoint.Store.Application.Services.AuthServices.Token;
 using Onpoint.Store.Application.Services.BranchManagerProductService;
 using Onpoint.Store.Application.Services.BranchServ;
+using Onpoint.Store.Application.Services.BranchServices;
 using Onpoint.Store.Application.Services.Brand;
 using Onpoint.Store.Application.Services.CartServ;
 using Onpoint.Store.Application.Services.CategoryServ;

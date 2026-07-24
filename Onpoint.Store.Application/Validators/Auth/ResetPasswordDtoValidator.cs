@@ -11,8 +11,10 @@ namespace Onpoint.Store.Application.Validators.Auth
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Invalid email format.");
 
-            RuleFor(x => x.ResetToken)
-                .NotEmpty().WithMessage("Reset token is required.");
+            RuleFor(x => x.Otp)
+    .NotEmpty().WithMessage("OTP code is required.");
+
+
 
             RuleFor(x => x.NewPassword)
                 .NotEmpty().WithMessage("New password is required.")

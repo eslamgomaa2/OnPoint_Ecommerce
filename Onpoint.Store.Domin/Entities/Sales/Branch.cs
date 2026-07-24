@@ -1,5 +1,6 @@
 ﻿using Onpoint.Store.Domin.Common;
 using Onpoint.Store.Domin.Entities.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 
 
 namespace Onpoint.Store.Domin.Entities
@@ -8,9 +9,15 @@ namespace Onpoint.Store.Domin.Entities
     {
         public string Name { get; set; } = string.Empty;
         public string? Address { get; set; }
-        public string? PhoneNumber { get; set; }
-        public bool IsActive { get; set; } = true;
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        public string? GoogleMapLocation { get; set; }
+        public string? WorkingHours { get; set; }
         public bool IsDefault { get; set; } = false;
+
+        [ForeignKey("Manager")]
+        public int? ManagerId { get; set; }
+        public virtual ApplicationUser? Manager { get; set; }
 
 
         public ICollection<ApplicationUser> Cashiers { get; set; } = new List<ApplicationUser>();

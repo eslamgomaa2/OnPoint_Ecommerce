@@ -28,7 +28,7 @@ namespace Onpoint.Store.API.Controllers
         [HttpPost("confirm-email")]
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto, CancellationToken ct = default)
         {
-            var result = await _authService.ConfirmEmailAsync(dto, ct);
+            var result = await _authService.VerifyOtpAsync(dto.Email, dto.Token);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
@@ -60,12 +60,7 @@ namespace Onpoint.Store.API.Controllers
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        [HttpPost("verify-reset-code")]
-        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeDto dto, CancellationToken ct = default)
-        {
-            var result = await _authService.VerifyResetCodeAsync(dto, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
+
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto, CancellationToken ct = default)
