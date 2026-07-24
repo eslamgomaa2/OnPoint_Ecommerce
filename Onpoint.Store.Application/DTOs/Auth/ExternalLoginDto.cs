@@ -2,7 +2,7 @@
 {
     public class ExternalLoginDto
     {
-        public string Provider { get; set; } = string.Empty; // "Google", "Facebook", "Apple"
-        public string IdToken { get; set; } = string.Empty;  // الرمز الذي يرسله الـ Frontend من جوجل/فيس بوك/آبل
+        public string Provider { get; set; } = string.Empty;
+        public string IdToken { get; set; } = string.Empty;
     }
 }

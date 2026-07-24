@@ -1,4 +1,5 @@
 ﻿using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Enums;
 
 namespace Onpoint.Store.Domin.Repositories
 {
@@ -6,9 +7,9 @@ namespace Onpoint.Store.Domin.Repositories
     {
 
 
-        Task<List<EmailVerificationOtp>> GetUnusedOtpsByUserIdAsync(int userId);
-        Task<EmailVerificationOtp?> GetLastUnusedOtpAsync(int userId);
-        Task<EmailVerificationOtp?> GetLastOtpAsync(int userId);
+        Task<List<EmailVerificationOtp>> GetUnusedOtpsByUserIdAsync(int userId, OtpPurpose purpose);
+        Task<EmailVerificationOtp?> GetLastUnusedOtpAsync(int userId, OtpPurpose purpose);
+        Task<EmailVerificationOtp?> GetLastOtpAsync(int userId, OtpPurpose purpose);
 
 
 

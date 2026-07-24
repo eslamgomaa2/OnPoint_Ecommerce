@@ -1,6 +1,7 @@
 ﻿using BuildingBlocks.Common.Helpers;
 using BuildingBlocks.Results;
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
 
 namespace Onpoint.Store.Application.Services.AuthServices.Otp
@@ -10,20 +11,21 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
         private readonly IUnitOfWork _unitOfWork;
         private readonly ServiceResultHandler _resultHandler;
 
+        private const int OtpLength = 6;
+        private static readonly TimeSpan OtpLifetime = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
+        private const int MaxAttempts = 5;
+
         public OtpService(IUnitOfWork unitOfWork, ServiceResultHandler resultHandler)
         {
             _unitOfWork = unitOfWork;
             _resultHandler = resultHandler;
         }
 
-        private const int OtpLength = 6;
-        private static readonly TimeSpan OtpLifetime = TimeSpan.FromMinutes(10);
-        private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
-        private const int MaxAttempts = 5;
-
-        public async Task<ServiceResult<string>> GenerateAndStoreOtpAsync(int userId)
+        public async Task<ServiceResult<string>> GenerateAndStoreOtpAsync(int userId, OtpPurpose purpose)
         {
-            var oldOtps = await _unitOfWork.EmailVerificationOtpRepo.GetUnusedOtpsByUserIdAsync(userId);
+
+            var oldOtps = await _unitOfWork.EmailVerificationOtpRepo.GetUnusedOtpsByUserIdAsync(userId, purpose);
             foreach (var old in oldOtps)
             {
                 old.IsUsed = true;
@@ -34,6 +36,7 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
             var otp = new EmailVerificationOtp
             {
                 UserId = userId,
+                otpPurpose = purpose,
                 OtpCodeHash = HashingHelper.Hash(code),
                 ExpiresAt = DateTime.UtcNow.Add(OtpLifetime),
                 CreatedAt = DateTime.UtcNow,
@@ -47,9 +50,14 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
             return _resultHandler.Success<string>(code);
         }
 
-        public async Task<ServiceResult<bool>> VerifyOtpAsync(int userId, string code)
+        public async Task<ServiceResult<bool>> VerifyOtpAsync(int userId, string code, OtpPurpose purpose)
         {
-            var otp = await _unitOfWork.EmailVerificationOtpRepo.GetLastUnusedOtpAsync(userId);
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return _resultHandler.BadRequest<bool>("Verification code cannot be empty.");
+            }
+
+            var otp = await _unitOfWork.EmailVerificationOtpRepo.GetLastUnusedOtpAsync(userId, purpose);
 
             if (otp is null)
             {
@@ -78,22 +86,26 @@ namespace Onpoint.Store.Application.Services.AuthServices.Otp
             otp.IsUsed = true;
             await _unitOfWork.SaveChangesAsync();
 
-            return _resultHandler.Success<bool>(true);
+            return _resultHandler.Success(true);
         }
 
-        public async Task<ServiceResult<bool>> CanResendAsync(int userId)
+        public async Task<ServiceResult<bool>> CanResendAsync(int userId, OtpPurpose purpose)
         {
-            var lastOtp = await _unitOfWork.EmailVerificationOtpRepo.GetLastOtpAsync(userId);
+            var lastOtp = await _unitOfWork.EmailVerificationOtpRepo.GetLastOtpAsync(userId, purpose);
 
             if (lastOtp is null)
-                return _resultHandler.Success<bool>(true);
-
-            if (DateTime.UtcNow - lastOtp.CreatedAt < ResendCooldown)
             {
-                return _resultHandler.BadRequest<bool>("Please wait before requesting a new code.");
+                return _resultHandler.Success(true);
             }
 
-            return _resultHandler.Success<bool>(true);
+            var timeSinceLastRequest = DateTime.UtcNow - lastOtp.CreatedAt;
+            if (timeSinceLastRequest < ResendCooldown)
+            {
+                var remainingSeconds = Math.Ceiling((ResendCooldown - timeSinceLastRequest).TotalSeconds);
+                return _resultHandler.BadRequest<bool>($"Please wait {remainingSeconds} seconds before requesting a new code.");
+            }
+
+            return _resultHandler.Success(true);
         }
     }
 }

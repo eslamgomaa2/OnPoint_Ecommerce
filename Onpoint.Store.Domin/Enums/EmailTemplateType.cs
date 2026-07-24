@@ -3,6 +3,6 @@
     public enum EmailTemplateType
     {
         OtpVerification,
-        EmailVerificationLink
+        EmailVerification
     }
 }
