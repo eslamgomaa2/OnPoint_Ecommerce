@@ -7,8 +7,7 @@ namespace Onpoint.Store.Application.Validators.Review
     {
         public UpdateReviewDtoValidator()
         {
-            RuleFor(x => x.ReviewId)
-                .GreaterThan(0).WithMessage("Valid Review ID is required.");
+
 
             RuleFor(x => x.Rating)
                 .InclusiveBetween(1, 5).WithMessage("Rating must be between 1 and 5.");

@@ -576,7 +576,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Code")
+                    b.Property<string>("OTP")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
@@ -617,7 +617,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("OTP")
                         .IsUnique();
 
                     b.ToTable("Coupons");

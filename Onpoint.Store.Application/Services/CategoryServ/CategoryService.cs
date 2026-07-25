@@ -103,11 +103,22 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             if (existingCategory is null)
                 return _resultHandler.NotFound<CategoryDto>("Category not found to update");
 
+            var nameExists = await _unitOfWork.Categories.GetCategoryByName(dto.Name, ct);
+            if (nameExists != null && nameExists.Id != id)
+                return _resultHandler.BadRequest<CategoryDto>("A category with this name already exists.");
+
             _mapper.Map(dto, existingCategory);
             existingCategory.UpdatedAt = DateTime.UtcNow;
-
             _unitOfWork.Categories.Update(existingCategory);
-            await _unitOfWork.SaveChangesAsync(ct);
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException ex)
+            {
+                return _resultHandler.BadRequest<CategoryDto>("A category with this name already exists.");
+            }
 
             return _resultHandler.Success(_mapper.Map<CategoryDto>(existingCategory));
         }

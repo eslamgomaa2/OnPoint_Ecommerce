@@ -221,5 +221,25 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
 
             return _resultHandler.Success<string>("Variant activated successfully.");
         }
+
+        public async Task<ServiceResult<IReadOnlyList<ProductVariantDto>>> GetVariantsAsync(int productId, CancellationToken ct = default)
+        {
+            var variants = await _unitOfWork.ProductVariants.GetByProductIdAsync(productId, ct);
+
+            if (variants is null || !variants.Any())
+                return _resultHandler.NotFound<IReadOnlyList<ProductVariantDto>>("No variants found for this product.");
+
+            return _resultHandler.Success(_mapper.Map<IReadOnlyList<ProductVariantDto>>(variants));
+        }
+
+        public async Task<ServiceResult<ProductVariantDto>> GetVariantByIdAsync(int productId, int variantId, CancellationToken ct = default)
+        {
+            var variant = await _unitOfWork.ProductVariants.GetByIdAsync(variantId, ct);
+
+            if (variant is null || variant.ProductId != productId)
+                return _resultHandler.NotFound<ProductVariantDto>("Variant not found for this product.");
+
+            return _resultHandler.Success(_mapper.Map<ProductVariantDto>(variant));
+        }
     }
 }

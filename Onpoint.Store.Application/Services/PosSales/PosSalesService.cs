@@ -443,7 +443,7 @@ namespace Onpoint.Store.Application.Services.PosSales
                             }
                             else
                             {
-                                qrCol.Item().AlignCenter().Text("[QR Code]").FontSize(9).FontColor(Colors.Grey.Medium);
+                                qrCol.Item().AlignCenter().Text("[QR OTP]").FontSize(9).FontColor(Colors.Grey.Medium);
                             }
                         });
 

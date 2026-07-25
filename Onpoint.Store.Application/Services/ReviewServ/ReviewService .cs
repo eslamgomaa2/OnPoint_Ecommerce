@@ -62,12 +62,12 @@ namespace Onpoint.Store.Application.Services.ReviewServ
             return _resultHandler.Created(_mapper.Map<ReviewDto>(saved));
         }
 
-        public async Task<ServiceResult<ReviewDto>> UpdateReviewAsync(int userId, UpdateReviewDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<ReviewDto>> UpdateReviewAsync(int userId, int reviewId, UpdateReviewDto dto, CancellationToken ct = default)
         {
             var validation = await _updateValidator.ValidateAsync(dto, ct);
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
 
-            var review = await _unitOfWork.Reviews.GetByIdForUserAsync(dto.ReviewId, userId, ct);
+            var review = await _unitOfWork.Reviews.GetByIdForUserAsync(reviewId, userId, ct);
             if (review == null)
                 return _resultHandler.NotFound<ReviewDto>("Review not found.");
 

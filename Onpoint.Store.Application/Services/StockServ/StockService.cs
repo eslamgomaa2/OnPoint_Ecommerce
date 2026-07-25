@@ -50,7 +50,7 @@ namespace Onpoint.Store.Application.Services.StockServ
             var count = await _unitOfWork.Stocks.GetOutOfStockCountAsync(branchId, ct);
             return _resultHandler.Success(count);
         }
-        public async Task<ServiceResult<StockDto>> InitializeStockAsync(InitializeStockDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<StockDto>> InitializeStockAsync(int Productid, InitializeStockDto dto, CancellationToken ct = default)
         {
             var validation = await _initializeValidator.ValidateAsync(dto, ct);
             if (!validation.IsValid)
@@ -58,7 +58,7 @@ namespace Onpoint.Store.Application.Services.StockServ
 
             if (dto.ProductVariantId.HasValue)
             {
-                var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(dto.ProductId, ct);
+                var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(Productid, ct);
                 var variantExists = product?.Variants.Any(v => v.Id == dto.ProductVariantId.Value) ?? false;
 
                 if (!variantExists)
@@ -67,7 +67,7 @@ namespace Onpoint.Store.Application.Services.StockServ
 
             var stock = new Stock
             {
-                ProductId = dto.ProductId,
+                ProductId = Productid,
                 ProductVariantId = dto.ProductVariantId,
                 BranchId = dto.BranchId,
                 Quantity = dto.Quantity,
