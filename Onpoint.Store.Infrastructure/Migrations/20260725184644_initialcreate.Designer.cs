@@ -12,7 +12,7 @@ using Onpoint.Store.Infrastructure.Data.Context;
 namespace Onpoint.Store.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260725162541_initialcreate")]
+    [Migration("20260725184644_initialcreate")]
     partial class initialcreate
     {
         /// <inheritdoc />

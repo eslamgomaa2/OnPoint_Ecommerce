@@ -71,7 +71,9 @@ namespace Onpoint.Store.Application.Services.AuthServices
             var validation = await _registerValidator.ValidateAsync(dto, ct);
             if (!validation.IsValid) throw new ValidationException(validation.Errors);
 
-            var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+            var existingUser = await _userManager.Users
+    .IgnoreQueryFilters()
+    .FirstOrDefaultAsync(u => u.NormalizedEmail == dto.Email.ToUpperInvariant(), ct);
             if (existingUser != null)
                 return _resultHandler.BadRequest<string>("Email is already registered.");
 
@@ -104,81 +106,113 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
         public async Task<ServiceResult<AuthResponseDto>> LoginAsync(LoginDto dto, CancellationToken ct = default)
         {
-            var validation = await _loginValidator.ValidateAsync(dto, ct);
-            if (!validation.IsValid) throw new ValidationException(validation.Errors);
-
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user == null)
-                return _resultHandler.Unauthorized<AuthResponseDto>();
-
-            if (await _userManager.IsLockedOutAsync(user))
+            try
             {
-                var message = user.LockoutEscalationLevel >= 1
-                    ? "The account is temporarily locked for 24 hours due to repeated incorrect login attempts. Please try again later."
-                    : "The account is temporarily locked for 1 hour due to repeated incorrect login attempts. Please try again later.";
+                // ─── 500: Check cancellation/timeout أول حاجة ───
+                ct.ThrowIfCancellationRequested();
 
-                return _resultHandler.BadRequest<AuthResponseDto>(message);
-            }
+                // ─── 400: Validation errors ───
+                var validation = await _loginValidator.ValidateAsync(dto, ct);
+                if (!validation.IsValid)
+                {
+                    var errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
+                    return _resultHandler.BadRequest<AuthResponseDto>("Validation failed", errors);
+                }
 
-            if (!user.EmailConfirmed)
-            {
-                return _resultHandler.BadRequest<AuthResponseDto>("You Must Verify your Account");
-            }
 
-            var passwordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
-            if (!passwordValid)
-            {
-                await _userManager.AccessFailedAsync(user);
+                var user = await _userManager.FindByEmailAsync(dto.Email);
+                if (user == null)
+                    return _resultHandler.BadRequest<AuthResponseDto>("Incorrect email address or password");
+
+
+                if (user.IsDeleted)
+                    return _resultHandler.Unauthorized<AuthResponseDto>("This account no longer exists.");
+
+
+                if (user.BranchId.HasValue && user.BranchRole == null)
+                    return _resultHandler.Forbidden<AuthResponseDto>("Access denied. No branch role assigned.");
+
+
+                if (!user.EmailConfirmed)
+                    return _resultHandler.AccountInactive<AuthResponseDto>("You must verify your account before logging in.");
+
+
+                if (!user.IsActive)
+                    return _resultHandler.AccountInactive<AuthResponseDto>("This account is inactive. Please contact support.");
+
 
                 if (await _userManager.IsLockedOutAsync(user))
                 {
-                    TimeSpan lockoutDuration;
+                    var message = user.LockoutEscalationLevel >= 1
+                        ? "The account is temporarily locked for 24 hours due to repeated incorrect login attempts. Please try again later."
+                        : "The account is temporarily locked for 1 hour due to repeated incorrect login attempts. Please try again later.";
 
-                    if (user.LockoutEscalationLevel == 0)
-                    {
-                        lockoutDuration = TimeSpan.FromHours(1);
-                        user.LockoutEscalationLevel = 1;
-                    }
-                    else
-                    {
-                        lockoutDuration = TimeSpan.FromHours(24);
-                    }
-
-                    await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.Add(lockoutDuration));
-                    await _userManager.UpdateAsync(user);
-
-                    var msg = lockoutDuration == TimeSpan.FromHours(1)
-                        ? "The account has been locked for 1 hour due to repeated incorrect login attempts."
-                        : "The account has been locked for 24 hours due to repeated incorrect login attempts.";
-
-                    return _resultHandler.BadRequest<AuthResponseDto>(msg);
+                    return _resultHandler.BadRequest<AuthResponseDto>(message);
                 }
 
-                return _resultHandler.BadRequest<AuthResponseDto>("Incorrect email address or password");
+
+                var passwordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
+                if (!passwordValid)
+                {
+                    await _userManager.AccessFailedAsync(user);
+
+                    if (await _userManager.IsLockedOutAsync(user))
+                    {
+                        TimeSpan lockoutDuration;
+
+                        if (user.LockoutEscalationLevel == 0)
+                        {
+                            lockoutDuration = TimeSpan.FromHours(1);
+                            user.LockoutEscalationLevel = 1;
+                        }
+                        else
+                        {
+                            lockoutDuration = TimeSpan.FromHours(24);
+                        }
+
+                        await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.Add(lockoutDuration));
+                        await _userManager.UpdateAsync(user);
+
+                        var msg = lockoutDuration == TimeSpan.FromHours(1)
+                            ? "The account has been locked for 1 hour due to repeated incorrect login attempts."
+                            : "The account has been locked for 24 hours due to repeated incorrect login attempts.";
+
+                        return _resultHandler.BadRequest<AuthResponseDto>(msg);
+                    }
+
+                    return _resultHandler.BadRequest<AuthResponseDto>("Incorrect email address or password");
+                }
+
+
+                await _userManager.ResetAccessFailedCountAsync(user);
+
+                if (user.LockoutEscalationLevel != 0)
+                {
+                    user.LockoutEscalationLevel = 0;
+                    await _userManager.UpdateAsync(user);
+                }
+
+
+                var roles = await _userManager.GetRolesAsync(user);
+                var roleList = roles.Count > 0 ? roles.ToList() : new List<string> { "Customer" };
+                var primaryRole = roleList.First();
+                var tokenData = _tokenService.GenerateToken(user, roleList);
+
+                return _resultHandler.Success(new AuthResponseDto
+                {
+                    Token = tokenData.token,
+                    Expiration = tokenData.expiresAt,
+                    UserId = user.Id,
+                    Email = user.Email!,
+                    FullName = $"{user.FirstName} {user.LastName}",
+                    Role = primaryRole
+                });
             }
-
-            await _userManager.ResetAccessFailedCountAsync(user);
-
-            if (user.LockoutEscalationLevel != 0)
+            catch (OperationCanceledException)
             {
-                user.LockoutEscalationLevel = 0;
-                await _userManager.UpdateAsync(user);
+
+                return _resultHandler.InternalServerError<AuthResponseDto>("Request timed out due to weak network connection.");
             }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var roleList = roles.Count > 0 ? roles.ToList() : new List<string> { "Customer" };
-            var primaryRole = roleList.First();
-            var tokenData = _tokenService.GenerateToken(user, roleList);
-
-            return _resultHandler.Success(new AuthResponseDto
-            {
-                Token = tokenData.token,
-                Expiration = tokenData.expiresAt,
-                UserId = user.Id,
-                Email = user.Email!,
-                FullName = $"{user.FirstName} {user.LastName}",
-                Role = primaryRole
-            });
         }
 
         public async Task<ServiceResult<string>> ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken ct = default)
@@ -189,6 +223,9 @@ namespace Onpoint.Store.Application.Services.AuthServices
             var user = await _userManager.FindByEmailAsync(dto.Email);
             if (user == null)
                 return _resultHandler.NotFound<string>("User not found.");
+
+            if (user.IsDeleted)
+                return _resultHandler.Unauthorized<string>("This account no longer exists.");
 
             if (user.EmailConfirmed)
                 return _resultHandler.BadRequest<string>("Email is already confirmed.");
@@ -216,7 +253,8 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
             const string genericMessage = "If the email is registered and unverified, a new verification code will be sent shortly.";
 
-            if (user is null)
+
+            if (user is null || user.IsDeleted)
             {
                 _logger.LogWarning("Resend OTP attempt for unregistered email: {Email}", email);
                 return _resultHandler.Success<string>(genericMessage);
@@ -226,7 +264,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.Success<string>(genericMessage);
 
             if (!user.IsActive)
-                return _resultHandler.BadRequest<string>("This account is inactive. Please contact support.");
+                return _resultHandler.AccountInactive<string>("This account is inactive. Please contact support.");
 
             bool isEmailSent = await GenerateOtpAndSendEmailAsync(user, "Forget Password", OtpPurpose.PasswordReset);
 
@@ -247,10 +285,9 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
             const string genericMessage = "If the email is registered and active, a password reset code will be sent shortly.";
 
-            if (user is null)
+            if (user is null || user.IsDeleted)
             {
                 _logger.LogWarning("Forgot password attempt for unregistered email: {Email}", email);
-
                 return _resultHandler.Success<string>(null, genericMessage);
             }
 
@@ -265,13 +302,15 @@ namespace Onpoint.Store.Application.Services.AuthServices
             _logger.LogInformation("Password reset code sent to user {UserId}", user.Id);
             return _resultHandler.Success<string>(null, genericMessage);
         }
+
         public async Task<ServiceResult<string>> VerifyOtpAsync(string email, string otpCode)
         {
-
             var user = await _userManager.FindByEmailAsync(email);
             if (user is null)
                 return _resultHandler.NotFound<string>("User was not found.");
 
+            if (user.IsDeleted)
+                return _resultHandler.Unauthorized<string>("This account no longer exists.");
 
             var otpResult = await _otpService.VerifyOtpAsync(
                 user.Id,
@@ -280,7 +319,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
 
             if (!otpResult.Succeeded)
                 return _resultHandler.BadRequest<string>(otpResult.Message, otpResult.Errors);
-
 
             user.EmailConfirmed = true;
             var updateResult = await _userManager.UpdateAsync(user);
@@ -291,11 +329,9 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.BadRequest<string>("Failed to update user account.", errors);
             }
 
-
             return _resultHandler.Success<string>(null,
                 "Email verified successfully. Your account is now pending admin trade license review.");
         }
-
 
         public async Task<ServiceResult<string>> ResetPasswordAsync(ResetPasswordDto dto, CancellationToken ct = default)
         {
@@ -308,9 +344,14 @@ namespace Onpoint.Store.Application.Services.AuthServices
                   .Include(u => u.RefreshTokens)
                   .FirstOrDefaultAsync(u => u.Email == email, ct);
 
-            if (user is null || !user.IsActive || !user.EmailConfirmed)
+            if (user is null)
                 return _resultHandler.BadRequest<string>("Invalid reset data.");
 
+            if (user.IsDeleted)
+                return _resultHandler.Unauthorized<string>("This account no longer exists.");
+
+            if (!user.IsActive || !user.EmailConfirmed)
+                return _resultHandler.AccountInactive<string>("This account is inactive or not verified.");
 
             var otpResult = await _otpService.VerifyOtpAsync(user.Id, dto.Otp.Trim(), OtpPurpose.PasswordReset);
             if (!otpResult.Succeeded)
@@ -319,7 +360,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.BadRequest<string>("Invalid email, incorrect code, or code has expired.");
             }
 
-            // 2. ولّد Identity Reset Token داخليًا (الـ Client مش هيشوفه)
             string resetToken;
             try
             {
@@ -331,7 +371,6 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.BadRequest<string>("An error occurred while resetting the password. Please try again.");
             }
 
-            // 3. استخدم التوكن ده فورًا عشان تغيّر الباسورد
             var resetResult = await _userManager.ResetPasswordAsync(user, resetToken, dto.NewPassword);
             if (!resetResult.Succeeded)
             {
@@ -351,11 +390,11 @@ namespace Onpoint.Store.Application.Services.AuthServices
             try
             {
                 var body = $@"
-        <p>Hello {user.FirstName},</p>
-        <p>Your account password has been successfully changed.</p>
-        <p style='color:#d9534f'>
-            If you did not make this change, please contact support immediately.
-        </p>";
+<p>Hello {user.FirstName},</p>
+<p>Your account password has been successfully changed.</p>
+<p style='color:#d9534f'>
+    If you did not make this change, please contact support immediately.
+</p>";
                 await _emailService.SendEmailAsync(user.Email!, "Password Changed Successfully", body);
             }
             catch (Exception ex)
@@ -366,17 +405,18 @@ namespace Onpoint.Store.Application.Services.AuthServices
             _logger.LogInformation("Password reset successfully for user {UserId}", user.Id);
             return _resultHandler.Success<string>("Password has been changed successfully. Please login with your new password.");
         }
+
         public async Task<ServiceResult<bool>> DeleteMyAccountAsync(int userId, CancellationToken ct = default)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user is null) return _resultHandler.NotFound<bool>("User not found");
+            if (user is null || user.IsDeleted)
+                return _resultHandler.Unauthorized<bool>("Account not found.");
 
             user.IsDeleted = true;
             user.DeletedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
             return _resultHandler.Deleted<bool>();
         }
-
         // ==========================================================
         // ===================  Private Helpers  ===================
         // ==========================================================
