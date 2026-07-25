@@ -12,8 +12,8 @@ using Onpoint.Store.Infrastructure.Data.Context;
 namespace Onpoint.Store.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260725024427_AddNewEntities")]
-    partial class AddNewEntities
+    [Migration("20260725162541_initialcreate")]
+    partial class initialcreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -591,7 +591,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("OTP")
+                    b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
@@ -632,7 +632,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OTP")
+                    b.HasIndex("Code")
                         .IsUnique();
 
                     b.ToTable("Coupons");
@@ -883,7 +883,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CustomerId")
+                    b.Property<int?>("CustomerId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("DiscountAmount")
@@ -2165,8 +2165,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasOne("Onpoint.Store.Domin.Entities.Identity.Customer", "Customer")
                         .WithMany("Orders")
                         .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Branch");
 

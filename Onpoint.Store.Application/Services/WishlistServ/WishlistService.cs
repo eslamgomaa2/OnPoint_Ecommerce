@@ -90,9 +90,9 @@ namespace Onpoint.Store.Application.Services.WishlistServ
             if (totalAvailable <= 0)
                 return _resultHandler.BadRequest<CartDto>("This product is out of stock.");
 
-            var addResult = await _cartService.AddToCartAsync(userId, new AddToCartDto
+            var addResult = await _cartService.AddToCartAsync(userId, productId, new AddToCartDto
             {
-                ProductId = productId,
+
                 Quantity = 1
             }, ct);
 
