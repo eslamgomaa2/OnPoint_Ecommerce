@@ -311,7 +311,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
             if (user is null || !user.IsActive || !user.EmailConfirmed)
                 return _resultHandler.BadRequest<string>("Invalid reset data.");
 
-            // 1. تحقق من الـ OTP بدل التوكن
+
             var otpResult = await _otpService.VerifyOtpAsync(user.Id, dto.Otp.Trim(), OtpPurpose.PasswordReset);
             if (!otpResult.Succeeded)
             {
