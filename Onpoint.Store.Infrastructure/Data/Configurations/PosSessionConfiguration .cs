@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
 
 namespace Onpoint.Store.Infrastructure.Data.Configurations
@@ -39,4 +40,47 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             builder.HasIndex(i => new { i.PosSessionId, i.ProductId, i.ProductVariantId }).IsUnique();
         }
     }
+
+    public class RefundConfiguration : IEntityTypeConfiguration<Refund>
+    {
+        public void Configure(EntityTypeBuilder<Refund> builder)
+        {
+            builder.ToTable("Refunds");
+
+            builder.HasKey(r => r.Id);
+
+            builder.Property(r => r.Type)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            builder.Property(r => r.TotalAmount)
+                .HasColumnType("decimal(18,2)")
+                .IsRequired();
+
+            builder.Property(r => r.Reason)
+                .HasMaxLength(1000);
+
+            builder.Property(r => r.RefundedAt)
+                .IsRequired();
+
+
+            builder.HasIndex(r => r.OrderId);
+            builder.HasIndex(r => r.BranchId);
+            builder.HasIndex(r => r.ProcessedByUserId);
+
+
+            builder.HasOne(r => r.Order)
+                .WithMany(o => o.Refunds)
+                .HasForeignKey(r => r.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(r => r.Branch)
+                .WithMany()
+                .HasForeignKey(r => r.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
+    }
+
+
 }

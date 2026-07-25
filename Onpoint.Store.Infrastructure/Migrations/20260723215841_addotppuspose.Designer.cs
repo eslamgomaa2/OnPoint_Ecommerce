@@ -735,7 +735,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.ToTable("Customers");
                 });
 
-            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Invoice", b =>
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.PosSales", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1889,11 +1889,11 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Navigation("Branch");
                 });
 
-            modelBuilder.Entity("Onpoint.Store.Domin.Entities.Invoice", b =>
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.PosSales", b =>
                 {
                     b.HasOne("Onpoint.Store.Domin.Entities.Order", "Order")
-                        .WithOne("Invoice")
-                        .HasForeignKey("Onpoint.Store.Domin.Entities.Invoice", "OrderId")
+                        .WithOne("PosSales")
+                        .HasForeignKey("Onpoint.Store.Domin.Entities.PosSales", "OrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2249,7 +2249,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Order", b =>
                 {
-                    b.Navigation("Invoice");
+                    b.Navigation("PosSales");
 
                     b.Navigation("OrderItems");
 

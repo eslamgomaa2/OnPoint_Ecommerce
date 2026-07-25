@@ -61,42 +61,14 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return _resultHandler.Success(_mapper.Map<ProductDto>(product));
         }
+
         public async Task<ServiceResult<ProductDashboardDto>> GetDashboardCountsAsync(int? branchId = null, CancellationToken ct = default)
         {
-            var (items, _) = await _unitOfWork.Products.GetFilteredPagedAsync(
-                null, null, branchId, 1, int.MaxValue, ct);
-
-            int inStock = 0, lowStock = 0, outOfStock = 0;
-
-            foreach (var product in items)
-            {
-                int totalQty;
-                int minLevel;
-
-                if (branchId.HasValue)
-                {
-                    var stocks = product.Stocks.Where(s => s.BranchId == branchId.Value);
-                    var variantStocks = product.Variants.SelectMany(v => v.Stocks.Where(s => s.BranchId == branchId.Value));
-                    totalQty = stocks.Sum(s => s.Quantity) + variantStocks.Sum(s => s.Quantity);
-                    minLevel = stocks.Any() ? stocks.Max(s => s.MinimumStockLevel) : 0;
-                }
-                else
-                {
-                    totalQty = product.Stocks.Sum(s => s.Quantity) + product.Variants.Sum(v => v.Stocks.Sum(s => s.Quantity));
-                    minLevel = product.Stocks.Any() ? product.Stocks.Max(s => s.MinimumStockLevel) : 0;
-                }
-
-                if (totalQty <= 0)
-                    outOfStock++;
-                else if (totalQty <= minLevel)
-                    lowStock++;
-                else
-                    inStock++;
-            }
+            var (inStock, lowStock, outOfStock, total) = await _unitOfWork.Products.GetStockCountsAsync(branchId, ct);
 
             var dto = new ProductDashboardDto
             {
-                TotalProducts = inStock + lowStock + outOfStock,
+                TotalProducts = total,
                 InStock = inStock,
                 LowStock = lowStock,
                 OutOfStock = outOfStock
@@ -104,7 +76,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return _resultHandler.Success(dto);
         }
-
 
         public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(PaginationRequest request, int? categoryId = null, string? searchTerm = null, int? branchId = null, LanguageCode? languageCode = null, CancellationToken ct = default)
         {
@@ -134,13 +105,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 var stocks = product.Stocks.Where(s => s.ProductVariantId == null);
                 dto.BranchStock = stocks.Select(s => _mapper.Map<VariantStockDto>(s)).ToList();
             }
-            else
-            {
-                foreach (var variantDto in dto.Variants)
-                {
-                    variantDto.Stocks = variantDto.Stocks.ToList();
-                }
-            }
 
             ApplyTranslationToDetail(dto, product, languageCode);
 
@@ -149,7 +113,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
         public async Task<ServiceResult<ProductDto>> CreateAsync(CreateProductDto dto, CancellationToken ct = default)
         {
-
             var validationResult = await _createValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
                 throw new FluentValidation.ValidationException(validationResult.Errors);
@@ -157,14 +120,12 @@ namespace Onpoint.Store.Application.Services.ProductServ
             var product = _mapper.Map<Product>(dto);
             product.Stocks.Clear();
 
-
             product.Slug = SlugHelper.GenerateSlug(product.Name);
             product.Sku = dto.SkuMode == CodeGenerationMode.Manual
                 ? dto.Sku!
                 : await _skuGeneratorService.GenerateUniqueSkuAsync(dto.Name, dto.CategoryId);
 
             product.Status = dto.Status;
-
 
             product.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual
                 ? dto.Barcode!
@@ -183,7 +144,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
                     product.BarcodeImagePath = barcodeUploadResult.Data;
             }
 
-
             product.QrCodeValue = dto.QrCodeMode == CodeGenerationMode.Manual
                 ? dto.QrCodeValue!
                 : _qrCodeService.GenerateValue(product.Sku);
@@ -201,14 +161,12 @@ namespace Onpoint.Store.Application.Services.ProductServ
                     product.QrCodeImagePath = qrUploadResult.Data;
             }
 
-
             if (dto.Images?.Any() == true)
             {
                 product.Images.Clear();
                 foreach (var img in dto.Images)
                     product.Images.Add(new ProductImage { ImageUrl = img.ImageUrl, IsPrimary = img.IsPrimary });
             }
-
 
             if (dto.Discount != null)
             {
@@ -221,7 +179,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
                     IsActive = true
                 });
             }
-
 
             if (dto.Attributes?.Any() == true)
             {
@@ -304,7 +261,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 }
             }
 
-            // 10. Handle Translations
             if (dto.Translations?.Any() == true)
             {
                 product.Translations.Clear();
@@ -377,7 +333,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Created(_mapper.Map<ProductDto>(product));
+            var createdWithDetails = await _unitOfWork.Products.GetWithDetailsAsync(product.Id, ct);
+            return _resultHandler.Created(_mapper.Map<ProductDto>(createdWithDetails ?? product));
         }
 
         public async Task<ServiceResult<ProductDto>> UpdateAsync(int id, UpdateProductDto dto, CancellationToken ct = default)
@@ -386,7 +343,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (!validationResult.IsValid)
                 throw new FluentValidation.ValidationException(validationResult.Errors);
 
-            var existingProduct = await _unitOfWork.Products.GetByIdAsync(id, ct);
+
+            var existingProduct = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             if (existingProduct is null)
                 return _resultHandler.NotFound<ProductDto>("Product not found to update");
 
@@ -397,8 +355,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
                 existingProduct.Sku = dto.Sku;
             }
-
-
 
             existingProduct.Name = dto.Name;
             existingProduct.Slug = SlugHelper.GenerateSlug(dto.Name);
@@ -414,8 +370,10 @@ namespace Onpoint.Store.Application.Services.ProductServ
             _unitOfWork.Products.Update(existingProduct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Success(_mapper.Map<ProductDto>(existingProduct));
+            var updated = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
+            return _resultHandler.Success(_mapper.Map<ProductDto>(updated ?? existingProduct));
         }
+
         public async Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetByIdAsync(id, ct);
@@ -495,7 +453,5 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return dto;
         }
-
-
     }
 }

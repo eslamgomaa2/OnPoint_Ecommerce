@@ -1,4 +1,4 @@
-﻿namespace Onpoint.Store.Application.DTOs.Invoice
+﻿namespace Onpoint.Store.Application.DTOs.PosSales
 {
     public class CreateInvoiceDto
     {

@@ -59,6 +59,16 @@ namespace Onpoint.Store.API.Controllers
             var result = await _customerService.GetByIdAsync(id, branchId.Value, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
+        [HttpGet("[action]/{phone}")]
+        public async Task<ActionResult<ServiceResult<CustomerDetailsDto>>> GetByPhoneNumber(string phone, CancellationToken ct = default)
+        {
+            var (_, branchId) = GetUserAndBranchId();
+            if (branchId is null)
+                return BadRequest("Branch not found for current user.");
+
+            var result = await _customerService.GetByPhoneNumberAsync(phone, branchId.Value, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
 
         [HttpPost("[action]")]
         public async Task<ActionResult<ServiceResult<CustomerDetailsDto>>> Create(

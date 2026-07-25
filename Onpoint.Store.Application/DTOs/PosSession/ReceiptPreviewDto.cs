@@ -15,7 +15,7 @@
         public decimal Total { get; set; }
         public decimal AmountReceived { get; set; }
         public decimal Change { get; set; }
-        public List<PaymentSummaryDto> Payments { get; set; } = new();
+        public List<SessionPaymentSummaryDto> Payments { get; set; } = new();
         public string? QrCodeData { get; set; }
     }
 }

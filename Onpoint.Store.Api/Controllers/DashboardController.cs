@@ -35,7 +35,7 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpGet("{id}/details")]
-        public async Task<ActionResult<ServiceResult<OrderDetailsDto>>> GetOrderDetails(int id, CancellationToken ct)
+        public async Task<ActionResult<ServiceResult<PosOrderDetailsDto>>> GetOrderDetails(int id, CancellationToken ct)
         {
             var (_, branchId) = GetUserAndBranchId();
             var result = await _orderService.GetOrderDetailsAsync(id, branchId, ct);

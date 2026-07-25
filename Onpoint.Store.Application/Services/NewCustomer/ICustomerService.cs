@@ -14,6 +14,7 @@ namespace Onpoint.Store.Application.Services.Customer
             CancellationToken ct = default);
 
         Task<ServiceResult<CustomerDetailsDto>> GetByIdAsync(int id, int branchId, CancellationToken ct = default);
+        Task<ServiceResult<CustomerDetailsDto>> GetByPhoneNumberAsync(string phone, int branchId, CancellationToken ct = default);
 
         Task<ServiceResult<CustomerStatsDto>> GetStatsAsync(int branchId, CancellationToken ct = default);
 

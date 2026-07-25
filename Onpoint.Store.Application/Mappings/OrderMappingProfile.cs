@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using Onpoint.Store.Application.DTOs.Order;
+using Onpoint.Store.Application.DTOs;
+using Onpoint.Store.Application.DTOs.PosSession;
 using Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Application.Mappings
@@ -8,11 +9,14 @@ namespace Onpoint.Store.Application.Mappings
     {
         public OrderMappingProfile()
         {
-            CreateMap<Order, OrderDto>()
-                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems));
+            CreateMap<OrderItem, SalesOrderItemDto>();
 
-            CreateMap<OrderItem, OrderItemDto>()
-                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice));
+            CreateMap<Order, PosOrderDto>()
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems))
+                .ForMember(dest => dest.BranchName, opt => opt.MapFrom(src => src.Branch != null ? src.Branch.Name : string.Empty))
+                .ForMember(dest => dest.CashierName, opt => opt.MapFrom(src => src.Cashier != null ? src.Cashier.UserName : string.Empty))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? $"{src.Customer.FName} {src.Customer.LName}" : string.Empty))
+                .ForMember(dest => dest.CustomerPhone, opt => opt.MapFrom(src => src.PhoneNumber));
         }
     }
 }

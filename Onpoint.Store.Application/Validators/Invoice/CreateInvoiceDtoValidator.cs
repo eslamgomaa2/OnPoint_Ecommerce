@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using Onpoint.Store.Application.DTOs.Invoice;
+using Onpoint.Store.Application.DTOs.PosSales;
 
 namespace Onpoint.Store.Application.Validators.Invoice
 {

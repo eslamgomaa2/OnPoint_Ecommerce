@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Onpoint.Store.Domin.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Onpoint.Store.Domin.Entities
@@ -19,7 +20,7 @@ namespace Onpoint.Store.Domin.Entities
 
         [ForeignKey("Branch")]
         public int? BranchId { get; set; }
-
+        public UserBranchRole? BranchRole { get; set; }
         public virtual Cart? Cart { get; set; }
         public virtual Branch? Branch { get; set; }
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

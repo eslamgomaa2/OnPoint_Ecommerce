@@ -9,16 +9,16 @@ namespace Onpoint.Store.Domin.Entities
         [ForeignKey(nameof(OrderId))]
         public virtual Order? Order { get; set; }
 
-        public string InvoiceNumber { get; set; } = string.Empty; // مثال: INV-998877
+        public string InvoiceNumber { get; set; } = string.Empty;
 
-        // تفاصيل الفاتورة الضريبية
+
         public decimal SubTotal { get; set; }
-        public decimal TaxAmount { get; set; } = 0; // لو المتجر عليه ضرائب هتتحسب هنا
+        public decimal TaxAmount { get; set; } = 0;
         public decimal TotalAmount { get; set; }
         public bool IsTaxable { get; set; } = false;
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal TaxPercentage { get; set; } = 0; // حالياً 0% لكن مستقبلاً ممكن تتغير
+        public decimal TaxPercentage { get; set; } = 0;
 
         // لو العميل شركة (B2B) ومطلوب منه الرقم الضريبي
         public string? CustomerTaxNumber { get; set; }

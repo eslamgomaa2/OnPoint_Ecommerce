@@ -2,7 +2,7 @@
 
 namespace Onpoint.Store.Domin.Repositories
 {
-    public interface IInvoiceRepository : IGenericRepository<Invoice, int>
+    public interface IPossalesRepository : IGenericRepository<Invoice, int>
     {
         Task<Invoice?> GetByOrderIdAsync(int orderId);
         Task<Invoice?> GetByInvoiceNumberAsync(string invoiceNumber);

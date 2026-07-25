@@ -284,7 +284,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             await _unitOfWork.Products.AddAsync(product, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            // إضافة المخزون (Stock)
+
             if (variantTracker.Any())
             {
                 foreach (var (vDto, savedVariant) in variantTracker)
@@ -300,7 +300,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
                                 BranchId = branchId,
                                 Quantity = bs.Quantity,
                                 ReservedQuantity = 0,
-                                MinimumStockLevel = dto.MinimumStockLevel != 0 ? dto.MinimumStockLevel : 0
+                                MinimumStockLevel = dto.MinimumStockLevel
                             };
 
                             product.Stocks.Add(stock);
@@ -375,11 +375,17 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return _resultHandler.Success(_mapper.Map<ProductDto>(existingProduct));
         }
 
-        public async Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default)
+        public async Task<ServiceResult<string>> DeleteAsync(int branchId, int id, CancellationToken ct = default)
         {
-            var product = await _unitOfWork.Products.GetByIdAsync(id, ct);
+            var product = await _unitOfWork.Products.GetWithStocksForBranchCheckAsync(id, ct);
             if (product is null)
                 return _resultHandler.NotFound<string>("Product not found to delete");
+
+            bool hasStockInBranch = product.Stocks.Any(s => s.BranchId == branchId && s.ProductVariantId == null) ||
+                                     product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
+
+            if (!hasStockInBranch)
+                return _resultHandler.BadRequest<string>("Product not available in this branch");
 
             product.IsDeleted = true;
             product.UpdatedAt = DateTime.UtcNow;

@@ -21,6 +21,6 @@ namespace Onpoint.Store.Application.DTOs.PosSession
         public string CashierName { get; set; } = string.Empty;
         public string? CustomerPhone { get; set; }
         public DateTime CreatedAt { get; set; }
-        public ICollection<PosOrderItemDto> Items { get; set; } = new List<PosOrderItemDto>();
+        public ICollection<SalesOrderItemDto> Items { get; set; } = new List<SalesOrderItemDto>();
     }
 }

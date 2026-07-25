@@ -1,6 +1,7 @@
 ﻿using BuildingBlocks.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Onpoint.Store.Application.DTOs.Customer;
 using Onpoint.Store.Application.DTOs.Pos;
 using Onpoint.Store.Application.DTOs.PosSession;
 using Onpoint.Store.Application.Services.PosServ;
@@ -34,7 +35,6 @@ namespace Onpoint.Store.API.Controllers
             return (userId, branchId);
         }
 
-        // ==================== SESSION MANAGEMENT ====================
 
         [HttpPost("create")]
         public async Task<ActionResult<ServiceResult<PosSessionDto>>> CreateSession()
@@ -113,12 +113,8 @@ namespace Onpoint.Store.API.Controllers
         }
 
 
-        [HttpPost("{sessionId}/items")]
-        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AddItem(
-          [FromQuery] int sessionId,
-            [FromQuery] int productId,
-            [FromQuery] int? productVariantId,
-            [FromQuery] int quantity = 1)
+        [HttpPost("Add/items")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AddItem([FromQuery] int sessionId, [FromQuery] int productId, [FromQuery] int? productVariantId, [FromQuery] int quantity = 1)
         {
             var result = await _posSessionService.AddItemAsync(sessionId, productId, productVariantId, quantity);
             return StatusCode((int)result.HttpStatusCode, result);
@@ -145,22 +141,15 @@ namespace Onpoint.Store.API.Controllers
         // ==================== CUSTOMER MANAGEMENT ====================
 
 
-        [HttpPost("{sessionId}/customer/{customerId}")]
-        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AssignCustomer(int sessionId, int customerId)
+        [HttpPost("AssignCustomer/{sessionId}")]
+        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AssignCustomer(int sessionId, [FromBody] CreateCustomerDto dto)
         {
-            var result = await _posSessionService.AssignCustomerToSessionAsync(sessionId, customerId);
+            var result = await _posSessionService.AssignCustomerToSessionAsync(sessionId, dto);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
 
-        [HttpPost("{sessionId}/customer-phone")]
-        public async Task<ActionResult<ServiceResult<PosSessionDto>>> AssignCustomerPhone(
-            int sessionId,
-            [FromBody] string phone)
-        {
-            var result = await _posSessionService.AssignCustomerPhoneAsync(sessionId, phone);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
+
 
 
         // ==================== COUPON MANAGEMENT ====================

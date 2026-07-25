@@ -84,7 +84,10 @@ namespace Onpoint.Store.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
-            var result = await _branchManagerProductService.DeleteAsync(id, ct);
+            var (_, branchId) = GetUserAndBranchId();
+            if (!branchId.HasValue)
+                return Unauthorized(new { message = "BranchId not found in token" });
+            var result = await _branchManagerProductService.DeleteAsync(branchId.Value, id, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 

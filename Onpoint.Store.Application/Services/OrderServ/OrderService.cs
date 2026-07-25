@@ -91,7 +91,6 @@ namespace Onpoint.Store.Application.Services.OrderServ
                     AddressId = dto.AddressId,
                     PhoneNumber = dto.PhoneNumber,
                     PaymentMethod = dto.PaymentMethod,
-                    OrderNumber = GenerateOrderNumber(),
                     Status = OrderStatus.Pending,
                     BranchId = defaultBranch.Id,
                     Source = OrderSource.Online,
@@ -216,7 +215,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 if (order.Status == OrderStatus.Pending)
                 {
                     var stockKeys = order.OrderItems.Select(i => (i.ProductId, i.ProductVariantId)).Distinct().ToList();
-                    var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, order.BranchId!.Value, ct);
+                    var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, order.BranchId, ct);
 
                     foreach (var item in order.OrderItems)
                     {
@@ -302,7 +301,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
         public async Task FinalizeOrderAsync(Order order, Cart? cart, Coupon? coupon, CancellationToken ct = default)
         {
-            var branchId = order.BranchId ?? await _unitOfWork.Branches.GetDefaultBranchIdAsync(ct);
+            var branchId = order.BranchId;
 
             var stockKeys = order.OrderItems
                 .Select(i => (i.ProductId, i.ProductVariantId))
@@ -348,7 +347,6 @@ namespace Onpoint.Store.Application.Services.OrderServ
             var list = items.Select(o => new OrderListItemDto
             {
                 Id = o.Id,
-                OrderNumber = o.OrderNumber,
                 OrderDate = o.CreatedAt,
                 Status = o.Status,
                 TotalAmount = o.TotalAmount
@@ -376,7 +374,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
         public async Task<ServiceResult<OrderDetailsDto>> GetOrderDetailsAsync(int id, int? branchId, CancellationToken ct = default)
         {
-            var order = await _unitOfWork.Orders.GetOrderDetailsAsync(id, ct);
+            var order = await _unitOfWork.Orders.GetFullOrderDetailsAsync(id, ct);
             if (order is null)
                 return _serviceResultHandler.NotFound<OrderDetailsDto>("Order not found.");
 
@@ -386,7 +384,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
             var dto = new OrderDetailsDto
             {
                 Id = order.Id,
-                InvoiceNumber = order.Invoice?.InvoiceNumber ?? order.OrderNumber,
+                InvoiceNumber = order.Invoice?.InvoiceNumber ?? string.Empty,
                 TotalAmount = order.TotalAmount,
                 Status = order.Status,
                 OrderDate = order.CreatedAt,
@@ -406,7 +404,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
             var list = items.Select(o => new OrderDetailsDto
             {
                 Id = o.Id,
-                InvoiceNumber = o.Invoice?.InvoiceNumber ?? o.OrderNumber,
+                InvoiceNumber = o.Invoice?.InvoiceNumber ?? string.Empty,
                 TotalAmount = o.TotalAmount,
                 Status = o.Status,
                 OrderDate = o.CreatedAt,

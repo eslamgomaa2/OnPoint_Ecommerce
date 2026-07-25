@@ -23,12 +23,21 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<IOrderRepo, OrderRepo>();
             services.AddScoped<IGenericRepository<OrderItem, int>, GenericRepository<OrderItem, int>>();
             services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
-            services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+            services.AddScoped<IPossalesRepository, PosSalesRepository>();
             services.AddScoped<IWishlistRepository, WishlistRepository>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
             services.AddScoped<IApplicationUserRepo, ApplicationUserRepo>();
             services.AddScoped<IBranchRepo, BranchRepo>();
             services.AddScoped<IStockRepository, StockRepository>();
+            services.AddScoped<IRefundRepository, RefundRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IBrandRepository, BrandRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<IDiscountRepo, DiscountRepo>();
+            services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
+            services.AddScoped<IProductVariantRepository, ProductVariantRepository>();
+
+
 
             // Register open generic repository
             services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));

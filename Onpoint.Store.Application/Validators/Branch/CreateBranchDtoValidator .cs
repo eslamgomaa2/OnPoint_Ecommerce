@@ -33,9 +33,7 @@ namespace Onpoint.Store.Application.Validators.Branch
                 .MaximumLength(100).When(x => !string.IsNullOrEmpty(x.WorkingHours))
                 .WithMessage("Working hours must not exceed 100 characters.");
 
-            RuleFor(x => x.ManagerId)
-                .GreaterThan(0).When(x => x.ManagerId.HasValue)
-                .WithMessage("Manager ID must be a positive number.");
+
         }
     }
 }

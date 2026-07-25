@@ -3,8 +3,11 @@ using BuildingBlocks.Results;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Onpoint.Store.Application.DTOs.Customer;
 using Onpoint.Store.Application.DTOs.Pos;
 using Onpoint.Store.Application.DTOs.PosSession;
+using Onpoint.Store.Application.Services.CodeGeneration.QrCodeGeneration;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Domin.Enums;
@@ -20,19 +23,28 @@ namespace Onpoint.Store.Application.Services.PosServ
         private readonly IValidator<AddPosSessionItemDto> _addItemValidator;
         private readonly ServiceResultHandler _resultHandler;
         private readonly IConfiguration _configuration;
+        private readonly IQrCodeService _qrCodeService;
+        private readonly IImageStorageService _imageStorageService;
+        private readonly ILogger<PosSessionService> _logger;
 
         public PosSessionService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IValidator<AddPosSessionItemDto> addItemValidator,
             ServiceResultHandler resultHandler,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IQrCodeService qrCodeService,
+            IImageStorageService imageStorageService,
+            ILogger<PosSessionService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _addItemValidator = addItemValidator;
             _resultHandler = resultHandler;
             _configuration = configuration;
+            _qrCodeService = qrCodeService;
+            _imageStorageService = imageStorageService;
+            _logger = logger;
         }
 
         private decimal GetTaxRate()
@@ -172,19 +184,52 @@ namespace Onpoint.Store.Application.Services.PosServ
 
         #region Customer Management
 
-        public async Task<ServiceResult<PosSessionDto>> AssignCustomerToSessionAsync(int sessionId, int customerId)
+        public async Task<ServiceResult<PosSessionDto>> AssignCustomerToSessionAsync(int sessionId, CreateCustomerDto dto)
         {
             var session = await GetSessionWithDetailsAsync(sessionId);
             if (session == null) return _resultHandler.NotFound<PosSessionDto>("Session not found");
             if (session.Status != PosSessionStatus.Active)
                 return _resultHandler.BadRequest<PosSessionDto>("Session is not active");
 
-            var customer = await _unitOfWork.Customers.GetByIdAsync(customerId);
-            if (customer == null) return _resultHandler.NotFound<PosSessionDto>("Customer not found");
+            if (string.IsNullOrWhiteSpace(dto.Phone))
+                return _resultHandler.BadRequest<PosSessionDto>("Phone number is required");
 
-            session.CustomerId = customerId;
+
+            var customer = await _unitOfWork.Customers
+                .FirstOrDefaultAsync(c => c.Phone == dto.Phone && c.BranchId == session.BranchId);
+
+            if (customer == null)
+            {
+
+                customer = new Domin.Entities.Identity.Customer
+                {
+                    FName = dto.FName,
+                    LName = dto.LName,
+                    Phone = dto.Phone,
+                    Email = dto.Email,
+                    Address = dto.Address,
+                    Note = dto.Note,
+                    BranchId = session.BranchId
+                };
+                await _unitOfWork.Customers.AddAsync(customer);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            else
+            {
+
+                customer.FName = !string.IsNullOrWhiteSpace(dto.FName) ? dto.FName : customer.FName;
+                customer.LName = !string.IsNullOrWhiteSpace(dto.LName) ? dto.LName : customer.LName;
+                customer.Email = !string.IsNullOrWhiteSpace(dto.Email) ? dto.Email : customer.Email;
+                customer.Address = !string.IsNullOrWhiteSpace(dto.Address) ? dto.Address : customer.Address;
+                customer.Note = !string.IsNullOrWhiteSpace(dto.Note) ? dto.Note : customer.Note;
+                _unitOfWork.Customers.Update(customer);
+            }
+
+
+            session.CustomerId = customer.Id;
             session.CustomerPhone = customer.Phone;
             _unitOfWork.PosSessions.Update(session);
+
             await _unitOfWork.SaveChangesAsync();
 
             return _resultHandler.Success<PosSessionDto>(_mapper.Map<PosSessionDto>(session));
@@ -474,7 +519,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                 Date = DateTime.UtcNow,
                 CashierName = session.Cashier?.UserName ?? "Unknown",
                 BranchName = session.Branch?.Name ?? "Main Store",
-                CustomerName = $"{session.Customer?.FName} {session.Customer?.LName}",
+                CustomerName = session.Customer != null ? $"{session.Customer.FName} {session.Customer.LName}".Trim() : "Walk-in Customer",
                 CustomerPhone = session.CustomerPhone,
                 Items = session.Items.Select(i => new ReceiptItemDto
                 {
@@ -490,7 +535,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                 Total = total,
                 AmountReceived = session.AmountReceived,
                 Change = session.Change,
-                Payments = new List<PaymentSummaryDto>()
+                Payments = new List<SessionPaymentSummaryDto>()
             };
 
             return _resultHandler.Success<ReceiptPreviewDto>(receipt);
@@ -512,15 +557,20 @@ namespace Onpoint.Store.Application.Services.PosServ
             var totalPayments = dto.Payments.Sum(p => p.Amount);
             if (dto.Payments.Any() && Math.Abs(totalPayments - total) > 0.001m)
                 return _resultHandler.BadRequest<PosOrderDto>($"Payment amount ({totalPayments}) does not match total ({total})");
+
             var cashPayment = dto.Payments.FirstOrDefault(p => p.Method == PaymentMethod.Cash);
             if (cashPayment != null && cashPayment.Amount > 0 && dto.AmountReceived < cashPayment.Amount)
             {
                 return _resultHandler.BadRequest<PosOrderDto>("Amount received is less than cash payment");
             }
+
+            Order order;
+
             await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
             {
+
                 var stockKeys = session.Items.Select(i => (i.ProductId, i.ProductVariantId)).Distinct().ToList();
                 var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, session.BranchId);
 
@@ -539,6 +589,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                     _unitOfWork.Stocks.Update(stock);
                 }
 
+
                 var orderItems = session.Items.Select(i => new OrderItem
                 {
                     ProductId = i.ProductId,
@@ -554,13 +605,13 @@ namespace Onpoint.Store.Application.Services.PosServ
                     ? dto.Payments[0].Method
                     : PaymentMethod.Cash;
 
-                var order = new Order
+
+                order = new Order
                 {
                     CashierId = session.CashierId,
                     CustomerId = session.CustomerId ?? 0,
-                    OrderNumber = $"POS-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(1000, 9999)}",
                     InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{session.Id:D4}",
-                    PhoneNumber = session.CustomerPhone ?? dto.CustomerPhone ?? string.Empty,
+                    PhoneNumber = session.CustomerPhone ?? string.Empty,
                     PaymentMethod = primaryMethod,
                     Status = OrderStatus.Completed,
                     Source = OrderSource.Pos,
@@ -573,8 +624,9 @@ namespace Onpoint.Store.Application.Services.PosServ
                     AmountReceived = dto.AmountReceived,
                     Change = dto.AmountReceived > total ? dto.AmountReceived - total : 0,
                     OrderItems = orderItems,
-                    Note = dto.Note
+
                 };
+
 
                 if (dto.Payments.Any())
                 {
@@ -606,6 +658,35 @@ namespace Onpoint.Store.Application.Services.PosServ
                     order.Transactions.Add(transaction);
                 }
 
+
+                order.StatusHistory.Add(new OrderStatusHistory
+                {
+                    Status = OrderStatus.Completed,
+                    EventName = EventName.OrderCreated,
+                    Description = "Order created via POS",
+                    EventTime = DateTime.UtcNow,
+                    PerformedByUserId = session.CashierId
+                });
+
+                order.StatusHistory.Add(new OrderStatusHistory
+                {
+                    Status = OrderStatus.Completed,
+                    EventName = EventName.PaymentReceived,
+                    Description = $"Payment received via {primaryMethod}. Amount: {total:C}",
+                    EventTime = DateTime.UtcNow,
+                    PerformedByUserId = session.CashierId
+                });
+
+                order.StatusHistory.Add(new OrderStatusHistory
+                {
+                    Status = OrderStatus.Completed,
+                    EventName = EventName.ReceiptPrinted,
+                    Description = "Receipt printed",
+                    EventTime = DateTime.UtcNow,
+                    PerformedByUserId = session.CashierId
+                });
+
+
                 if (!string.IsNullOrEmpty(session.CouponCode))
                 {
                     var coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == session.CouponCode);
@@ -616,10 +697,11 @@ namespace Onpoint.Store.Application.Services.PosServ
                     }
                 }
 
+
                 await _unitOfWork.Orders.AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();
 
-                // Update session
+
                 session.Status = PosSessionStatus.Completed;
                 session.OrderId = order.Id;
                 session.AmountReceived = dto.AmountReceived;
@@ -628,16 +710,41 @@ namespace Onpoint.Store.Application.Services.PosServ
                 await _unitOfWork.SaveChangesAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
-
-                return _resultHandler.Created<PosOrderDto>(_mapper.Map<PosOrderDto>(order));
             }
             catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
-        }
 
+
+            try
+            {
+                var qrValue = $"https://yourapp.com/invoice/{order.Id}";
+                var qrBytes = _qrCodeService.GenerateImage(qrValue);
+
+                using var qrStream = new MemoryStream(qrBytes);
+                var fileName = $"invoice-qr-{order.Id}-{Guid.NewGuid()}.png";
+                var uploadResult = await _imageStorageService.UploadImageAsync(qrStream, fileName);
+
+                if (uploadResult.Succeeded)
+                {
+                    order.QRCode = uploadResult.Data;
+                    _unitOfWork.Orders.Update(order);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                else
+                {
+                    _logger.LogWarning("QR upload failed for order {OrderId}: {Error}", order.Id, uploadResult.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate/upload QR code for order {OrderId}", order.Id);
+            }
+
+            return _resultHandler.Created<PosOrderDto>(_mapper.Map<PosOrderDto>(order));
+        }
         #endregion
     }
 }

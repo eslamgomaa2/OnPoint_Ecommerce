@@ -6,8 +6,8 @@ namespace Onpoint.Store.Domin.Repositories
     {
 
         Task<Product?> GetWithDetailsAsync(int id, CancellationToken ct = default);
-        Task<Product?> GetWithFullDetailsForAdminAsync(int id, CancellationToken ct = default);
-
+        Task<Product?> GetWithFullDetailsForAdminAsync(int id, bool includeDeleted = false, CancellationToken ct = default);
+        Task<(int InStock, int LowStock, int OutOfStock, int Total)> GetStockCountsAsync(int? branchId, CancellationToken ct = default);
         Task<List<Product>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default);
         Task<Product?> GetWithStocksForBranchCheckAsync(int id, CancellationToken ct = default);
         Task<(IReadOnlyList<Product> Items, int TotalCount)> GetFilteredPagedAsync(int? categoryId, string? searchTerm, int? branchId, int pageNumber, int pageSize, CancellationToken ct = default);
