@@ -14,7 +14,7 @@ namespace Onpoint.Store.Domin.Entities
         [ForeignKey("Branch")]
         public int BranchId { get; set; }
         public Branch? Branch { get; set; }
-        public int CustomerId { get; set; }
+        public int? CustomerId { get; set; }
         [ForeignKey(nameof(CustomerId))]
         public virtual Customer? Customer { get; set; }
 

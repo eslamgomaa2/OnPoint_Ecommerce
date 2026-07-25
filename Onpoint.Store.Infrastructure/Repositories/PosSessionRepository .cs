@@ -21,7 +21,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
             => await _dbset
                 .Include(s => s.Items)
                 .Include(s => s.Branch)
-                .Include(s => s.Cashier)
+                .Include(s => s.Cashier).Include(o => o.Customer)
                 .FirstOrDefaultAsync(s => s.Id == sessionId, ct);
     }
 }

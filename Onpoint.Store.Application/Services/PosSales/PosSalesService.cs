@@ -2,6 +2,8 @@
 using BuildingBlocks.Results;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.DTOs.PosSales;
@@ -24,6 +26,9 @@ namespace Onpoint.Store.Application.Services.PosSales
         private readonly IQrCodeService _qrCodeService;
         private readonly IImageStorageService _imageStorageService;
         private readonly ServiceResultHandler _resultHandler;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<PosSalesService> _logger;
+        private readonly IConfiguration _configuration;
 
         public PosSalesService(
             IUnitOfWork unitOfWork,
@@ -31,7 +36,10 @@ namespace Onpoint.Store.Application.Services.PosSales
             IRefundService refundService,
             IQrCodeService qrCodeService,
             IImageStorageService imageStorageService,
-            ServiceResultHandler resultHandler)
+            ServiceResultHandler resultHandler,
+            IHttpClientFactory httpClientFactory,
+            ILogger<PosSalesService> logger,
+            IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -39,6 +47,9 @@ namespace Onpoint.Store.Application.Services.PosSales
             _qrCodeService = qrCodeService;
             _imageStorageService = imageStorageService;
             _resultHandler = resultHandler;
+            _httpClientFactory = httpClientFactory;
+            _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<ServiceResult<PosSalesListResponse>> GetPosSalesPagedAsync(
@@ -50,13 +61,13 @@ namespace Onpoint.Store.Application.Services.PosSales
                 .Include(o => o.Branch)
                 .AsQueryable();
 
-            // Branch restriction
+
             if (forcedBranchId.HasValue)
                 query = query.Where(o => o.BranchId == forcedBranchId.Value);
             else if (filter.BranchId.HasValue)
                 query = query.Where(o => o.BranchId == filter.BranchId.Value);
 
-            // Search
+
             if (!string.IsNullOrWhiteSpace(filter.Search))
             {
                 var search = filter.Search.Trim().ToLower();
@@ -65,7 +76,7 @@ namespace Onpoint.Store.Application.Services.PosSales
                     (o.Customer != null && (o.Customer.FName + " " + o.Customer.LName).ToLower().Contains(search)));
             }
 
-            // Filters
+
             if (filter.Status.HasValue)
                 query = query.Where(o => o.Status == filter.Status.Value);
 
@@ -80,7 +91,7 @@ namespace Onpoint.Store.Application.Services.PosSales
 
             var totalCount = await query.CountAsync(ct);
 
-            // Sorting
+
             query = filter.SortBy switch
             {
                 OrderSortBy.OrderNumber => filter.Descending
@@ -97,7 +108,7 @@ namespace Onpoint.Store.Application.Services.PosSales
                     : query.OrderBy(o => o.CreatedAt)
             };
 
-            // Pagination
+
             var items = await query
                 .Skip((filter.PageNumber - 1) * filter.PageSize)
                 .Take(filter.PageSize)
@@ -149,7 +160,7 @@ namespace Onpoint.Store.Application.Services.PosSales
                 Status = order.Status,
                 Customer = new CustomerSummaryDto
                 {
-                    Id = order.CustomerId,
+                    Id = order.CustomerId.Value,
                     Name = order.Customer != null ? $"{order.Customer.FName} {order.Customer.LName}".Trim() : string.Empty
                 },
                 Cashier = new CashierSummaryDto
@@ -307,75 +318,145 @@ namespace Onpoint.Store.Application.Services.PosSales
 
             var receipt = receiptResult.Data;
 
+            byte[]? qrImageBytes = null;
+            if (!string.IsNullOrEmpty(receipt.QrCodeData))
+            {
+                try
+                {
+                    using var httpClient = _httpClientFactory.CreateClient();
+                    qrImageBytes = await httpClient.GetByteArrayAsync(receipt.QrCodeData, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to download QR code image for order {OrderId}", orderId);
+                }
+            }
+
             var document = QuestPDFDocument.Create(container =>
             {
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
                     page.Margin(2, Unit.Centimetre);
+                    page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
+
 
                     page.Header().Column(col =>
                     {
                         col.Item().Text("Company Name").Bold().FontSize(20).AlignCenter();
                         col.Item().Text("123 Main St, New York, NY 10001").FontSize(10).AlignCenter();
                         col.Item().Text("Tel: +1 555-0100").FontSize(10).AlignCenter();
+                        col.Item().PaddingTop(8).LineHorizontal(1);
                     });
 
-                    page.Content().Column(column =>
+
+                    page.Content().PaddingTop(10).Column(column =>
                     {
-                        column.Spacing(10);
+                        column.Spacing(6);
+
 
                         column.Item().Row(row =>
                         {
-                            row.RelativeItem().Text($"Invoice: {receipt.InvoiceNumber}");
-                            row.RelativeItem().Text($"Date: {receipt.Date:dd/MM/yyyy}").AlignRight();
+                            row.RelativeItem().Text($"Invoice: {receipt.InvoiceNumber}").SemiBold();
+                            row.RelativeItem().AlignRight().Text($"Date: {receipt.Date:dd/MM/yyyy}");
                         });
-
                         column.Item().Text($"Cashier: {receipt.CashierName}");
                         column.Item().Text($"Branch: {receipt.BranchName}");
                         column.Item().Text($"Customer: {receipt.CustomerName}");
 
-                        column.Item().LineHorizontal(1);
+                        column.Item().PaddingTop(5).LineHorizontal(1);
 
-                        foreach (var item in receipt.Items)
+                        column.Item().Table(table =>
                         {
-                            column.Item().Row(row =>
+                            table.ColumnsDefinition(columns =>
                             {
-                                row.RelativeItem().Text($"{item.ProductName}\n{item.Quantity} x ${item.UnitPrice:F2}");
-                                row.RelativeItem().Text($"${item.Total:F2}").AlignRight();
+                                columns.RelativeColumn(3); // product
+                                columns.RelativeColumn(1); // qty
+                                columns.RelativeColumn(1); // unit price
+                                columns.RelativeColumn(1); // total
                             });
-                        }
 
-                        column.Item().LineHorizontal(1);
+                            table.Header(header =>
+                            {
+                                header.Cell().Text("Item").Bold();
+                                header.Cell().AlignCenter().Text("Qty").Bold();
+                                header.Cell().AlignRight().Text("Price").Bold();
+                                header.Cell().AlignRight().Text("Total").Bold();
+                                header.Cell().ColumnSpan(4).PaddingTop(3).LineHorizontal(0.5f);
+                            });
 
-                        column.Item().Row(row =>
-                        {
-                            row.RelativeItem().Text("Subtotal");
-                            row.RelativeItem().Text($"${receipt.SubTotal:F2}").AlignRight();
-                        });
-                        column.Item().Row(row =>
-                        {
-                            row.RelativeItem().Text("Discount");
-                            row.RelativeItem().Text($"-${receipt.Discount:F2}").AlignRight();
-                        });
-                        column.Item().Row(row =>
-                        {
-                            row.RelativeItem().Text("Tax");
-                            row.RelativeItem().Text($"${receipt.Tax:F2}").AlignRight();
-                        });
-                        column.Item().Row(row =>
-                        {
-                            row.RelativeItem().Text("TOTAL").Bold();
-                            row.RelativeItem().Text($"${receipt.Total:F2}").Bold().AlignRight();
+                            foreach (var item in receipt.Items)
+                            {
+                                table.Cell().PaddingVertical(3).Text(item.ProductName);
+                                table.Cell().PaddingVertical(3).AlignCenter().Text(item.Quantity.ToString());
+                                table.Cell().PaddingVertical(3).AlignRight().Text($"${item.UnitPrice:F2}");
+                                table.Cell().PaddingVertical(3).AlignRight().Text($"${item.Total:F2}");
+                            }
                         });
 
-                        column.Item().Text($"Cash: ${receipt.AmountReceived:F2}");
-                        column.Item().Text($"Change: ${receipt.Change:F2}");
+                        column.Item().PaddingTop(5).LineHorizontal(1);
 
-                        if (!string.IsNullOrEmpty(receipt.QrCodeData))
-                            column.Item().Text("[QR Code]").AlignCenter();
 
-                        column.Item().Text("Thank you for your purchase!").AlignCenter().Italic();
+                        column.Item().AlignRight().Width(220).Column(totals =>
+                        {
+                            totals.Spacing(3);
+
+                            totals.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text("Subtotal");
+                                row.RelativeItem().AlignRight().Text($"${receipt.SubTotal:F2}");
+                            });
+                            totals.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text("Discount");
+                                row.RelativeItem().AlignRight().Text($"-${receipt.Discount:F2}");
+                            });
+                            totals.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text("Tax");
+                                row.RelativeItem().AlignRight().Text($"${receipt.Tax:F2}");
+                            });
+                            totals.Item().PaddingTop(3).LineHorizontal(1);
+                            totals.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text("TOTAL").Bold().FontSize(13);
+                                row.RelativeItem().AlignRight().Text($"${receipt.Total:F2}").Bold().FontSize(13);
+                            });
+                            totals.Item().PaddingTop(5).Row(row =>
+                            {
+                                row.RelativeItem().Text("Cash");
+                                row.RelativeItem().AlignRight().Text($"${receipt.AmountReceived:F2}");
+                            });
+                            totals.Item().Row(row =>
+                            {
+                                row.RelativeItem().Text("Change");
+                                row.RelativeItem().AlignRight().Text($"${receipt.Change:F2}");
+                            });
+                        });
+
+
+                        column.Item().PaddingTop(15).AlignCenter().Column(qrCol =>
+                        {
+                            if (qrImageBytes != null)
+                            {
+                                qrCol.Item().AlignCenter().Width(100).Image(qrImageBytes);
+                            }
+                            else
+                            {
+                                qrCol.Item().AlignCenter().Text("[QR Code]").FontSize(9).FontColor(Colors.Grey.Medium);
+                            }
+                        });
+
+                        column.Item().PaddingTop(10).AlignCenter()
+                            .Text("Thank you for your purchase!").Italic();
+                    });
+
+
+                    page.Footer().AlignCenter().Text(x =>
+                    {
+                        x.CurrentPageNumber();
+                        x.Span(" / ");
+                        x.TotalPages();
                     });
                 });
             });
@@ -479,7 +560,9 @@ namespace Onpoint.Store.Application.Services.PosSales
             if (order == null)
                 return _resultHandler.NotFound<string>("Order not found.");
 
-            var qrValue = $"INVOICE:{order.InvoiceNumber ?? string.Empty}|ID:{order.Id}|TOTAL:{order.TotalAmount:F2}|DATE:{order.CreatedAt:yyyy-MM-dd}";
+
+            var frontendBaseUrl = _configuration["FrontendBaseUrl"];
+            var qrValue = $"{frontendBaseUrl}/invoice/{order.Id}";
 
             var qrBytes = _qrCodeService.GenerateImage(qrValue);
             var fileName = $"invoice-qr-{order.Id}-{Guid.NewGuid()}.png";

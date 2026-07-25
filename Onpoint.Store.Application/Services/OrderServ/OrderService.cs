@@ -171,7 +171,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 if (!string.IsNullOrEmpty(order.CouponCode))
                     coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == order.CouponCode, ct);
 
-                var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.CustomerId, ct);
+                var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.CustomerId.Value, ct);
 
                 await FinalizeOrderAsync(order, cart, coupon, ct);
 

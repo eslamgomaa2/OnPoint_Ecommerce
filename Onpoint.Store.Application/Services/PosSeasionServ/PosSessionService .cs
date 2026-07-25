@@ -609,7 +609,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                 order = new Order
                 {
                     CashierId = session.CashierId,
-                    CustomerId = session.CustomerId ?? 0,
+                    CustomerId = session.CustomerId,
                     InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{session.Id:D4}",
                     PhoneNumber = session.CustomerPhone ?? string.Empty,
                     PaymentMethod = primaryMethod,

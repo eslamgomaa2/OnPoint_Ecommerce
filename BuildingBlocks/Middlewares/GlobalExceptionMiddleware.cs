@@ -36,7 +36,7 @@ namespace BuildingBlocks.Middlewares
         {
             context.Response.ContentType = "application/json";
 
-            // 1. FluentValidation Exceptions
+
             if (exception is ValidationException validationEx)
             {
                 var errorMessages = validationEx.Errors
@@ -62,7 +62,7 @@ namespace BuildingBlocks.Middlewares
                 return;
             }
 
-            // 2. Managed Exceptions
+
             var (statusCode, localizationKey) = GetExceptionDetails(exception);
             string message = GetLocalizedMessage(localization, localizationKey);
 
@@ -95,21 +95,21 @@ namespace BuildingBlocks.Middlewares
         {
             return exception switch
             {
-                // Authentication & Account Exceptions
+
                 UserNotFoundException _ => (StatusCodes.Status401Unauthorized, "Errors.UserNotFound"),
                 UnauthorizedAccessException _ => (StatusCodes.Status401Unauthorized, "Errors.Unauthorized"),
                 AccountInactiveException _ => (StatusCodes.Status402PaymentRequired, "Errors.AccountInactive"),
 
-                // Bad Request Errors (400)
+
                 InvalidImageException _ => (StatusCodes.Status400BadRequest, "Business.InvalidImage"),
                 ArgumentException _ => (StatusCodes.Status400BadRequest, "Errors.ValidationFailed"),
                 InvalidOperationException _ => (StatusCodes.Status400BadRequest, "Errors.ValidationFailed"),
 
-                // Not Found & Timeouts
+
                 KeyNotFoundException _ => (StatusCodes.Status404NotFound, "Errors.NotFound"),
                 TimeoutException _ => (StatusCodes.Status504GatewayTimeout, "Errors.GenericError"),
 
-                // Internal Server Error Fallback (500)
+
                 _ => (StatusCodes.Status500InternalServerError, "Errors.GenericError")
             };
         }
