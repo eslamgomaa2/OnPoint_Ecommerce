@@ -5,7 +5,7 @@ namespace Onpoint.Store.Application.Services.StockServ
 {
     public interface IStockService
     {
-        Task<ServiceResult<StockDto>> InitializeStockAsync(InitializeStockDto dto, CancellationToken ct = default);
+        Task<ServiceResult<StockDto>> InitializeStockAsync(int Productid, InitializeStockDto dto, CancellationToken ct = default);
         Task<ServiceResult<StockDto>> AdjustStockAsync(AdjustStockDto dto, CancellationToken ct = default);
         Task<ServiceResult<bool>> TransferStockAsync(TransferStockDto dto, CancellationToken ct = default);
         Task<ServiceResult<List<StockDto>>> GetStockByProductAsync(int productId, CancellationToken ct = default);

@@ -11,7 +11,7 @@ namespace Onpoint.Store.Application.Validators.Auth
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Invalid email format.");
 
-            RuleFor(x => x.Token)
+            RuleFor(x => x.OTP)
                 .NotEmpty().WithMessage("Verification token is required.");
         }
     }

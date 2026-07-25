@@ -6,8 +6,8 @@ namespace Onpoint.Store.Application.Services.CartServ
     public interface ICartService
     {
         Task<ServiceResult<CartDto>> GetUserCartAsync(int userId, CancellationToken ct = default);
-        Task<ServiceResult<CartDto>> AddToCartAsync(int userId, AddToCartDto dto, CancellationToken ct = default);
-        Task<ServiceResult<CartDto>> UpdateItemQuantityAsync(int userId, UpdateCartItemDto dto, CancellationToken ct = default);
+        Task<ServiceResult<CartDto>> AddToCartAsync(int userId, int productid, AddToCartDto dto, CancellationToken ct = default);
+        Task<ServiceResult<CartDto>> UpdateItemQuantityAsync(int userId, int cartItemId, UpdateCartItemDto dto, CancellationToken ct = default);
         Task<ServiceResult<string>> RemoveItemAsync(int userId, int cartItemId, CancellationToken ct = default);
         Task<ServiceResult<string>> ClearCartAsync(int userId, CancellationToken ct = default);
         Task<ServiceResult<CartDto>> ApplyCouponAsync(int userId, ApplyCouponDto dto, CancellationToken ct = default);

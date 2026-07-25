@@ -1,69 +1,61 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Stock;
 using Onpoint.Store.Application.Services.StockServ;
+using Onpoint.Store.Domin.Enums;
 
-namespace Onpoint.Store.Api.Controllers
+[Route("api/[controller]")]
+[ApiController]
+[Authorize(Roles = "SuperAdmin")]
+public class StockController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-
-    public class StockController : ControllerBase
+    private readonly IStockService _stockService;
+    public StockController(IStockService stockService)
     {
-        private readonly IStockService _stockService;
+        _stockService = stockService;
+    }
 
-        public StockController(IStockService stockService)
+    [HttpGet("counts")]
+    public async Task<IActionResult> GetCounts(
+        [FromQuery] StockStatus status,
+        [FromQuery] int? branchId,
+        CancellationToken ct)
+    {
+        var result = status switch
         {
-            _stockService = stockService;
-        }
+            StockStatus.LowStock => await _stockService.GetLowStockCountAsync(branchId, ct),
+            StockStatus.InStock => await _stockService.GetInStockCountAsync(branchId, ct),
+            StockStatus.OutOfStock => await _stockService.GetOutOfStockCountAsync(branchId, ct),
+            _ => throw new ArgumentOutOfRangeException(nameof(status))
+        };
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
 
-        [HttpGet("low-stock/count")]
-        public async Task<IActionResult> GetLowStockCount([FromQuery] int? branchId, CancellationToken ct)
-        {
-            var result = await _stockService.GetLowStockCountAsync(branchId, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
+    [HttpGet("products/{productId}")]
+    public async Task<IActionResult> GetByProduct(int productId, CancellationToken ct = default)
+    {
+        var result = await _stockService.GetStockByProductAsync(productId, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
 
+    [HttpPost("initialize/{Productid}")]
+    public async Task<IActionResult> Initialize(int Productid, [FromBody] InitializeStockDto dto, CancellationToken ct = default)
+    {
+        var result = await _stockService.InitializeStockAsync(Productid, dto, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
 
-        [HttpGet("in-stock/count")]
-        public async Task<IActionResult> GetInStockCount([FromQuery] int? branchId, CancellationToken ct)
-        {
-            var result = await _stockService.GetInStockCountAsync(branchId, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
+    [HttpPost("adjust")]
+    public async Task<IActionResult> Adjust([FromBody] AdjustStockDto dto, CancellationToken ct = default)
+    {
+        var result = await _stockService.AdjustStockAsync(dto, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
 
-
-        [HttpGet("out-of-stock/count")]
-        public async Task<IActionResult> GetOutOfStockCount([FromQuery] int? branchId, CancellationToken ct)
-        {
-            var result = await _stockService.GetOutOfStockCountAsync(branchId, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-        [HttpPost("[action]")]
-        public async Task<IActionResult> Initialize([FromBody] InitializeStockDto dto, CancellationToken ct = default)
-        {
-            var result = await _stockService.InitializeStockAsync(dto, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-
-        [HttpPost("[action]")]
-        public async Task<IActionResult> Adjust([FromBody] AdjustStockDto dto, CancellationToken ct = default)
-        {
-            var result = await _stockService.AdjustStockAsync(dto, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-
-        [HttpPost("[action]")]
-        public async Task<IActionResult> Transfer([FromBody] TransferStockDto dto, CancellationToken ct = default)
-        {
-            var result = await _stockService.TransferStockAsync(dto, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
-
-        [HttpGet("product/{productId}")]
-        public async Task<IActionResult> GetByProduct(int productId, CancellationToken ct = default)
-        {
-            var result = await _stockService.GetStockByProductAsync(productId, ct);
-            return StatusCode((int)result.HttpStatusCode, result);
-        }
+    [HttpPost("transfer")]
+    public async Task<IActionResult> Transfer([FromBody] TransferStockDto dto, CancellationToken ct = default)
+    {
+        var result = await _stockService.TransferStockAsync(dto, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
     }
 }

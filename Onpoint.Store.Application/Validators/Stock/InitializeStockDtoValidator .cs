@@ -10,13 +10,7 @@ namespace Onpoint.Store.Application.Validators.Stock
         {
             RuleFor(x => x.Quantity).GreaterThanOrEqualTo(0);
 
-            RuleFor(x => x)
-                .MustAsync(async (dto, ct) =>
-                {
-                    var product = await unitOfWork.Products.GetByIdAsync(dto.ProductId, ct);
-                    return product != null;
-                })
-                .WithMessage("Product not found.");
+
 
             RuleFor(x => x)
                 .MustAsync(async (dto, ct) =>
@@ -26,14 +20,6 @@ namespace Onpoint.Store.Application.Validators.Stock
                 })
                 .WithMessage("Branch not found or inactive.");
 
-            RuleFor(x => x)
-                .MustAsync(async (dto, ct) =>
-                {
-                    var existing = await unitOfWork.Stocks.GetByProductAndBranchAsync(
-                        dto.ProductId, dto.ProductVariantId, dto.BranchId, ct);
-                    return existing == null;
-                })
-                .WithMessage("Stock record already exists for this product/variant/branch. Use adjust instead.");
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Onpoint.Store.Domin.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
 
@@ -11,7 +12,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
         }
 
-
+        public async Task<Category?> GetCategoryByName(string Name, CancellationToken ct)
+        {
+            return await _dbset.FirstOrDefaultAsync(c => c.Name == Name, ct);
+        }
     }
 
 

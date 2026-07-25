@@ -47,7 +47,7 @@ namespace Onpoint.Store.Application.Services.CartServ
             return _resultHandler.Success(MapToCartDto(cart));
         }
 
-        public async Task<ServiceResult<CartDto>> AddToCartAsync(int userId, AddToCartDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<CartDto>> AddToCartAsync(int userId, int productId, AddToCartDto dto, CancellationToken ct = default)
         {
             await _addToCartValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
@@ -59,7 +59,7 @@ namespace Onpoint.Store.Application.Services.CartServ
                 await _unitOfWork.SaveChangesAsync(ct);
             }
 
-            var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(dto.ProductId, ct);
+            var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
             if (product == null)
                 throw new KeyNotFoundException("Product not found.");
 
@@ -85,9 +85,9 @@ namespace Onpoint.Store.Application.Services.CartServ
             if (defaultBranch == null)
                 return _resultHandler.BadRequest<CartDto>("Default online branch is not configured.");
 
-            var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(dto.ProductId, dto.ProductVariantId, defaultBranch.Id, ct);
+            var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(productId, dto.ProductVariantId, defaultBranch.Id, ct);
 
-            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == dto.ProductId && i.ProductVariantId == dto.ProductVariantId);
+            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == productId && i.ProductVariantId == dto.ProductVariantId);
             var requestedTotalQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
 
             if (stock == null || stock.AvailableQuantity < requestedTotalQuantity)
@@ -102,7 +102,7 @@ namespace Onpoint.Store.Application.Services.CartServ
             {
                 cart.Items.Add(new CartItem
                 {
-                    ProductId = dto.ProductId,
+                    ProductId = productId,
                     ProductVariantId = dto.ProductVariantId,
                     Quantity = dto.Quantity,
                     UnitPrice = unitPrice
@@ -116,7 +116,7 @@ namespace Onpoint.Store.Application.Services.CartServ
             return _resultHandler.Success(MapToCartDto(updatedCart!));
         }
 
-        public async Task<ServiceResult<CartDto>> UpdateItemQuantityAsync(int userId, UpdateCartItemDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<CartDto>> UpdateItemQuantityAsync(int userId, int cartItemId, UpdateCartItemDto dto, CancellationToken ct = default)
         {
             await _updateItemValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
@@ -124,7 +124,7 @@ namespace Onpoint.Store.Application.Services.CartServ
             if (cart == null)
                 return _resultHandler.NotFound<CartDto>("Cart not found.");
 
-            var item = cart.Items.FirstOrDefault(i => i.Id == dto.CartItemId);
+            var item = cart.Items.FirstOrDefault(i => i.Id == cartItemId);
             if (item == null)
                 return _resultHandler.NotFound<CartDto>("Item not found in cart.");
 

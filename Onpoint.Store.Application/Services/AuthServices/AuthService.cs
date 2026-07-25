@@ -193,7 +193,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
             if (user.EmailConfirmed)
                 return _resultHandler.BadRequest<string>("Email is already confirmed.");
 
-            var decodedToken = WebUtility.UrlDecode(dto.Token);
+            var decodedToken = WebUtility.UrlDecode(dto.OTP);
 
             var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
 

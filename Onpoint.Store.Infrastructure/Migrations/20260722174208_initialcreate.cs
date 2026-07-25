@@ -1178,7 +1178,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Coupons_Code",
                 table: "Coupons",
-                column: "Code",
+                column: "OTP",
                 unique: true);
 
             migrationBuilder.CreateIndex(

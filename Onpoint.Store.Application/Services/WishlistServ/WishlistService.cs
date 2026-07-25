@@ -38,28 +38,27 @@ namespace Onpoint.Store.Application.Services.WishlistServ
             return _resultHandler.Success(dto);
         }
 
-        public async Task<ServiceResult<WishlistItemDto>> AddToWishlistAsync(int userId, AddToWishlistDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<WishlistItemDto>> AddToWishlistAsync(int userId, int productid, CancellationToken ct = default)
         {
-            var validation = await _addValidator.ValidateAsync(dto, ct);
-            if (!validation.IsValid) throw new ValidationException(validation.Errors);
 
-            var product = await _unitOfWork.Products.GetByIdAsync(dto.ProductId, ct);
+
+            var product = await _unitOfWork.Products.GetByIdAsync(productid, ct);
             if (product == null || product.IsDeleted)
                 return _resultHandler.NotFound<WishlistItemDto>("Product not found.");
-            var existing = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, dto.ProductId, ct);
+            var existing = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productid, ct);
             if (existing != null)
                 return _resultHandler.BadRequest<WishlistItemDto>("Product is already in your wishlist.");
 
             var wishlistItem = new Wishlist
             {
                 UserId = userId,
-                ProductId = dto.ProductId
+                ProductId = productid,
             };
 
             await _unitOfWork.Wishlists.AddAsync(wishlistItem, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            var saved = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, dto.ProductId, ct);
+            var saved = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productid, ct);
             return _resultHandler.Created(_mapper.Map<WishlistItemDto>(saved));
         }
 

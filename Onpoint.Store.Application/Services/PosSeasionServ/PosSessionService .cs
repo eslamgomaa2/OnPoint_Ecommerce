@@ -256,7 +256,7 @@ namespace Onpoint.Store.Application.Services.PosServ
         public async Task<ServiceResult<PosSessionDto>> ScanAndAddItemAsync(ScanPosItemDto dto, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(dto.Code))
-                return _resultHandler.BadRequest<PosSessionDto>("Code cannot be empty.");
+                return _resultHandler.BadRequest<PosSessionDto>("OTP cannot be empty.");
 
             var scannedCode = dto.Code.Trim();
             var session = await GetSessionWithDetailsAsync(dto.SessionId);
