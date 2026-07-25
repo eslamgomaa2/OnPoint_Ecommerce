@@ -63,5 +63,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
             return (totalCustomers, active, newThisMonth);
         }
+
+        public async Task<Customer?> GetByPhoneNumberAsync(string phone, int branchId, CancellationToken ct = default)
+        {
+            return await _dbset
+                 .AsNoTracking()
+                 .FirstOrDefaultAsync(c => c.Phone == phone && c.BranchId == branchId && !c.IsDeleted, ct);
+        }
     }
 }

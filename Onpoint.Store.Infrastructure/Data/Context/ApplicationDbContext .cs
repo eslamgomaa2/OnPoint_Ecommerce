@@ -36,6 +36,10 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<PosSession> PosSessions { get; set; }
         public DbSet<PosSessionItem> PosSessionItems { get; set; }
         public DbSet<Customer> Customers { get; set; }
+        public DbSet<Refund> Refunds { get; set; }
+        public DbSet<RefundItem> RefundItems { get; set; }
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+
 
 
 
@@ -69,6 +73,9 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new ProductShippingConfiguration());
             builder.ApplyConfiguration(new ProductTranslationConfiguration());
             builder.ApplyConfiguration(new CustomerConfiguration());
+            builder.ApplyConfiguration(new RefundConfiguration());
+            builder.ApplyConfiguration(new RefundItemConfiguration());
+            builder.ApplyConfiguration(new OrderStatusHistoryConfiguration());
 
 
             foreach (var entityType in builder.Model.GetEntityTypes())

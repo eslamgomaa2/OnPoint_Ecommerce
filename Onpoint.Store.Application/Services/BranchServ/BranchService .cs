@@ -13,22 +13,20 @@ namespace Onpoint.Store.Application.Services.BranchServices
 {
     public class BranchService : IBranchService
     {
-        private readonly IGenericRepository<Branch, int> _branchRepo;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IGenericRepository<ApplicationUser, int> _userRepo;
 
         private readonly IValidator<CreateBranchDto> _createBranchValidator;
         private readonly IValidator<UpdateBranchDto> _UpdateBranchValidator;
         private readonly IValidator<CreateManagerDto> _createManagerValidator;
-        private readonly IGenericRepository<Order, int> _orderRepo;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<int>> _roleManager;
         private readonly ServiceResultHandler _resultHandler;
 
         public BranchService(
-            IGenericRepository<Branch, int> branchRepo,
+
             IGenericRepository<ApplicationUser, int> userRepo,
-            IGenericRepository<Order, int> orderRepo,
+
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<int>> roleManager,
             ServiceResultHandler resultHandler,
@@ -37,9 +35,9 @@ namespace Onpoint.Store.Application.Services.BranchServices
             IValidator<CreateManagerDto> createManagerValidator,
             IValidator<UpdateBranchDto> updateBranchValidator)
         {
-            _branchRepo = branchRepo;
+
             _userRepo = userRepo;
-            _orderRepo = orderRepo;
+
             _userManager = userManager;
             _roleManager = roleManager;
             _resultHandler = resultHandler;
@@ -53,9 +51,9 @@ namespace Onpoint.Store.Application.Services.BranchServices
         public async Task<ServiceResult<PagedResult<BranchDto>>> GetPagedAsync(BranchPagedRequestDto request, CancellationToken ct = default)
         {
             var query = _unitOfWork.Branches.QueryNoTracking()
-                .Include(b => b.Manager)
-                .Include(b => b.Cashiers.Where(c => !c.IsDeleted))
-                .Where(b => !b.IsDeleted);
+        .Include(b => b.Manager)
+        .Include(b => b.Cashiers.Where(c => !c.IsDeleted && c.BranchRole == UserBranchRole.Cashier))
+        .Where(b => !b.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
@@ -117,10 +115,11 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
         public async Task<ServiceResult<BranchDto>> GetByIdAsync(int id, CancellationToken ct = default)
         {
+
             var branch = await _unitOfWork.Branches.QueryNoTracking()
-                .Include(b => b.Manager)
-                .Include(b => b.Cashiers.Where(c => !c.IsDeleted))
-                .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
+        .Include(b => b.Manager)
+        .Include(b => b.Cashiers.Where(c => !c.IsDeleted && c.BranchRole == UserBranchRole.Cashier))
+        .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
 
             if (branch == null)
                 return _resultHandler.NotFound<BranchDto>("Branch not found.");
@@ -145,7 +144,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
             };
 
-            await _branchRepo.AddAsync(branch, ct);
+            await _unitOfWork.Branches.AddAsync(branch, ct);
 
             if (dto.IsDefault)
             {
@@ -159,20 +158,15 @@ namespace Onpoint.Store.Application.Services.BranchServices
         public async Task<ServiceResult<BranchDto>> UpdateAsync(int id, UpdateBranchDto dto, CancellationToken ct = default)
         {
             await _UpdateBranchValidator.ValidateAndThrowAsync(dto, ct);
-            var branch = await _branchRepo.Query()
-                .Include(b => b.Manager)
-                .Include(b => b.Cashiers.Where(c => !c.IsDeleted))
-                .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
+            var branch = await _unitOfWork.Branches.Query()
+        .Include(b => b.Manager)
+        .Include(b => b.Cashiers.Where(c => !c.IsDeleted && c.BranchRole == UserBranchRole.Cashier))
+        .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
 
             if (branch == null)
                 return _resultHandler.NotFound<BranchDto>("Branch not found.");
 
-            if (dto.ManagerId.HasValue)
-            {
-                var managerExists = await _userRepo.AnyAsync(u => u.Id == dto.ManagerId.Value && !u.IsDeleted, ct);
-                if (!managerExists)
-                    return _resultHandler.BadRequest<BranchDto>("Selected manager not found.");
-            }
+
 
             branch.Name = dto.Name;
             branch.Address = dto.Address;
@@ -181,7 +175,6 @@ namespace Onpoint.Store.Application.Services.BranchServices
             branch.GoogleMapLocation = dto.GoogleMapLocation;
             branch.WorkingHours = dto.WorkingHours;
             branch.IsActive = dto.IsActive;
-            branch.ManagerId = dto.ManagerId;
             branch.UpdatedAt = DateTime.UtcNow;
 
             if (dto.IsDefault && !branch.IsDefault)
@@ -194,16 +187,17 @@ namespace Onpoint.Store.Application.Services.BranchServices
                 branch.IsDefault = dto.IsDefault;
             }
 
-            _branchRepo.Update(branch);
+            _unitOfWork.Branches.Update(branch);
             await _unitOfWork.SaveChangesAsync();
             return _resultHandler.Success(MapToDto(branch));
         }
 
         public async Task<ServiceResult<bool>> DeleteAsync(int id, CancellationToken ct = default)
         {
-            var branch = await _branchRepo.Query()
-                .Include(b => b.Cashiers.Where(c => !c.IsDeleted))
-                .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
+            var branch = await _unitOfWork.Branches.QueryNoTracking()
+         .Include(b => b.Manager)
+         .Include(b => b.Cashiers.Where(c => !c.IsDeleted && c.BranchRole == UserBranchRole.Cashier))
+         .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
 
             if (branch == null)
                 return _resultHandler.NotFound<bool>("Branch not found.");
@@ -211,14 +205,14 @@ namespace Onpoint.Store.Application.Services.BranchServices
             if (branch.Cashiers.Any())
                 return _resultHandler.BadRequest<bool>("Cannot delete branch with active cashiers. Please remove or reassign them first.");
 
-            var hasOrders = await _orderRepo.AnyAsync(o => o.BranchId == id, ct);
+            var hasOrders = await _unitOfWork.Orders.AnyAsync(o => o.BranchId == id, ct);
             if (hasOrders)
                 return _resultHandler.BadRequest<bool>("Cannot delete branch with existing orders.");
 
             branch.IsDeleted = true;
             branch.IsActive = true;
             branch.UpdatedAt = DateTime.UtcNow;
-            _branchRepo.Update(branch);
+            _unitOfWork.Branches.Update(branch);
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -227,7 +221,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
         public async Task<ServiceResult<bool>> ToggleActiveAsync(int id, CancellationToken ct = default)
         {
-            var branch = await _branchRepo.Query()
+            var branch = await _unitOfWork.Branches.Query()
                 .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
 
             if (branch == null)
@@ -235,7 +229,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
             branch.IsActive = !branch.IsActive;
             branch.UpdatedAt = DateTime.UtcNow;
-            _branchRepo.Update(branch);
+            _unitOfWork.Branches.Update(branch);
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -244,7 +238,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
         public async Task<ServiceResult<bool>> SetDefaultAsync(int id, CancellationToken ct = default)
         {
-            var branch = await _branchRepo.Query()
+            var branch = await _unitOfWork.Branches.Query()
                 .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
 
             if (branch == null)
@@ -255,7 +249,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
             branch.IsDefault = true;
             branch.UpdatedAt = DateTime.UtcNow;
-            _branchRepo.Update(branch);
+            _unitOfWork.Branches.Update(branch);
 
             await UnsetOtherDefaultsAsync(branch.Id, ct);
 
@@ -267,10 +261,10 @@ namespace Onpoint.Store.Application.Services.BranchServices
         public async Task<ServiceResult<BranchDto>> AssignManagerAsync(int branchId, CreateManagerDto dto, CancellationToken ct = default)
         {
             await _createManagerValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
-            var branch = await _branchRepo.Query()
-                .Include(b => b.Manager)
-                .Include(b => b.Cashiers.Where(c => !c.IsDeleted))
-                .FirstOrDefaultAsync(b => b.Id == branchId && !b.IsDeleted, ct);
+            var branch = await _unitOfWork.Branches.Query()
+                  .Include(b => b.Manager)
+                   .Include(b => b.Cashiers.Where(c => !c.IsDeleted))
+                    .FirstOrDefaultAsync(b => b.Id == branchId && !b.IsDeleted, ct);
 
             if (branch == null)
                 return _resultHandler.NotFound<BranchDto>("Branch not found.");
@@ -281,7 +275,6 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
             if (!await _roleManager.RoleExistsAsync("BranchManager"))
                 await _roleManager.CreateAsync(new IdentityRole<int>("BranchManager"));
-
             var user = new ApplicationUser
             {
                 FirstName = dto.FirstName,
@@ -290,6 +283,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
                 BranchId = branchId,
+                BranchRole = UserBranchRole.Manager,
                 EmailConfirmed = true,
                 IsActive = true
             };
@@ -305,7 +299,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
             branch.ManagerId = user.Id;
             branch.UpdatedAt = DateTime.UtcNow;
-            _branchRepo.Update(branch);
+            _unitOfWork.Branches.Update(branch);
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -315,7 +309,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
         // ===================== REMOVE MANAGER =====================
         public async Task<ServiceResult<bool>> RemoveManagerAsync(int branchId, CancellationToken ct = default)
         {
-            var branch = await _branchRepo.Query()
+            var branch = await _unitOfWork.Branches.Query()
                 .Include(b => b.Manager)
                 .FirstOrDefaultAsync(b => b.Id == branchId && !b.IsDeleted, ct);
 
@@ -335,7 +329,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
 
             branch.ManagerId = null;
             branch.UpdatedAt = DateTime.UtcNow;
-            _branchRepo.Update(branch);
+            _unitOfWork.Branches.Update(branch);
 
             await _unitOfWork.SaveChangesAsync();
             return _resultHandler.Success(true);
@@ -344,7 +338,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
         // ===================== HELPERS =====================
         private async Task UnsetOtherDefaultsAsync(int exceptBranchId, CancellationToken ct)
         {
-            var otherDefaults = await _branchRepo.FindAsync(
+            var otherDefaults = await _unitOfWork.Branches.FindAsync(
                 b => b.IsDefault && b.Id != exceptBranchId && !b.IsDeleted,
                 ct: ct);
 
@@ -352,7 +346,7 @@ namespace Onpoint.Store.Application.Services.BranchServices
             {
                 b.IsDefault = false;
                 b.UpdatedAt = DateTime.UtcNow;
-                _branchRepo.Update(b);
+                _unitOfWork.Branches.Update(b);
             }
         }
 

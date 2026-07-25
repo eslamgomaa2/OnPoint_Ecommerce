@@ -17,6 +17,6 @@ public class PosSessionDto
     public decimal TaxAmount { get; set; }
     public decimal AmountReceived { get; set; }
     public decimal Change { get; set; }
-    public ICollection<PosSessionItemDto> Items { get; set; } = new List<PosSessionItemDto>();
+    public IList<PosSessionItemDto> Items { get; set; } = new List<PosSessionItemDto>();
     public DateTime CreatedAt { get; set; }
 }

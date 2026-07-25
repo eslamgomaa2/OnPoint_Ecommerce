@@ -5,9 +5,9 @@ using Onpoint.Store.Infrastructure.Data.Context;
 
 namespace Onpoint.Store.Infrastructure.Repositories
 {
-    public class InvoiceRepository : GenericRepository<Invoice, int>, IInvoiceRepository
+    public class PosSalesRepository : GenericRepository<Invoice, int>, IPossalesRepository
     {
-        public InvoiceRepository(ApplicationDbContext context) : base(context)
+        public PosSalesRepository(ApplicationDbContext context) : base(context)
         {
         }
 

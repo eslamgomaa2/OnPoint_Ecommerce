@@ -14,7 +14,7 @@ namespace Onpoint.Store.Domin.Repositories
             CancellationToken ct = default);
 
         Task<Customer?> GetByIdWithOrdersAsync(int id, int branchId, CancellationToken ct = default);
-
+        Task<Customer?> GetByPhoneNumberAsync(string phone, int branchId, CancellationToken ct = default);
         Task<(int TotalCustomers, int Active, int NewThisMonth)> GetCustomerCountsAsync(
             int branchId,
             CancellationToken ct = default);

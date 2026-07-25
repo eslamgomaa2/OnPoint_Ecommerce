@@ -110,13 +110,32 @@ namespace Onpoint.Store.Application.Services.Customer
         public async Task<ServiceResult<bool>> DeleteAsync(int id, int branchId, CancellationToken ct = default)
         {
             var customer = await _unitOfWork.Customers.GetByIdAsync(id, ct);
-            if (customer is null || customer.BranchId != branchId)
+            if (customer is null || customer.BranchId != branchId || customer.IsDeleted)
                 return _resultHandler.NotFound<bool>("Customer not found.");
 
-            _unitOfWork.Customers.Remove(customer);
-            await _unitOfWork.SaveChangesAsync(ct);
+            var hasOrders = await _unitOfWork.Orders.AnyAsync(o => o.CustomerId == id, ct);
+            if (hasOrders)
+            {
+                customer.IsDeleted = true;
+                customer.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Customers.Update(customer);
+            }
+            else
+            {
+                _unitOfWork.Customers.Remove(customer);
+            }
 
+            await _unitOfWork.SaveChangesAsync(ct);
             return _resultHandler.Deleted<bool>();
+        }
+
+        public async Task<ServiceResult<CustomerDetailsDto>> GetByPhoneNumberAsync(string phone, int branchId, CancellationToken ct = default)
+        {
+            var customer = await _unitOfWork.Customers.GetByPhoneNumberAsync(phone, branchId, ct);
+            if (customer is null)
+                return _resultHandler.NotFound<CustomerDetailsDto>("Customer not found.");
+
+            return _resultHandler.Success(_mapper.Map<CustomerDetailsDto>(customer));
         }
     }
 }

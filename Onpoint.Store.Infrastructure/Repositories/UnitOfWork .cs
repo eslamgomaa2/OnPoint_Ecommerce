@@ -20,10 +20,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private ICouponRepository? _couponRepository;
         private IOrderRepo? _orders;
         private IPaymentTransactionRepository? _paymentTransactions;
-        private IInvoiceRepository? _invoices;
+        private IPossalesRepository? _invoices;
         private IWishlistRepository? _wishlists;
         private IReviewRepository? _reviews;
         private IGenericRepository<OrderItem, int>? _orderItems;
+        private IGenericRepository<RefundItem, int>? _refundItems;
+
         private IApplicationUserRepo? _applicationUsers;
         private IStockRepository? _stockRepository;
         private IBranchRepo? _branches;
@@ -31,6 +33,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IProductVariantRepository? _productVariantRepository;
         private IProductAttributeRepository? _productAttributes;
         private IDiscountRepo? _discounts;
+        private IRefundRepository? _refunds;
 
         private ICustomerRepository? _customers;
 
@@ -43,7 +46,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         }
 
         public IPaymentTransactionRepository PaymentTransactions => _paymentTransactions ??= new PaymentTransactionRepository(_context);
-        public IInvoiceRepository Invoices => _invoices ??= new InvoiceRepository(_context);
+        public IPossalesRepository Invoices => _invoices ??= new PosSalesRepository(_context);
         public ICategoryRepository Categories => _categories ??= new CategoryRepository(_context);
         public IProductRepository Products => _products ??= new ProductRepository(_context);
         public ICartRepository Carts => _carts ??= new CartRepository(_context);
@@ -71,6 +74,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IBrandRepository Brands => _brands ??= new BrandRepository(_context);
 
         public ICustomerRepository Customers => _customers ??= new CustomerRepository(_context);
+
+        public IRefundRepository Refunds => _refunds ??= new RefundRepository(_context);
+
+        public IGenericRepository<RefundItem, int> RefundItems => _refundItems ??= new GenericRepository<RefundItem, int>(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

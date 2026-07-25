@@ -3,7 +3,7 @@ using Onpoint.Store.Application.Extensions;
 using Onpoint.Store.Infrastructure.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
-
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
@@ -18,8 +18,8 @@ builder.Services.AddFluentValidationConfiguration(new[]
 {
     typeof(ApplicationServiceExtension).Assembly
 });
-builder.Services.AddSwaggerGen();
-//builder.Services.AddSwaggerConfiguration();
+//builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerConfiguration();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 // Infrastructure 

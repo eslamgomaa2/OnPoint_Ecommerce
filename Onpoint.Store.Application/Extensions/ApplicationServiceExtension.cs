@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.Interfaces;
 using Onpoint.Store.Application.Mappings;
+using Onpoint.Store.Application.Services;
 using Onpoint.Store.Application.Services.AddressServ;
 using Onpoint.Store.Application.Services.AuthServices;
 using Onpoint.Store.Application.Services.AuthServices.Email;
@@ -24,12 +25,12 @@ using Onpoint.Store.Application.Services.CodeGeneration.SkuGeneration;
 using Onpoint.Store.Application.Services.CouponServ;
 using Onpoint.Store.Application.Services.Customer;
 using Onpoint.Store.Application.Services.DiscountServ;
-using Onpoint.Store.Application.Services.InvoiceServ;
 using Onpoint.Store.Application.Services.MedioServices;
 using Onpoint.Store.Application.Services.OrderServ;
 using Onpoint.Store.Application.Services.PaymentServ;
 using Onpoint.Store.Application.Services.PaymentServices;
 using Onpoint.Store.Application.Services.PaymentTransactionServ;
+using Onpoint.Store.Application.Services.PosSales;
 using Onpoint.Store.Application.Services.PosServ;
 using Onpoint.Store.Application.Services.ProductAttributeServ;
 using Onpoint.Store.Application.Services.ProductServ;
@@ -58,7 +59,6 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<ICouponService, CouponService>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
-            services.AddScoped<IInvoiceService, InvoiceService>();
             services.AddScoped<IWishlistService, WishlistService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddHttpClient<IMyFatoorahClient, MyFatoorahClient>();
@@ -77,6 +77,9 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IShippingService, ShippingService>();
             services.AddScoped<IBranchManagerProductService, BranchManagerProductService>();
             services.AddScoped<ICustomerService, CustomerService>();
+            services.AddScoped<IRefundService, RefundService>();
+            services.AddScoped<IPosSalesService, PosSalesService>();
+
 
 
 

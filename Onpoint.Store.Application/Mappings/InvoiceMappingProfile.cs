@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Onpoint.Store.Application.DTOs.Invoice;
+using Onpoint.Store.Application.DTOs.PosSales;
 using Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Application.Mappings

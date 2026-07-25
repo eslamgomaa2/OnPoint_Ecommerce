@@ -55,7 +55,8 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 return _resultHandler.BadRequest<ProductVariantDto>(errors);
             }
 
-            var product = await _unitOfWork.Products.GetWithFullDetailsForAdminAsync(productId, ct);
+
+            var product = await _unitOfWork.Products.GetWithFullDetailsForAdminAsync(productId, ct: ct);
             if (product is null)
                 return _resultHandler.NotFound<ProductVariantDto>("Product not found.");
 
@@ -72,14 +73,11 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             if (dto.BarcodeMode is not null)
             {
                 variant.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual ? dto.Barcode : _barcodeService.GenerateValue();
-
                 var bytes = _barcodeService.GenerateImage(variant.Barcode!);
                 using var stream = new MemoryStream(bytes);
-
                 var upload = await _imageStorageService.UploadImageAsync(stream, $"{variant.Sku}-barcode.png", ct);
                 if (!upload.Succeeded)
                     return _resultHandler.BadRequest<ProductVariantDto>(upload.Message ?? "Failed to upload variant barcode image.");
-
                 variant.BarcodeImagePath = upload.Data!;
             }
 
@@ -87,14 +85,11 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             {
                 var qrValue = _qrCodeService.GenerateValue(variant.Sku);
                 variant.QrCodeValue = qrValue;
-
                 var qrBytes = _qrCodeService.GenerateImage(qrValue);
                 using var qrStream = new MemoryStream(qrBytes);
-
                 var qrUpload = await _imageStorageService.UploadImageAsync(qrStream, $"{variant.Sku}-qr.png", ct);
                 if (!qrUpload.Succeeded)
                     return _resultHandler.BadRequest<ProductVariantDto>(qrUpload.Message ?? "Failed to upload variant QR image.");
-
                 variant.QrCodeImagePath = qrUpload.Data!;
             }
 
@@ -102,7 +97,15 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 variant.AttributeValues.Add(new VariantAttributeValue { ProductAttributeId = a.ProductAttributeId, Value = a.Value });
 
             foreach (var bs in dto.BranchStocks)
-                variant.Stocks.Add(new Stock { BranchId = bs.BranchId, Quantity = bs.Quantity, ReservedQuantity = 0 });
+            {
+                variant.Stocks.Add(new Stock
+                {
+                    BranchId = bs.BranchId,
+                    Quantity = bs.Quantity,
+                    ReservedQuantity = 0,
+                    MinimumStockLevel = bs.MinimumStockLevel
+                });
+            }
 
             await _unitOfWork.ProductVariants.AddAsync(variant, ct);
             await _unitOfWork.SaveChangesAsync(ct);

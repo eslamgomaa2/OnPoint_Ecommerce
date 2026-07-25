@@ -14,9 +14,10 @@ namespace Onpoint.Store.Domin.Repositories
         IAddressRepository Addresses { get; }
         ICouponRepository Coupons { get; }
         IOrderRepo Orders { get; }
+        IRefundRepository Refunds { get; }
         IGenericRepository<OrderItem, int> OrderItems { get; }
         IPaymentTransactionRepository PaymentTransactions { get; }
-        IInvoiceRepository Invoices { get; }
+        IPossalesRepository Invoices { get; }
         IWishlistRepository Wishlists { get; }
         IReviewRepository Reviews { get; }
         IApplicationUserRepo ApplicationUsers { get; }
@@ -25,6 +26,8 @@ namespace Onpoint.Store.Domin.Repositories
         IPosSessionRepository PosSessions { get; }
         IProductVariantRepository ProductVariants { get; }
         IGenericRepository<PosSessionItem, int> PosSessionItems { get; }
+        IGenericRepository<RefundItem, int> RefundItems { get; }
+
         IProductAttributeRepository ProductAttributes { get; }
         IDiscountRepo Discounts { get; }
         IBrandRepository Brands { get; }

@@ -10,6 +10,5 @@
         public string? WorkingHours { get; set; }
         public bool IsActive { get; set; } = true;
         public bool IsDefault { get; set; } = false;
-        public int? ManagerId { get; set; }
     }
 }

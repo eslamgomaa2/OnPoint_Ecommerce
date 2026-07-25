@@ -19,13 +19,19 @@ namespace Onpoint.Store.Domin.Entities
 
         public string ProductName { get; set; } = string.Empty;
         public string? ProductImageUrl { get; set; } = string.Empty;
-
         public string? VariantDescription { get; set; }
 
         public int Quantity { get; set; }
+        public int RefundedQuantity { get; set; }
+        public int NetQuantity => Quantity - RefundedQuantity;
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal UnitPrice { get; set; }
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice => Quantity * UnitPrice;
+
+        [NotMapped]
+        public decimal NetTotalPrice => NetQuantity * UnitPrice;
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Infrastructure.Data.Context;
 
 namespace Onpoint.Store.Infrastructure.SeedingData
@@ -75,7 +76,9 @@ namespace Onpoint.Store.Infrastructure.SeedingData
                 Email = cashierEmail,
                 EmailConfirmed = true,
                 IsActive = true,
-                BranchId = defaultBranch.Id
+                BranchId = defaultBranch.Id,
+                BranchRole = UserBranchRole.Cashier
+
             };
 
             var result = await userManager.CreateAsync(cashier, cashierPassword);
@@ -144,7 +147,9 @@ namespace Onpoint.Store.Infrastructure.SeedingData
                 {
                     Name = "Main Branch",
                     IsActive = true,
-                    IsDefault = true
+                    IsDefault = true,
+                    Phone = "123456",
+                    Email = "BranchManager@Gmail.com"
                 };
                 context.Branches.Add(defaultBranch);
                 await context.SaveChangesAsync();
@@ -158,6 +163,7 @@ namespace Onpoint.Store.Infrastructure.SeedingData
                 Email = BranchManagerEmail,
                 EmailConfirmed = true,
                 IsActive = true,
+                BranchRole = UserBranchRole.Manager,
                 BranchId = defaultBranch.Id
             };
 
@@ -174,6 +180,11 @@ namespace Onpoint.Store.Infrastructure.SeedingData
                 var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
                 throw new Exception($"Failed to assign BranchManager role: {errors}");
             }
+
+
+            defaultBranch.ManagerId = branchManager.Id;
+            context.Branches.Update(defaultBranch);
+            await context.SaveChangesAsync();
         }
 
     }

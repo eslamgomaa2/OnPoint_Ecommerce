@@ -11,12 +11,13 @@ namespace Onpoint.Store.Domin.Entities
         public int? CashierId { get; set; }
         [ForeignKey(nameof(CashierId))]
         public virtual ApplicationUser? Cashier { get; set; }
-
+        [ForeignKey("Branch")]
+        public int BranchId { get; set; }
+        public Branch? Branch { get; set; }
         public int CustomerId { get; set; }
         [ForeignKey(nameof(CustomerId))]
         public virtual Customer? Customer { get; set; }
 
-        public string OrderNumber { get; set; } = string.Empty;
         public string? InvoiceNumber { get; set; }
 
         public int? AddressId { get; set; }
@@ -37,12 +38,14 @@ namespace Onpoint.Store.Domin.Entities
         public OrderSource Source { get; set; } = OrderSource.Online;
         public string? Note { get; set; }
 
-        [ForeignKey("Branch")]
-        public int? BranchId { get; set; }
-        public Branch? Branch { get; set; }
+
+
+        public string? QRCode { get; set; }
 
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
         public virtual ICollection<PaymentTransaction> Transactions { get; set; } = new List<PaymentTransaction>();
+        public virtual ICollection<OrderStatusHistory> StatusHistory { get; set; } = new List<OrderStatusHistory>();
+        public virtual ICollection<Refund> Refunds { get; set; } = new List<Refund>();
         public virtual Invoice? Invoice { get; set; }
         public virtual PaymentTransaction? Transaction { get; set; }
     }

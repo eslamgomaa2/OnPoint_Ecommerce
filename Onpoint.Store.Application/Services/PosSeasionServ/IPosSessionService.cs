@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Onpoint.Store.Application.DTOs.Customer;
 using Onpoint.Store.Application.DTOs.Pos;
 using Onpoint.Store.Application.DTOs.PosSession;
 
@@ -37,7 +38,7 @@ namespace Onpoint.Store.Application.Services.PosServ
         Task<ServiceResult<PosSessionDto>> UpdateItemQuantityAsync(int sessionId, int itemId, int quantity);
 
         // Customer Management
-        Task<ServiceResult<PosSessionDto>> AssignCustomerToSessionAsync(int sessionId, int customerId);
+        Task<ServiceResult<PosSessionDto>> AssignCustomerToSessionAsync(int sessionId, CreateCustomerDto dto);
         Task<ServiceResult<PosSessionDto>> AssignCustomerPhoneAsync(int sessionId, string phone);
 
         // Coupon
