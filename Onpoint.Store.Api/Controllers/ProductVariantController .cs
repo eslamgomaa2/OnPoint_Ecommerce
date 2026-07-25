@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.Services.ProductVariantServ;
 
 [Route("api/products/{productId}/variants")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
 public class ProductVariantController : ControllerBase
 {
     private readonly IProductVariantService _variantService;

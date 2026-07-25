@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.Interfaces;
 
 [ApiController]
 [Route("api/products/{productId}/shipping")]
-[Authorize(Roles = "SuperAdmin")]
 public class ShippingController : ControllerBase
 {
     private readonly IShippingService _shippingService;

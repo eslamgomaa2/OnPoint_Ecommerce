@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Stock;
 using Onpoint.Store.Application.Services.StockServ;
 using Onpoint.Store.Domin.Enums;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
 public class StockController : ControllerBase
 {
     private readonly IStockService _stockService;

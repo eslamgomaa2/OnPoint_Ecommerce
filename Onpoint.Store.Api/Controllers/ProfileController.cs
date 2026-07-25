@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Onpoint.Store.Application.DTOs.Auth;
 using Onpoint.Store.Application.Services.Profile;
 using System.Security.Claims;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
 public class ProfileController : ControllerBase
 {
     private readonly IProfileServices _profileServices;
@@ -22,6 +21,13 @@ public class ProfileController : ControllerBase
         return userId;
     }
 
+    [HttpPut]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileDto dto, CancellationToken ct = default)
+    {
+        /*var userId = GetUserId();*/
+        var result = await _profileServices.UpdateMyAccount(8, dto, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
 
     [HttpDelete]
     public async Task<IActionResult> DeleteMyAccount(CancellationToken ct = default)

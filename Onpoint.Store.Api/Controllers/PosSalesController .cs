@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.DTOs.PosSales;
 using Onpoint.Store.Application.Services.PosSales;
@@ -7,7 +6,6 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/pos-sales")]
-[Authorize(Roles = "SuperAdmin")]
 public class PosSalesController : ControllerBase
 {
     private readonly IPosSalesService _posSalesService;

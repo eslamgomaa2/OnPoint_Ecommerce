@@ -51,13 +51,6 @@ namespace Onpoint.Store.Application.Services.CartServ
         {
             await _addToCartValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
-            var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
-            if (cart == null)
-            {
-                cart = new Cart { UserId = userId };
-                await _unitOfWork.Carts.AddAsync(cart, ct);
-                await _unitOfWork.SaveChangesAsync(ct);
-            }
 
             var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
             if (product == null)
@@ -87,6 +80,15 @@ namespace Onpoint.Store.Application.Services.CartServ
 
             var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(productId, dto.ProductVariantId, defaultBranch.Id, ct);
 
+
+            var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
+            if (cart == null)
+            {
+                cart = new Cart { UserId = userId };
+                await _unitOfWork.Carts.AddAsync(cart, ct);
+
+            }
+
             var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == productId && i.ProductVariantId == dto.ProductVariantId);
             var requestedTotalQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
 
@@ -110,6 +112,11 @@ namespace Onpoint.Store.Application.Services.CartServ
             }
 
             await RecalculateDiscountAsync(cart, ct);
+
+            // FIX #1: explicitly mark the cart (and its item graph) as modified before saving.
+            // Without this, if GetUserCartWithItemsAsync ever reads with AsNoTracking (or the
+            // Items collection isn't tracked), added/updated items silently never persist.
+            _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
 
             var updatedCart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
@@ -147,6 +154,9 @@ namespace Onpoint.Store.Application.Services.CartServ
             }
 
             await RecalculateDiscountAsync(cart, ct);
+
+            // FIX #1
+            _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
 
             var updatedCart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
@@ -165,6 +175,9 @@ namespace Onpoint.Store.Application.Services.CartServ
 
             cart.Items.Remove(item);
             await RecalculateDiscountAsync(cart, ct);
+
+            // FIX #1
+            _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Deleted<string>("Item removed from cart.");
@@ -180,6 +193,8 @@ namespace Onpoint.Store.Application.Services.CartServ
             cart.AppliedCouponCode = null;
             cart.DiscountAmount = 0;
 
+            // FIX #1
+            _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
             return _resultHandler.Success<string>("Cart cleared.");
         }
