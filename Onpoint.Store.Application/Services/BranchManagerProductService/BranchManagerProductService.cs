@@ -130,9 +130,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return _resultHandler.Success(dto);
         }
 
-        public async Task<ServiceResult<ProductDto>> CreateAsync(
-            int branchId,
-            CreateProductByBranchManagerDto dto,
+        public async Task<ServiceResult<ProductDto>> CreateAsync(int branchId, CreateProductByBranchManagerDto dto,
             CancellationToken ct = default)
         {
             var validationResult = await _createValidator.ValidateAsync(dto, ct);

@@ -166,7 +166,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
                     order.Status = OrderStatus.Pending;
                     _unitOfWork.Orders.Update(order);
 
-                    var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.CustomerId, ct);
+                    var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(order.CustomerId.Value, ct);
 
                     Coupon? coupon = null;
                     if (order.DiscountAmount > 0 && cart != null && !string.IsNullOrEmpty(cart.AppliedCouponCode))
