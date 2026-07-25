@@ -131,5 +131,21 @@ namespace BuildingBlocks.Results
                 Errors = errors ?? new List<string> { message }
             };
         }
+
+        // =========================================================
+        // 4. SERVER ERROR (500)
+        // =========================================================
+
+        public ServiceResult<T> InternalServerError<T>(string message = "Internal Server Error")
+        {
+            return new ServiceResult<T>
+            {
+                Succeeded = false,
+                Message = message,
+                Data = default,
+                Errors = new List<string> { message },
+                HttpStatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
     }
 }

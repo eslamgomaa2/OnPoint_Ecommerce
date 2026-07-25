@@ -32,7 +32,7 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                 .HasConversion<string>()
                 .HasMaxLength(30);
 
-            builder.HasQueryFilter(u => !u.IsDeleted);
+
 
             builder.HasOne(u => u.Branch)
                 .WithMany()
