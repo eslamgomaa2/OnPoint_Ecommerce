@@ -108,10 +108,10 @@ namespace Onpoint.Store.Application.Services.AuthServices
         {
             try
             {
-                // ─── 500: Check cancellation/timeout أول حاجة ───
+
                 ct.ThrowIfCancellationRequested();
 
-                // ─── 400: Validation errors ───
+
                 var validation = await _loginValidator.ValidateAsync(dto, ct);
                 if (!validation.IsValid)
                 {
@@ -204,6 +204,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
                     Expiration = tokenData.expiresAt,
                     UserId = user.Id,
                     Email = user.Email!,
+                    PHoneNumber = user.PhoneNumber,
                     FullName = $"{user.FirstName} {user.LastName}",
                     Role = primaryRole
                 });
@@ -560,5 +561,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
             if (!await _roleManager.RoleExistsAsync(roleName))
                 await _roleManager.CreateAsync(new IdentityRole<int>(roleName));
         }
+
+
     }
 }

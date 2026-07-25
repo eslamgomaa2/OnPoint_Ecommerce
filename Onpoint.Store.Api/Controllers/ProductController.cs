@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Results;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Product;
@@ -9,7 +8,6 @@ using Onpoint.Store.Domin.Enums;
 
 [Route("api/admin/products")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
 public class ProductController : ControllerBase
 {
     private readonly IProductService productService;

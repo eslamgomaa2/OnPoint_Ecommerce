@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Results;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Customer;
 using Onpoint.Store.Application.DTOs.Pos;
@@ -9,7 +8,6 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/pos-sessions")]
-[Authorize(Roles = "SuperAdmin")]
 public class PosSessionController : ControllerBase
 {
     private readonly IPosSessionService _posSessionService;

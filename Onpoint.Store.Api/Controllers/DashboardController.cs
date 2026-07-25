@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Results;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.Services.OrderServ;
@@ -8,7 +7,6 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/dashboard")]
     [ApiController]
-    [Authorize(Roles = "SuperAdmin")]
     public class DashboardController : ControllerBase
     {
         private readonly IOrderService _orderService;

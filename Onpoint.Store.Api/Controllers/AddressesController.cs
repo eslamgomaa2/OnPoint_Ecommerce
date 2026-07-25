@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Address;
 using Onpoint.Store.Application.Services.AddressServ;
 using System.Security.Claims;
 
 [Route("api/addresses")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
 public class AddressesController : ControllerBase
 {
     private readonly IAddressService _addressService;

@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Auth;
 using Onpoint.Store.Application.DTOs.Branch;
 using Onpoint.Store.Application.Services.BranchServ;
 
 [ApiController]
 [Route("api/branches")]
-[Authorize(Roles = "SuperAdmin")]
 public class BranchesController : ControllerBase
 {
     private readonly IBranchService _branchService;

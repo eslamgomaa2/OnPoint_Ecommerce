@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Results;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.Services.OrderServ;
@@ -8,7 +7,6 @@ using System.Security.Claims;
 
 [Route("api/orders")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;

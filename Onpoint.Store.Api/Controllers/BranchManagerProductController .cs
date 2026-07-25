@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Results;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
@@ -11,7 +10,6 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/branch-manager/products")]
     [ApiController]
-    [Authorize(Roles = "BranchManager")]
     public class BranchManagerProductController : ControllerBase
     {
         private readonly IBranchManagerProductService _branchManagerProductService;

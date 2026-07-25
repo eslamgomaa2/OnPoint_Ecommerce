@@ -5,7 +5,6 @@ using Onpoint.Store.Application.Services.ProductAttributeServ;
 
 [Route("api/product-attributes")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
 public class ProductAttributeController : ControllerBase
 {
     private readonly IProductAttributeService _attributeService;

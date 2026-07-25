@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Refund;
 using Onpoint.Store.Application.Interfaces;
 using System.Security.Claims;
 
 [ApiController]
 [Route("api/orders/{orderId}/refunds")]
-[Authorize(Roles = "SuperAdmin")]
 public class RefundController : ControllerBase
 {
     private readonly IRefundService _refundService;

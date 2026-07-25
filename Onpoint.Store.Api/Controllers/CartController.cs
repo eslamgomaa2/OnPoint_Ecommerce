@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Cart;
 using Onpoint.Store.Application.Services.CartServ;
 using System.Security.Claims;
 
 [Route("api/cart")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
 public class CartController : ControllerBase
 {
     private readonly ICartService _cartService;

@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Brand;
 using Onpoint.Store.Application.Services.Brand;
 
 [ApiController]
 [Route("api/brands")]
-[Authorize(Roles = "SuperAdmin")]
+
 public class BrandsController : ControllerBase
 {
     private readonly IBrandService _brandService;
