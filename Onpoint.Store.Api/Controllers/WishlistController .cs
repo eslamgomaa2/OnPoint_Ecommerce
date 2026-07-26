@@ -3,55 +3,74 @@ using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.Services.WishlistServ;
 using System.Security.Claims;
 
-[Route("api/[controller]")]
-[ApiController]
-[Authorize]
-
-public class WishlistController : ControllerBase
+namespace Onpoint.Store.Api.Controllers
 {
-    private readonly IWishlistService _wishlistService;
-    public WishlistController(IWishlistService wishlistService)
+    [Route("api/wishlist")]
+    [ApiController]
+    [Authorize]
+    public class WishlistController : ControllerBase
     {
-        _wishlistService = wishlistService;
-    }
+        private readonly IWishlistService _wishlistService;
 
-    private int GetUserId()
-    {
-        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
-        if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out var userId))
-            throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
-        return userId;
-    }
+        public WishlistController(IWishlistService wishlistService)
+        {
+            _wishlistService = wishlistService;
+        }
 
-    [HttpGet]
-    public async Task<IActionResult> GetMyWishlist(CancellationToken ct = default)
-    {
-        var userId = GetUserId();
-        var result = await _wishlistService.GetUserWishlistAsync(userId, ct);
-        return StatusCode((int)result.HttpStatusCode, result);
-    }
+        [HttpGet]
+        public async Task<IActionResult> GetMyWishlist(CancellationToken ct = default)
+        {
+            var userId = GetUserId();
+            var result = await _wishlistService.GetUserWishlistAsync(userId, ct);
+            return ToResponse(result);
+        }
 
-    [HttpPost("products/{productId}")]
-    public async Task<IActionResult> AddToWishlist(int productId, CancellationToken ct = default)
-    {
-        var userId = GetUserId();
-        var result = await _wishlistService.AddToWishlistAsync(userId, productId, ct);
-        return StatusCode((int)result.HttpStatusCode, result);
-    }
 
-    [HttpDelete("products/{productId}")]
-    public async Task<IActionResult> RemoveFromWishlist(int productId, CancellationToken ct = default)
-    {
-        var userId = GetUserId();
-        var result = await _wishlistService.RemoveFromWishlistAsync(userId, productId, ct);
-        return StatusCode((int)result.HttpStatusCode, result);
-    }
+        [HttpPost("products/{productId:int}")]
+        public async Task<IActionResult> AddToWishlist(
+            int productId,
+            [FromQuery] int? variantId,
+            CancellationToken ct = default)
+        {
+            var userId = GetUserId();
+            var result = await _wishlistService.AddToWishlistAsync(userId, productId, variantId, ct);
+            return ToResponse(result);
+        }
 
-    [HttpPost("products/{productId}/move-to-cart")]
-    public async Task<IActionResult> MoveToCart(int productId, CancellationToken ct = default)
-    {
-        var userId = GetUserId();
-        var result = await _wishlistService.MoveToCartAsync(userId, productId, ct);
-        return StatusCode((int)result.HttpStatusCode, result);
+
+        [HttpDelete("products/{productId:int}")]
+        public async Task<IActionResult> RemoveFromWishlist(
+            int productId,
+            [FromQuery] int? variantId,
+            CancellationToken ct = default)
+        {
+            var userId = GetUserId();
+            var result = await _wishlistService.RemoveFromWishlistAsync(userId, productId, variantId, ct);
+            return ToResponse(result);
+        }
+
+
+        [HttpPost("products/{productId:int}/move-to-cart")]
+        public async Task<IActionResult> MoveToCart(
+            int productId,
+            [FromQuery] int? variantId,
+            CancellationToken ct = default)
+        {
+            var userId = GetUserId();
+            var result = await _wishlistService.MoveToCartAsync(userId, productId, variantId, ct);
+            return ToResponse(result);
+        }
+
+        private int GetUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out var userId))
+                throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
+
+            return userId;
+        }
+
+        private IActionResult ToResponse<T>(BuildingBlocks.Results.ServiceResult<T> result)
+            => StatusCode((int)result.HttpStatusCode, result);
     }
 }

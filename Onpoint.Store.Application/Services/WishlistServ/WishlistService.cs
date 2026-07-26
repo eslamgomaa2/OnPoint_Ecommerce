@@ -38,33 +38,45 @@ namespace Onpoint.Store.Application.Services.WishlistServ
             return _resultHandler.Success(dto);
         }
 
-        public async Task<ServiceResult<WishlistItemDto>> AddToWishlistAsync(int userId, int productid, CancellationToken ct = default)
+        public async Task<ServiceResult<WishlistItemDto>> AddToWishlistAsync(
+     int userId, int productId, int? productVariantId, CancellationToken ct = default)
         {
-
-
-            var product = await _unitOfWork.Products.GetByIdAsync(productid, ct);
+            var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
             if (product == null || product.IsDeleted)
                 return _resultHandler.NotFound<WishlistItemDto>("Product not found.");
-            var existing = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productid, ct);
+
+
+            if (product.Variants.Any(v => v.IsActive))
+            {
+                if (!productVariantId.HasValue)
+                    return _resultHandler.BadRequest<WishlistItemDto>("This product requires selecting a variant.");
+
+                var variant = product.Variants.FirstOrDefault(v => v.Id == productVariantId.Value && v.IsActive);
+                if (variant == null)
+                    return _resultHandler.BadRequest<WishlistItemDto>("Selected variant is not available.");
+            }
+
+            var existing = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productId, productVariantId, ct);
             if (existing != null)
                 return _resultHandler.BadRequest<WishlistItemDto>("Product is already in your wishlist.");
 
             var wishlistItem = new Wishlist
             {
                 UserId = userId,
-                ProductId = productid,
+                ProductId = productId,
+                ProductVariantId = productVariantId
             };
 
             await _unitOfWork.Wishlists.AddAsync(wishlistItem, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            var saved = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productid, ct);
+            var saved = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productId, productVariantId, ct);
             return _resultHandler.Created(_mapper.Map<WishlistItemDto>(saved));
         }
 
-        public async Task<ServiceResult<string>> RemoveFromWishlistAsync(int userId, int productId, CancellationToken ct = default)
+        public async Task<ServiceResult<string>> RemoveFromWishlistAsync(int userId, int productId, int? productVariantId, CancellationToken ct = default)
         {
-            var item = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productId, ct);
+            var item = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productId, productVariantId, ct);
             if (item == null)
                 return _resultHandler.NotFound<string>("Item not found in wishlist.");
 
@@ -74,9 +86,9 @@ namespace Onpoint.Store.Application.Services.WishlistServ
             return _resultHandler.Deleted<string>("Item removed from wishlist.");
         }
 
-        public async Task<ServiceResult<CartDto>> MoveToCartAsync(int userId, int productId, CancellationToken ct = default)
+        public async Task<ServiceResult<CartDto>> MoveToCartAsync(int userId, int productId, int? productVariantId, CancellationToken ct = default)
         {
-            var wishlistItem = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productId, ct);
+            var wishlistItem = await _unitOfWork.Wishlists.GetByUserAndProductAsync(userId, productId, productVariantId, ct);
             if (wishlistItem == null)
                 return _resultHandler.NotFound<CartDto>("Item not found in wishlist.");
 
@@ -84,15 +96,9 @@ namespace Onpoint.Store.Application.Services.WishlistServ
             if (product == null || product.IsDeleted || !product.IsActive)
                 return _resultHandler.BadRequest<CartDto>("This product is no longer available.");
 
-            var stocks = await _unitOfWork.Stocks.FindAsync(s => s.ProductId == productId, ct: ct);
-            var totalAvailable = stocks.Sum(s => s.Quantity - s.ReservedQuantity);
-
-            if (totalAvailable <= 0)
-                return _resultHandler.BadRequest<CartDto>("This product is out of stock.");
-
             var addResult = await _cartService.AddToCartAsync(userId, productId, new AddToCartDto
             {
-
+                ProductVariantId = wishlistItem.ProductVariantId,
                 Quantity = 1
             }, ct);
 
