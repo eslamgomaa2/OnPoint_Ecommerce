@@ -11,6 +11,7 @@ using System.Security.Claims;
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;
+
     public OrdersController(IOrderService orderService)
     {
         _orderService = orderService;
@@ -23,7 +24,15 @@ public class OrdersController : ControllerBase
             throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
         return userId;
     }
+    [Authorize]
+    [HttpGet("{id:int}/items")]
+    public async Task<ActionResult<ServiceResult<List<OrderItemDto>>>> GetOrderItems(int id)
+    {
+        var result = await _orderService.GetOrderItemsAsync(id, GetUserId());
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
 
+    [Authorize]
     [HttpPost("checkout")]
     public async Task<ActionResult<ServiceResult<OrderDto>>> Checkout([FromBody] CreateOrderDto dto)
     {

@@ -32,5 +32,19 @@ namespace Onpoint.Store.Infrastructure.Repositories
                                           && w.ProductVariantId == productVariantId
                                           && !w.IsDeleted, ct);
         }
+        public async Task<HashSet<int>> GetWishlistedProductIdsAsync(int userId, IEnumerable<int> productIds, CancellationToken ct = default)
+        {
+            var idList = productIds.Distinct().ToList();
+            if (!idList.Any())
+                return new HashSet<int>();
+
+            var result = await _dbset
+                .Where(w => w.UserId == userId && !w.IsDeleted && idList.Contains(w.ProductId))
+                .Select(w => w.ProductId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            return result.ToHashSet();
+        }
     }
 }

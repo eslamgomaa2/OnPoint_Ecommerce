@@ -77,18 +77,36 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return _resultHandler.Success(dto);
         }
 
-        public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(PaginationRequest request, int? categoryId = null, string? searchTerm = null, int? branchId = null, LanguageCode? languageCode = null, CancellationToken ct = default)
+        public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
+      PaginationRequest request, int? categoryId = null, string? searchTerm = null,
+      int? branchId = null, LanguageCode? languageCode = null, int? currentUserId = null,
+      CancellationToken ct = default)
         {
             var (items, totalCount) = await _unitOfWork.Products.GetFilteredPagedAsync(
                 categoryId, searchTerm, branchId, request.PageNumber, request.PageSize, ct);
 
             var dtoItems = items.Select(p => ApplyTranslation(MapWithBranchStock(p, branchId), p, languageCode)).ToList();
 
+            if (currentUserId.HasValue && dtoItems.Any())
+            {
+                var productIds = dtoItems.Select(d => d.Id).ToList();
+
+                var wishlistedIds = await _unitOfWork.Wishlists.GetWishlistedProductIdsAsync(currentUserId.Value, productIds, ct);
+                var cartedIds = await _unitOfWork.Carts.GetProductIdsInCartAsync(currentUserId.Value, productIds, ct);
+
+                foreach (var dto in dtoItems)
+                {
+                    dto.IsInWishlist = wishlistedIds.Contains(dto.Id);
+                    dto.IsInCart = cartedIds.Contains(dto.Id);
+                }
+            }
+
             var pagedResult = PagedResult<ProductDto>.Create(dtoItems, totalCount, request.PageNumber, request.PageSize);
             return _resultHandler.Success(pagedResult);
         }
 
-        public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int id, LanguageCode? languageCode = null, CancellationToken ct = default)
+        public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(
+    int id, LanguageCode? languageCode = null, int? currentUserId = null, CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             if (product is null)
@@ -107,6 +125,16 @@ namespace Onpoint.Store.Application.Services.ProductServ
             }
 
             ApplyTranslationToDetail(dto, product, languageCode);
+
+
+            if (currentUserId.HasValue)
+            {
+                var wishlistedIds = await _unitOfWork.Wishlists.GetWishlistedProductIdsAsync(currentUserId.Value, new[] { id }, ct);
+                var cartedIds = await _unitOfWork.Carts.GetProductIdsInCartAsync(currentUserId.Value, new[] { id }, ct);
+
+                dto.IsInWishlist = wishlistedIds.Contains(id);
+                dto.IsInCart = cartedIds.Contains(id);
+            }
 
             return _resultHandler.Success(dto);
         }

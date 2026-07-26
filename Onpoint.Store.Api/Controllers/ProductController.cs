@@ -6,6 +6,7 @@ using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.Services.DiscountServ;
 using Onpoint.Store.Application.Services.ProductServ;
 using Onpoint.Store.Domin.Enums;
+using System.Security.Claims;
 
 [Route("api/admin/products")]
 [ApiController]
@@ -13,10 +14,18 @@ public class ProductController : ControllerBase
 {
     private readonly IProductService productService;
     private readonly IDiscountService _discountService;
+
     public ProductController(IProductService productService, IDiscountService discountService)
     {
         this.productService = productService;
         _discountService = discountService;
+    }
+    private int? GetCurrentUserId()
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out var userId))
+            return null;
+        return userId;
     }
 
     [HttpGet]
@@ -28,11 +37,19 @@ public class ProductController : ControllerBase
         [FromQuery] LanguageCode? lang = null,
         CancellationToken ct = default)
     {
+        var currentUserId = GetCurrentUserId();
         var result = await productService.GetFilteredPagedAsync(
-            request, categoryId, searchTerm, branchId, lang, ct);
+            request, categoryId, searchTerm, branchId, lang, currentUserId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id, [FromQuery] LanguageCode? lang, CancellationToken ct)
+    {
+        var currentUserId = GetCurrentUserId();
+        var result = await productService.GetByIdAsync(id, lang, currentUserId, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboardCounts([FromQuery] int? branchId, CancellationToken ct)
     {
@@ -47,12 +64,7 @@ public class ProductController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id, [FromQuery] LanguageCode? lang, CancellationToken ct)
-    {
-        var result = await productService.GetByIdAsync(id, lang, ct);
-        return StatusCode((int)result.HttpStatusCode, result);
-    }
+
 
     [Authorize(Roles = "SuperAdmin")]
     [HttpPost]

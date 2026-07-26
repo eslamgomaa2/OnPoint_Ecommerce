@@ -6,5 +6,7 @@ namespace Onpoint.Store.Domin.Repositories
     {
         Task<List<Wishlist>> GetUserWishlistAsync(int userId, CancellationToken ct = default);
         Task<Wishlist?> GetByUserAndProductAsync(int userId, int productId, int? productVariantId, CancellationToken ct = default);
+        Task<HashSet<int>> GetWishlistedProductIdsAsync(int userId, IEnumerable<int> productIds, CancellationToken ct = default);
+
     }
 }

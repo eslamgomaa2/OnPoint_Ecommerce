@@ -10,14 +10,10 @@ namespace Onpoint.Store.Application.Services.ProductServ
         Task<ServiceResult<ProductDashboardDto>> GetDashboardCountsAsync(int? branchId = null, CancellationToken ct = default);
 
         Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
-            PaginationRequest request,
-            int? categoryId = null,
-            string? searchTerm = null,
-            int? branchId = null,
-            LanguageCode? languageCode = null,
-            CancellationToken ct = default);
-
-        Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int id, LanguageCode? languageCode = null, CancellationToken ct = default);
+     PaginationRequest request, int? categoryId = null, string? searchTerm = null,
+     int? branchId = null, LanguageCode? languageCode = null, int? currentUserId = null,
+     CancellationToken ct = default);
+        Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int id, LanguageCode? languageCode = null, int? currentUserId = null, CancellationToken ct = default);
 
         Task<ServiceResult<ProductDto>> CreateAsync(CreateProductDto dto, CancellationToken ct = default);
 

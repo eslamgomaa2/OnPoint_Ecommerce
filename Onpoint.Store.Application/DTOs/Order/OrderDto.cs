@@ -15,6 +15,7 @@ namespace Onpoint.Store.Application.DTOs.Order
         public string PhoneNumber { get; set; } = string.Empty;
         public string? CouponCode { get; set; }
         public int? BranchId { get; set; }
-        public ICollection<OrderItemDto> Items { get; set; } = new List<OrderItemDto>();
+        public DateTime CreatedAt { get; set; }
+
     }
 }
