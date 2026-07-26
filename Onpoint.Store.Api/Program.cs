@@ -18,8 +18,8 @@ builder.Services.AddFluentValidationConfiguration(new[]
 {
     typeof(ApplicationServiceExtension).Assembly
 });
-builder.Services.AddSwaggerGen();
-//builder.Services.AddSwaggerConfiguration();
+//builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerConfiguration();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 // Infrastructure 

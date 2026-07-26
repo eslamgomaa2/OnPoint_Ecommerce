@@ -27,8 +27,8 @@ public class ProfileController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileDto dto, CancellationToken ct = default)
     {
-        /*var userId = GetUserId();*/
-        var result = await _profileServices.UpdateMyAccount(8, dto, ct);
+        var userId = GetUserId();
+        var result = await _profileServices.UpdateMyAccount(userId, dto, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 

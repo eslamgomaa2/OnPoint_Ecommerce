@@ -77,23 +77,27 @@ namespace Onpoint.Store.Application.Services.CartServ
             var defaultBranch = await _unitOfWork.Branches.FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, ct);
             if (defaultBranch == null)
                 return _resultHandler.BadRequest<CartDto>("Default online branch is not configured.");
-
             var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(productId, dto.ProductVariantId, defaultBranch.Id, ct);
-
 
             var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
             if (cart == null)
             {
                 cart = new Cart { UserId = userId };
                 await _unitOfWork.Carts.AddAsync(cart, ct);
-
+                await _unitOfWork.SaveChangesAsync(ct);
             }
 
             var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == productId && i.ProductVariantId == dto.ProductVariantId);
             var requestedTotalQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
 
-            if (stock == null || stock.AvailableQuantity < requestedTotalQuantity)
-                return _resultHandler.BadRequest<CartDto>("Not enough stock available.");
+
+            if (stock == null)
+                return _resultHandler.BadRequest<CartDto>(
+                    $"No stock record found for this product/variant at branch '{defaultBranch.Name}' (Id: {defaultBranch.Id}).");
+
+            if (stock.AvailableQuantity < requestedTotalQuantity)
+                return _resultHandler.BadRequest<CartDto>(
+                    $"Not enough stock available. Available: {stock.AvailableQuantity}, Requested: {requestedTotalQuantity}");
 
             if (existingItem != null)
             {

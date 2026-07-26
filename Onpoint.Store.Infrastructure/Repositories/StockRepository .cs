@@ -57,11 +57,14 @@ namespace Onpoint.Store.Infrastructure.Repositories
             return await query.CountAsync(ct);
         }
         public async Task<Stock?> GetByProductVariantAndBranchAsync(int productId, int? productVariantId, int branchId, CancellationToken ct = default)
-            => await _dbset.FirstOrDefaultAsync(s =>
-                s.ProductId == productId &&
-                s.ProductVariantId == productVariantId &&
-                s.BranchId == branchId, ct);
-
+        {
+            return await _dbset
+                .Where(s => s.ProductId == productId &&
+                            s.ProductVariantId == productVariantId &&
+                            s.BranchId == branchId &&
+                            !s.IsDeleted)
+                .FirstOrDefaultAsync(ct);
+        }
         public async Task<List<Stock>> GetByProductVariantsAndBranchAsync(IEnumerable<(int ProductId, int? ProductVariantId)> keys, int branchId, CancellationToken ct = default)
         {
             var keyList = keys.ToList();
