@@ -24,10 +24,13 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .ToListAsync(ct);
         }
 
-        public async Task<Wishlist?> GetByUserAndProductAsync(int userId, int productId, CancellationToken ct = default)
+        public async Task<Wishlist?> GetByUserAndProductAsync(int userId, int productId, int? productVariantId, CancellationToken ct = default)
         {
             return await _dbset
-                .FirstOrDefaultAsync(w => w.UserId == userId && w.ProductId == productId, ct);
+                .FirstOrDefaultAsync(w => w.UserId == userId
+                                          && w.ProductId == productId
+                                          && w.ProductVariantId == productVariantId
+                                          && !w.IsDeleted, ct);
         }
     }
 }
