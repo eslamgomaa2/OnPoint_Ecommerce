@@ -15,6 +15,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<StaticPage> StaticPages { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<Discount> Discounts { get; set; }
         public DbSet<ProductShipping> ProductShippings { get; set; }
@@ -77,6 +78,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new RefundConfiguration());
             builder.ApplyConfiguration(new RefundItemConfiguration());
             builder.ApplyConfiguration(new OrderStatusHistoryConfiguration());
+            builder.ApplyConfiguration(new StaticPageConfiguration());
 
 
             foreach (var entityType in builder.Model.GetEntityTypes())

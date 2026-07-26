@@ -85,4 +85,24 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             builder.HasIndex(e => e.Email);
         }
     }
+    public class StaticPageConfiguration : IEntityTypeConfiguration<StaticPage>
+    {
+        public void Configure(EntityTypeBuilder<StaticPage> builder)
+        {
+            builder.ToTable("StaticPages");
+
+            builder.Property(x => x.Title)
+                .HasMaxLength(300)
+                .IsRequired();
+
+            builder.Property(x => x.Content)
+                .HasColumnType("nvarchar(max)")
+                .IsRequired();
+
+            builder.Property(x => x.Type)
+                .IsRequired();
+
+            builder.HasIndex(x => x.Type).IsUnique();
+        }
+    }
 }

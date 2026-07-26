@@ -39,6 +39,7 @@ using Onpoint.Store.Application.Services.ProductVariantServ;
 using Onpoint.Store.Application.Services.Profile;
 using Onpoint.Store.Application.Services.ReviewServ;
 using Onpoint.Store.Application.Services.ShippingServ;
+using Onpoint.Store.Application.Services.StaticPage;
 using Onpoint.Store.Application.Services.StockServ;
 using Onpoint.Store.Application.Services.WishlistServ;
 using System.Reflection;
@@ -81,7 +82,7 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IRefundService, RefundService>();
             services.AddScoped<IContactMessageService, ContactMessageService>();
             services.AddScoped<IPosSalesService, PosSalesService>();
-
+            services.AddScoped<IStaticPageService, StaticPageService>();
 
 
 

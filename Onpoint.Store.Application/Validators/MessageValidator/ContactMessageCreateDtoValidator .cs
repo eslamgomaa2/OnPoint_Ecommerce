@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using Onpoint.Store.Application.DTOs.Contactmessage;
 
-namespace Onpoint.Store.Application.Validators
+namespace Onpoint.Store.Application.Validators.MessageValidator
 {
 
     public class ContactMessageCreateDtoValidator : AbstractValidator<ContactMessageCreateDto>
