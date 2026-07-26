@@ -2,6 +2,7 @@
 using BuildingBlocks.Results;
 using FluentValidation;
 using Onpoint.Store.Application.DTOs.Brand;
+using Onpoint.Store.Application.DTOs.Common;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.Helpers;
 using Onpoint.Store.Domin.Repositories;
@@ -59,13 +60,22 @@ namespace Onpoint.Store.Application.Services.Brand
             return _resultHandler.Success(dto);
         }
 
-        public async Task<ServiceResult<(IReadOnlyList<BrandDto> Items, int TotalCount)>> GetFilteredPagedAsync(
-            string? searchTerm, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default)
+        public async Task<ServiceResult<PagedResultDto<BrandDto>>> GetFilteredPagedAsync(string? searchTerm, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default)
         {
-            var (items, totalCount) = await _unitOfWork.Brands.GetFilteredPagedAsync(searchTerm, isActive, pageNumber, pageSize, ct);
+            var (items, totalCount) = await _unitOfWork.Brands.GetFilteredPagedAsync(
+                searchTerm, isActive, pageNumber, pageSize, ct);
+
             var dtos = _mapper.Map<IReadOnlyList<BrandDto>>(items);
 
-            return _resultHandler.Success((dtos, totalCount));
+            var pagedResult = new PagedResultDto<BrandDto>
+            {
+                Items = dtos,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return _resultHandler.Success(pagedResult);
         }
 
         public async Task<ServiceResult<BrandDto>> CreateAsync(CreateBrandDto dto, CancellationToken ct = default)
