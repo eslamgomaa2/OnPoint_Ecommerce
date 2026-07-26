@@ -34,6 +34,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IProductAttributeRepository? _productAttributes;
         private IDiscountRepo? _discounts;
         private IRefundRepository? _refunds;
+        private IStaticPageRepository? _staticPages;
 
         private ICustomerRepository? _customers;
 
@@ -80,6 +81,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IGenericRepository<RefundItem, int> RefundItems => _refundItems ??= new GenericRepository<RefundItem, int>(_context);
 
         public IContactMessageRepository ContactMessages => _contactMessages ??= new ContactMessageRepository(_context);
+
+        public IStaticPageRepository StaticPages => _staticPages ??= new StaticPageRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

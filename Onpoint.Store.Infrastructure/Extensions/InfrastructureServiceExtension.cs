@@ -37,6 +37,7 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
             services.AddScoped<IProductVariantRepository, ProductVariantRepository>();
             services.AddScoped<IContactMessageRepository, ContactMessageRepository>();
+            services.AddScoped<IStaticPageRepository, StaticPageRepository>();
 
 
 
