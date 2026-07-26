@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Customer;
 using Onpoint.Store.Application.Services.Customer;
@@ -6,6 +7,7 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/customers")]
+[Authorize(Roles = "SuperAdmin")]
 public class CustomersController : ControllerBase
 {
     private readonly ICustomerService _customerService;

@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Product;
@@ -53,6 +54,7 @@ public class ProductController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProductDto dto, CancellationToken ct)
     {
@@ -60,6 +62,7 @@ public class ProductController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProductDto dto, CancellationToken ct)
     {
@@ -74,6 +77,7 @@ public class ProductController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {

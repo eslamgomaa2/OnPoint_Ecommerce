@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Address;
 using Onpoint.Store.Application.Services.AddressServ;
 using System.Security.Claims;
@@ -21,6 +22,7 @@ public class AddressesController : ControllerBase
         return userId;
     }
 
+    [Authorize(Roles = "Customer")]
     [HttpGet]
     public async Task<IActionResult> GetMyAddresses(CancellationToken ct = default)
     {
@@ -28,20 +30,21 @@ public class AddressesController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "Customer")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateAddressDto dto, CancellationToken ct = default)
     {
         var result = await _addressService.CreateAsync(GetUserId(), dto, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
-
+    [Authorize(Roles = "Customer")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateAddressDto dto, CancellationToken ct = default)
     {
         var result = await _addressService.UpdateAsync(GetUserId(), id, dto, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
-
+    [Authorize(Roles = "Customer")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {

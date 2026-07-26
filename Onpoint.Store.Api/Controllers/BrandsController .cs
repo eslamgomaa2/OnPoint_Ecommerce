@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Brand;
 using Onpoint.Store.Application.Services.Brand;
 
@@ -41,6 +42,7 @@ public class BrandsController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBrandDto dto)
     {
@@ -48,6 +50,7 @@ public class BrandsController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateBrandDto dto)
     {
@@ -55,6 +58,7 @@ public class BrandsController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPatch("{id:int}/toggle-active")]
     public async Task<IActionResult> ToggleActive(int id)
     {
@@ -62,6 +66,7 @@ public class BrandsController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

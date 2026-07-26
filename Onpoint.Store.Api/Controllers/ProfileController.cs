@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Auth;
 using Onpoint.Store.Application.Services.Profile;
 using System.Security.Claims;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
+
 public class ProfileController : ControllerBase
 {
     private readonly IProfileServices _profileServices;

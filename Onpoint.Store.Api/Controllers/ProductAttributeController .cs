@@ -30,7 +30,7 @@ public class ProductAttributeController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProductAttributeDto dto, CancellationToken ct = default)
     {
@@ -38,7 +38,7 @@ public class ProductAttributeController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProductAttributeDto dto, CancellationToken ct = default)
     {
@@ -46,7 +46,7 @@ public class ProductAttributeController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-
+    [Authorize(Roles = "SuperAdmin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {

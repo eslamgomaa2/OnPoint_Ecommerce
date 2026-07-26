@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Stock;
 using Onpoint.Store.Application.Services.StockServ;
 using Onpoint.Store.Domin.Enums;
@@ -36,6 +37,7 @@ public class StockController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost("initialize/{Productid}")]
     public async Task<IActionResult> Initialize(int Productid, [FromBody] InitializeStockDto dto, CancellationToken ct = default)
     {
@@ -43,6 +45,7 @@ public class StockController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost("adjust")]
     public async Task<IActionResult> Adjust([FromBody] AdjustStockDto dto, CancellationToken ct = default)
     {
@@ -50,6 +53,7 @@ public class StockController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost("transfer")]
     public async Task<IActionResult> Transfer([FromBody] TransferStockDto dto, CancellationToken ct = default)
     {

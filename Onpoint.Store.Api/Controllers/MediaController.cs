@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Media;
 using Onpoint.Store.Application.Services.MedioServices;
 
 [Route("api/media")]
 [ApiController]
+[Authorize(Roles = "SuperAdmin")]
 public class MediaController : ControllerBase
 {
     private readonly IMediaService _mediaService;
