@@ -48,4 +48,41 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             builder.Property(c => c.MinOrderAmount).HasColumnType("decimal(18,3)");
         }
     }
+    public class ContactMessageConfiguration : IEntityTypeConfiguration<ContactMessage>
+    {
+        public void Configure(EntityTypeBuilder<ContactMessage> builder)
+        {
+            builder.ToTable("ContactMessages");
+
+            builder.HasKey(e => e.Id);
+
+            builder.Property(e => e.FirstName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            builder.Property(e => e.LastName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            builder.Property(e => e.Email)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            builder.Property(e => e.PhoneNumber)
+                .HasMaxLength(30);
+
+            builder.Property(e => e.Message)
+                .IsRequired()
+                .HasMaxLength(2000);
+
+            builder.Property(e => e.CreatedAt)
+                .IsRequired();
+
+            builder.Property(e => e.IsResolved)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.HasIndex(e => e.Email);
+        }
+    }
 }

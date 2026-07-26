@@ -25,7 +25,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IReviewRepository? _reviews;
         private IGenericRepository<OrderItem, int>? _orderItems;
         private IGenericRepository<RefundItem, int>? _refundItems;
-
+        private IContactMessageRepository? _contactMessages;
         private IApplicationUserRepo? _applicationUsers;
         private IStockRepository? _stockRepository;
         private IBranchRepo? _branches;
@@ -78,6 +78,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IRefundRepository Refunds => _refunds ??= new RefundRepository(_context);
 
         public IGenericRepository<RefundItem, int> RefundItems => _refundItems ??= new GenericRepository<RefundItem, int>(_context);
+
+        public IContactMessageRepository ContactMessages => _contactMessages ??= new ContactMessageRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

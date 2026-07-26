@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using BuildingBlocks.Results;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using Onpoint.Store.Application.DTOs.Cart;
 using Onpoint.Store.Application.DTOs.Wishlist;
 using Onpoint.Store.Application.Services.CartServ;
@@ -16,23 +17,27 @@ namespace Onpoint.Store.Application.Services.WishlistServ
         private readonly ServiceResultHandler _resultHandler;
         private readonly IValidator<AddToWishlistDto> _addValidator;
         private readonly ICartService _cartService;
+        private readonly ILogger<WishlistService> _logger;
 
         public WishlistService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ServiceResultHandler resultHandler,
             IValidator<AddToWishlistDto> addValidator,
-            ICartService cartService)
+            ICartService cartService,
+            ILogger<WishlistService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _resultHandler = resultHandler;
             _addValidator = addValidator;
             _cartService = cartService;
+            _logger = logger;
         }
 
         public async Task<ServiceResult<List<WishlistItemDto>>> GetUserWishlistAsync(int userId, CancellationToken ct = default)
         {
+            _logger.LogInformation("GetUserWishlistAsync called with userId={UserId}", userId);
             var items = await _unitOfWork.Wishlists.GetUserWishlistAsync(userId, ct);
             var dto = _mapper.Map<List<WishlistItemDto>>(items);
             return _resultHandler.Success(dto);

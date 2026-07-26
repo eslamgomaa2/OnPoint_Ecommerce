@@ -39,6 +39,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<Refund> Refunds { get; set; }
         public DbSet<RefundItem> RefundItems { get; set; }
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+        public DbSet<ContactMessage> ContactMessages { get; set; }
 
 
 

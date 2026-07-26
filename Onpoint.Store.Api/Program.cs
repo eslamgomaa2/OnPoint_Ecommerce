@@ -39,7 +39,7 @@ var cloudinaryAccount = new CloudinaryDotNet.Account(
 builder.Services.AddSingleton(new CloudinaryDotNet.Cloudinary(cloudinaryAccount));
 
 var app = builder.Build();
-//await app.MigrateDatabaseAsync();
+await app.MigrateDatabaseAsync();
 
 
 app.UseGlobalExceptionHandler();

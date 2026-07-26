@@ -12,8 +12,8 @@ using Onpoint.Store.Infrastructure.Data.Context;
 namespace Onpoint.Store.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260726100646_updatewishlist")]
-    partial class updatewishlist
+    [Migration("20260726183013_LastUpdate")]
+    partial class LastUpdate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -583,6 +583,44 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.ContactMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ContactMessages");
+                });
+
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Coupon", b =>
                 {
                     b.Property<int>("Id")
@@ -942,6 +980,9 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AddressId");
@@ -957,6 +998,8 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("InvoiceNumber")
                         .IsUnique()
                         .HasFilter("[InvoiceNumber] IS NOT NULL");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Orders", (string)null);
                 });
@@ -2172,6 +2215,11 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Onpoint.Store.Domin.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Branch");
 
                     b.Navigation("Cashier");
@@ -2179,6 +2227,8 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("ShippingAddress");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.OrderItem", b =>

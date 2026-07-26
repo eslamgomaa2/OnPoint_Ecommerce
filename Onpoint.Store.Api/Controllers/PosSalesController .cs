@@ -23,6 +23,22 @@ public class PosSalesController : ControllerBase
         var result = await _posSalesService.GetPosSalesPagedAsync(filter, branchId, ct);
         return Ok(result);
     }
+    [HttpGet("{orderId:int}/pdf")]
+    public async Task<IActionResult> DownloadPdf(int orderId, CancellationToken ct)
+    {
+        var result = await _posSalesService.GeneratePdfAsync(orderId, ct);
+        if (!result.Succeeded || result.Data == null)
+            return BadRequest(result);
+
+        var fileName = $"invoice-{orderId}.pdf";
+
+        Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+        Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
+        Response.Headers.Append("Pragma", "no-cache");
+        Response.Headers.Append("Expires", "0");
+
+        return File(result.Data, "application/pdf", fileName);
+    }
 
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] ExportPosSalesRequestDto filter, CancellationToken ct)
@@ -31,9 +47,17 @@ public class PosSalesController : ControllerBase
         var result = await _posSalesService.ExportToExcelAsync(filter, branchId, ct);
         if (!result.Succeeded || result.Data == null)
             return BadRequest(result);
+
+        var fileName = $"pos-sales-{DateTime.UtcNow:yyyyMMdd}.xlsx";
+
+        Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+        Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
+        Response.Headers.Append("Pragma", "no-cache");
+        Response.Headers.Append("Expires", "0");
+
         return File(result.Data,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            $"pos-sales-{DateTime.UtcNow:yyyyMMdd}.xlsx");
+            fileName);
     }
 
     [HttpGet("{orderId:int}")]
@@ -50,14 +74,7 @@ public class PosSalesController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("{orderId:int}/pdf")]
-    public async Task<IActionResult> DownloadPdf(int orderId, CancellationToken ct)
-    {
-        var result = await _posSalesService.GeneratePdfAsync(orderId, ct);
-        if (!result.Succeeded || result.Data == null)
-            return BadRequest(result);
-        return File(result.Data, "application/pdf", $"invoice-{orderId}.pdf");
-    }
+
 
     [HttpGet("{orderId:int}/qrcode")]
     public async Task<ActionResult> GenerateQrCode(int orderId, CancellationToken ct)

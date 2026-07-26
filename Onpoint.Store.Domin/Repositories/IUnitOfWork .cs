@@ -27,7 +27,7 @@ namespace Onpoint.Store.Domin.Repositories
         IProductVariantRepository ProductVariants { get; }
         IGenericRepository<PosSessionItem, int> PosSessionItems { get; }
         IGenericRepository<RefundItem, int> RefundItems { get; }
-
+        IContactMessageRepository ContactMessages { get; }
         IProductAttributeRepository ProductAttributes { get; }
         IDiscountRepo Discounts { get; }
         IBrandRepository Brands { get; }

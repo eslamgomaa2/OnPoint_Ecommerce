@@ -205,7 +205,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
                     UserId = user.Id,
                     Email = user.Email!,
                     PHoneNumber = user.PhoneNumber,
-                    FullName = $"{user.FirstName} {user.LastName}",
+                    FullName = $"{user.UserName}",
                     Role = primaryRole
                 });
             }
