@@ -42,14 +42,13 @@ namespace Onpoint.Store.Infrastructure.Repositories
         }
 
         public async Task<(IReadOnlyList<Brand> Items, int TotalCount)> GetFilteredPagedAsync(
-     string? searchTerm, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default)
+            string? searchTerm, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default)
         {
             IQueryable<Brand> query = _dbset.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                var term = searchTerm.Trim().ToLower();
-                query = query.Where(b => b.Name.ToLower().Contains(term));
+                query = query.Where(b => b.Name.Contains(searchTerm));
             }
 
             if (isActive.HasValue)
@@ -58,8 +57,6 @@ namespace Onpoint.Store.Infrastructure.Repositories
             }
 
             int totalCount = await query.CountAsync(ct);
-            pageNumber = pageNumber <= 0 ? 1 : pageNumber;
-            pageSize = pageSize <= 0 ? 10 : pageSize;
 
             var items = await query
                 .OrderBy(b => b.DisplayOrder)

@@ -10,16 +10,14 @@ namespace Onpoint.Store.Application.Mapping
         {
             CreateMap<Brand, BrandDto>()
                 .ForMember(dest => dest.ProductsCount,
-                            opt => opt.MapFrom(src => src.Products != null ? src.Products.Count : 0));
+                           opt => opt.MapFrom(src => src.Products.Count));
 
             CreateMap<CreateBrandDto, Brand>()
-                .ForMember(dest => dest.Slug, opt => opt.Ignore())
-                .ForMember(dest => dest.Products, opt => opt.Ignore());
+                .ForMember(dest => dest.Slug, opt => opt.Ignore());
 
             CreateMap<UpdateBrandDto, Brand>()
                 .ForMember(dest => dest.Slug, opt => opt.Ignore())
-                .ForMember(dest => dest.Id, opt => opt.Ignore())
-                .ForMember(dest => dest.Products, opt => opt.Ignore());
+                .ForMember(dest => dest.Id, opt => opt.Ignore());
         }
     }
 }

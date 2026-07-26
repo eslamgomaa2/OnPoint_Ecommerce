@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.Services.ReviewServ;
 
 [Route("api/admin/reviews")]
 [ApiController]
+[Authorize(Roles = "SuperAdmin")]
 public class AdminReviewsController : ControllerBase
 {
     private readonly IReviewService _reviewService;

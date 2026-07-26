@@ -158,23 +158,15 @@ namespace Onpoint.Store.Application.Services.BranchServices
         public async Task<ServiceResult<BranchDto>> UpdateAsync(int id, UpdateBranchDto dto, CancellationToken ct = default)
         {
             await _UpdateBranchValidator.ValidateAndThrowAsync(dto, ct);
-
             var branch = await _unitOfWork.Branches.Query()
-                .Include(b => b.Manager)
-                .Include(b => b.Cashiers.Where(c => !c.IsDeleted && c.BranchRole == UserBranchRole.Cashier))
-                .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
+        .Include(b => b.Manager)
+        .Include(b => b.Cashiers.Where(c => !c.IsDeleted && c.BranchRole == UserBranchRole.Cashier))
+        .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted, ct);
 
             if (branch == null)
                 return _resultHandler.NotFound<BranchDto>("Branch not found.");
 
 
-            if (dto.IsDefault && !branch.IsDefault)
-            {
-                await UnsetOtherDefaultsAsync(branch.Id, ct);
-
-
-                await _unitOfWork.SaveChangesAsync(ct);
-            }
 
             branch.Name = dto.Name;
             branch.Address = dto.Address;
@@ -184,13 +176,19 @@ namespace Onpoint.Store.Application.Services.BranchServices
             branch.WorkingHours = dto.WorkingHours;
             branch.IsActive = dto.IsActive;
             branch.UpdatedAt = DateTime.UtcNow;
-            branch.IsDefault = dto.IsDefault;
+
+            if (dto.IsDefault && !branch.IsDefault)
+            {
+                branch.IsDefault = true;
+                await UnsetOtherDefaultsAsync(branch.Id, ct);
+            }
+            else
+            {
+                branch.IsDefault = dto.IsDefault;
+            }
 
             _unitOfWork.Branches.Update(branch);
-
-
-            await _unitOfWork.SaveChangesAsync(ct);
-
+            await _unitOfWork.SaveChangesAsync();
             return _resultHandler.Success(MapToDto(branch));
         }
 

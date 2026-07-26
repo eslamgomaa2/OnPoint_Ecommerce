@@ -1,4 +1,5 @@
 ﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.Services.OrderServ;
@@ -30,6 +31,7 @@ public class OrdersController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "Customer")]
     [HttpGet("mine")]
     public async Task<ActionResult<ServiceResult<IEnumerable<OrderDto>>>> GetMyOrders()
     {
@@ -37,6 +39,7 @@ public class OrdersController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPut("{id}/status")]
     public async Task<ActionResult<ServiceResult<bool>>> UpdateStatus(int id, [FromBody] OrderStatus dto)
     {

@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Discount;
 using Onpoint.Store.Application.Services.DiscountServ;
 
 [Route("api/discounts")]
 [ApiController]
+[Authorize(Roles = "SuperAdmin")]
 public class DiscountController : ControllerBase
 {
     private readonly IDiscountService _discountService;

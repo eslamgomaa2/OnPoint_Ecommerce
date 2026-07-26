@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.Services.WishlistServ;
 using System.Security.Claims;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
+
 public class WishlistController : ControllerBase
 {
     private readonly IWishlistService _wishlistService;
