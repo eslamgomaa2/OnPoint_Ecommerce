@@ -1,5 +1,6 @@
 ﻿using BuildingBlocks.Results;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.DTOs.Payment;
@@ -22,6 +23,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
         private readonly ServiceResultHandler _resultHandler;
         private readonly IMyFatoorahClient _myFatoorahClient;
         private readonly MyFatoorahOptions _options;
+        private readonly ILogger<PaymentService> _logger;
 
         public PaymentService(
             IUnitOfWork unitOfWork,
@@ -29,7 +31,8 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             IMyFatoorahClient myFatoorahClient,
             IOptions<MyFatoorahOptions> options,
             UserManager<ApplicationUser> userManager,
-            IOrderService orderService)
+            IOrderService orderService,
+            ILogger<PaymentService> logger)
         {
             _unitOfWork = unitOfWork;
             _resultHandler = resultHandler;
@@ -37,6 +40,7 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             _options = options.Value;
             _userManager = userManager;
             this.orderService = orderService;
+            _logger = logger;
         }
 
         public async Task<ServiceResult<List<PaymentMethodDto>>> GetAvailablePaymentMethodsAsync(int orderId, CancellationToken ct = default)
@@ -210,9 +214,28 @@ namespace Onpoint.Store.Application.Services.PaymentServices
         private async Task<Order?> ValidateOrderForPaymentAsync(int userId, int orderId, CancellationToken ct)
         {
             var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId, ct);
-            if (order == null || order.UserId != userId) return null;
-            if (order.Status != OrderStatus.Pending) return null;
-            if (order.PaymentMethod == PaymentMethod.Cash) return null;
+
+            if (order == null)
+            {
+                _logger.LogWarning("Order {OrderId} not found.", orderId);
+                return null;
+            }
+            if (order.UserId != userId)
+            {
+                _logger.LogWarning("Order {OrderId} UserId {OrderUserId} does not match requesting userId {UserId}.", orderId, order.UserId, userId);
+                return null;
+            }
+            if (order.Status != OrderStatus.Pending)
+            {
+                _logger.LogWarning("Order {OrderId} status is {Status}, expected Pending.", orderId, order.Status);
+                return null;
+            }
+            if (order.PaymentMethod == PaymentMethod.Cash)
+            {
+                _logger.LogWarning("Order {OrderId} payment method is Cash, not eligible for online payment.", orderId);
+                return null;
+            }
+
             return order;
         }
 
