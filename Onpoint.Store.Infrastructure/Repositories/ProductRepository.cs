@@ -136,11 +136,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public async Task<Product?> GetBySkuAsync(string sku, CancellationToken ct = default)
         {
             return await _dbset
-                .Where(p => !p.IsDeleted)
+                .Where(p => !p.IsDeleted &&
+                       (p.Sku == sku || p.Variants.Any(v => v.Sku == sku)))
                 .Include(p => p.Category)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
-                .FirstOrDefaultAsync(p => p.Sku == sku, ct);
+                .FirstOrDefaultAsync(ct);
         }
 
         public async Task<List<Product>> SearchBySkuAsync(string skuTerm, CancellationToken ct = default)
