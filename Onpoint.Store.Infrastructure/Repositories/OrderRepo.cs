@@ -28,7 +28,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
                     .ThenInclude(r => r.RefundItems)
                 .FirstOrDefaultAsync(o => o.Id == id, ct);
         }
-
+        public async Task<Order?> GetOrderItemsForUserAsync(int orderId, int userId, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId, ct);
+        }
         public async Task<(IReadOnlyList<Order> Items, int TotalCount)> GetPosSalesPagedAsync(
             int pageNumber, int pageSize,
             string? search,
@@ -103,11 +108,13 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .FirstOrDefaultAsync(o => o.Id == id && o.Source == OrderSource.Pos, ct);
         }
 
-        public async Task<IEnumerable<Order>> GetUserOrders(int id)
+        public async Task<IEnumerable<Order>> GetUserOrders(int userId)
         {
-            var orders = await _dbset.Include(o => o.OrderItems)
-                 .ThenInclude(oi => oi.Product)
-                 .Where(o => o.CustomerId == id)
+            var orders = await _dbset
+                 .Include(o => o.OrderItems)
+                     .ThenInclude(oi => oi.Product)
+                 .Where(o => o.UserId == userId)
+                 .OrderByDescending(o => o.CreatedAt)
                  .ToListAsync();
             return orders;
         }
@@ -116,7 +123,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public async Task<bool> HasUserReceivedProductAsync(int userId, int productId, CancellationToken ct = default)
         {
             return await _dbset
-                .Where(o => o.CustomerId == userId && o.Status == OrderStatus.Completed)
+                .Where(o => o.UserId == userId && o.Status == OrderStatus.Completed)
                 .SelectMany(o => o.OrderItems)
                 .AnyAsync(oi => oi.ProductId == productId, ct);
         }

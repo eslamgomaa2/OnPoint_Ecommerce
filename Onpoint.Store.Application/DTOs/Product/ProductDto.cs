@@ -16,6 +16,8 @@ namespace Onpoint.Store.Application.DTOs.Product
         public StockStatus StockStatus { get; set; }
         public ProductStatus Status { get; set; }
         public bool IsPopular { get; set; }
+        public bool IsInCart { get; set; }
+        public bool IsInWishlist { get; set; }
 
     }
 }

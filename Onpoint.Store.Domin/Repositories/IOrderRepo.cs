@@ -13,7 +13,7 @@ namespace Onpoint.Store.Domin.Repositories
         Task<(IReadOnlyList<Order> Items, int TotalCount)> GetOrdersPagedAsync(int pageNumber, int pageSize, OrderSortBy sortBy, bool descending, int? branchId, CancellationToken ct = default);
         Task<Order> GetOrderViaInvoiceNumber(string InvoiceNumber);
         Task<Order?> GetFullOrderDetailsAsync(int id, CancellationToken ct = default);
-
+        Task<Order?> GetOrderItemsForUserAsync(int orderId, int userId, CancellationToken ct = default);
         Task<int> GetTotalOrdersCountAsync(int? branchId, CancellationToken ct = default);
         Task<int> GetCompletedOrdersCountAsync(int? branchId, CancellationToken ct = default);
         Task<int> GetPendingOrdersCountAsync(int? branchId, CancellationToken ct = default);

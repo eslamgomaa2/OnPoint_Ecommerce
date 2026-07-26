@@ -65,9 +65,13 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(o => o.Customer)
-                .WithMany(o => o.Orders)
-                .HasForeignKey(o => o.CustomerId)
-                .OnDelete(DeleteBehavior.Restrict);
+     .WithMany(c => c.Orders)
+     .HasForeignKey(o => o.CustomerId)
+     .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(o => o.User)
+    .WithMany()
+    .HasForeignKey(o => o.UserId)
+    .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(o => o.ShippingAddress)
                 .WithMany()

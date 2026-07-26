@@ -87,7 +87,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
                 var order = new Order
                 {
-                    CustomerId = userId,
+                    UserId = userId,
                     AddressId = dto.AddressId,
                     PhoneNumber = dto.PhoneNumber,
                     PaymentMethod = dto.PaymentMethod,
@@ -154,6 +154,17 @@ namespace Onpoint.Store.Application.Services.OrderServ
             }
         }
 
+        public async Task<ServiceResult<List<OrderItemDto>>> GetOrderItemsAsync(int orderId, int userId, CancellationToken ct = default)
+        {
+            var order = await _unitOfWork.Orders.GetOrderItemsForUserAsync(orderId, userId, ct);
+
+
+            if (order == null)
+                return _serviceResultHandler.NotFound<List<OrderItemDto>>("Order not found.");
+
+            var items = _mapper.Map<List<OrderItemDto>>(order.OrderItems);
+            return _serviceResultHandler.Success(items);
+        }
         public async Task<ServiceResult<bool>> ProcessPaymentSuccessAsync(int orderId, string transactionId, CancellationToken ct = default)
         {
             await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);

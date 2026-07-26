@@ -31,11 +31,57 @@ namespace BuildingBlocks.Middlewares
                 await HandleExceptionAsync(context, ex, localization);
             }
         }
+        #region
+        /* private async Task HandleExceptionAsync(HttpContext context, Exception exception, ILocalizationService localization)
+         {
+             context.Response.ContentType = "application/json";
 
+
+             if (exception is ValidationException validationEx)
+             {
+                 var errorMessages = validationEx.Errors
+                     .Select(e => e.ErrorMessage)
+                     .Distinct()
+                     .ToList();
+
+                 string combinedMessage = errorMessages.Count > 0
+                     ? string.Join(" | ", errorMessages)
+                     : GetLocalizedMessage(localization, "Errors.ValidationFailed");
+
+                 var response = new ServiceResult<object>
+                 {
+                     Succeeded = false,
+                     Message = combinedMessage,
+                     Data = null,
+                     Errors = errorMessages,
+                     HttpStatusCode = StatusCodes.Status400BadRequest
+                 };
+
+                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                 await context.Response.WriteAsync(JsonSerializer.Serialize(response, GetJsonOptions()));
+                 return;
+             }
+
+
+             var (statusCode, localizationKey) = GetExceptionDetails(exception);
+             string message = GetLocalizedMessage(localization, localizationKey);
+
+             var standardResponse = new ServiceResult<object>
+             {
+                 Succeeded = false,
+                 Message = message,
+                 Data = null,
+                 Errors = new List<string> { message },
+                 HttpStatusCode = statusCode
+             };
+
+             context.Response.StatusCode = statusCode;
+             await context.Response.WriteAsync(JsonSerializer.Serialize(standardResponse, GetJsonOptions()));
+         }*/
+        #endregion
         private async Task HandleExceptionAsync(HttpContext context, Exception exception, ILocalizationService localization)
         {
             context.Response.ContentType = "application/json";
-
 
             if (exception is ValidationException validationEx)
             {
@@ -62,9 +108,10 @@ namespace BuildingBlocks.Middlewares
                 return;
             }
 
-
             var (statusCode, localizationKey) = GetExceptionDetails(exception);
-            string message = GetLocalizedMessage(localization, localizationKey);
+
+            // ✅ الفيكس الأساسي هنا
+            string message = BuildErrorMessage(exception, statusCode, localization, localizationKey);
 
             var standardResponse = new ServiceResult<object>
             {
@@ -79,6 +126,20 @@ namespace BuildingBlocks.Middlewares
             await context.Response.WriteAsync(JsonSerializer.Serialize(standardResponse, GetJsonOptions()));
         }
 
+        // ✅ جديد
+        private static string BuildErrorMessage(Exception exception, int statusCode, ILocalizationService localization, string localizationKey)
+        {
+            // للأخطاء الـ 500 غير المتوقعة، نفضل نسيبها عامة حماية للمعلومات الحساسة
+            // (تفاصيلها الكاملة موجودة في الـ logs أصلاً عن طريق logger.LogError فوق)
+            if (statusCode == StatusCodes.Status500InternalServerError)
+                return GetLocalizedMessage(localization, localizationKey);
+
+            // لباقي الأخطاء (400, 401, 402, 404, 504) اللي هي أخطاء متوقعة ومقصودة،
+            // نعرض الرسالة الحقيقية اللي انت كاتبها وقت الـ throw
+            return !string.IsNullOrWhiteSpace(exception.Message)
+                ? exception.Message
+                : GetLocalizedMessage(localization, localizationKey);
+        }
         private static string GetLocalizedMessage(ILocalizationService localization, string key)
         {
             try

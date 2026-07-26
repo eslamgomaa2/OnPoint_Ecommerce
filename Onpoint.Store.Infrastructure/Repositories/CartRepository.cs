@@ -23,5 +23,19 @@ namespace Onpoint.Store.Infrastructure.Repositories
                             .ThenInclude(av => av.ProductAttribute)
                 .FirstOrDefaultAsync(c => c.UserId == userId, ct);
         }
+        public async Task<HashSet<int>> GetProductIdsInCartAsync(int userId, IEnumerable<int> productIds, CancellationToken ct = default)
+        {
+            var idList = productIds.Distinct().ToList();
+            if (!idList.Any())
+                return new HashSet<int>();
+
+            var result = await _context.CartItems
+                .Where(ci => ci.Cart.UserId == userId && idList.Contains(ci.ProductId))
+                .Select(ci => ci.ProductId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            return result.ToHashSet();
+        }
     }
 }
