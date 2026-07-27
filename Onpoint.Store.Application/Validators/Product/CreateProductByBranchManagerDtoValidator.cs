@@ -1,5 +1,4 @@
-﻿
-using FluentValidation;
+﻿using FluentValidation;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
@@ -26,11 +25,16 @@ namespace Onpoint.Store.Application.Validators.Product
                 .NotEmpty()
                 .When(x => x.BarcodeMode == CodeGenerationMode.Manual)
                 .WithMessage("Barcode is required when BarcodeMode is Manual.");
-            RuleFor(x => x.Discount)
-                .SetValidator(new CreateDiscountDtoValidator()!)
-                .When(x => x.Discount != null);
 
-            RuleForEach(x => x.Variants).SetValidator(new CreateProductVariantByBranchManagerDtoValidator(unitOfWork));
+            // ⚠️ NEW: Variants is required and must have at least one item
+            RuleFor(x => x.Variants)
+                .NotNull()
+                .WithMessage("Product must have at least one variant.")
+                .Must(v => v != null && v.Count > 0)
+                .WithMessage("Product must have at least one variant.");
+
+            RuleForEach(x => x.Variants)
+                .SetValidator(new CreateProductVariantByBranchManagerDtoValidator(unitOfWork));
         }
     }
 }

@@ -24,7 +24,7 @@ public class OrdersController : ControllerBase
             throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
         return userId;
     }
-    [Authorize]
+
     [HttpGet("{id:int}/items")]
     public async Task<ActionResult<ServiceResult<List<OrderItemDto>>>> GetOrderItems(int id)
     {
@@ -41,10 +41,12 @@ public class OrdersController : ControllerBase
     }
 
     [Authorize(Roles = "Customer")]
-    [HttpGet("mine")]
-    public async Task<ActionResult<ServiceResult<IEnumerable<OrderDto>>>> GetMyOrders()
+    [HttpGet("MyOrders")]
+    public async Task<ActionResult<ServiceResult<PagedResult<OrderListItemDto>>>> GetMyOrders(
+            [FromQuery] GetOrdersQueryDto query, CancellationToken ct)
     {
-        var result = await _orderService.GetUserOrdersAsync(GetUserId());
+        var (_, branchId) = GetUserAndBranchId();
+        var result = await _orderService.GetDashboardPagedAsync(query, branchId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
@@ -54,5 +56,14 @@ public class OrdersController : ControllerBase
     {
         var result = await _orderService.UpdateOrderStatusAsync(id, dto);
         return StatusCode((int)result.HttpStatusCode, result);
+    }
+    private (int UserId, int? BranchId) GetUserAndBranchId()
+    {
+        var userClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        var branchClaim = User.FindFirstValue("BranchId");
+        if (string.IsNullOrEmpty(userClaim) || !int.TryParse(userClaim, out var userId))
+            throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
+        int? branchId = int.TryParse(branchClaim, out var bId) ? bId : null;
+        return (userId, branchId);
     }
 }

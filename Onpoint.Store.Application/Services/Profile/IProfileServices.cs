@@ -7,6 +7,6 @@ namespace Onpoint.Store.Application.Services.Profile
     {
         Task<ServiceResult<bool>> DeleteMyAccountAsync(int userId);
 
-        Task<ServiceResult<string>> UpdateMyAccount(int UserId, UpdateMyProfileDto dto, CancellationToken ct = default);
+        Task<ServiceResult<UpdateMyProfileDto>> UpdateMyAccount(int UserId, UpdateMyProfileDto dto, CancellationToken ct = default);
     }
 }

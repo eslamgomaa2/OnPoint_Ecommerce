@@ -158,11 +158,39 @@ namespace Onpoint.Store.Application.Services.OrderServ
         {
             var order = await _unitOfWork.Orders.GetOrderItemsForUserAsync(orderId, userId, ct);
 
-
             if (order == null)
                 return _serviceResultHandler.NotFound<List<OrderItemDto>>("Order not found.");
 
-            var items = _mapper.Map<List<OrderItemDto>>(order.OrderItems);
+            var items = order.OrderItems.Select(oi => new OrderItemDto
+            {
+                Id = oi.Id,
+                ProductId = oi.ProductId,
+                ProductVariantId = oi.ProductVariantId,
+                ProductName = oi.Product?.Name ?? "Unknown Product",
+
+
+                ProductImageUrl = oi.Product?.Images
+                    .Where(i => i.IsPrimary)
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault()
+                    ?? oi.Product?.Images
+                        .Select(i => i.ImageUrl)
+                        .FirstOrDefault(),
+
+
+                VariantAttributes = oi.ProductVariant?.AttributeValues?
+                    .Select(av => new VariantAttributeDto
+                    {
+                        AttributeName = av.ProductAttribute?.Name ?? "Attribute",
+                        AttributeValue = av.Value
+                    })
+                    .ToList() ?? new List<VariantAttributeDto>(),
+
+                Quantity = oi.Quantity,
+                UnitPrice = oi.UnitPrice,
+
+            }).ToList();
+
             return _serviceResultHandler.Success(items);
         }
         public async Task<ServiceResult<bool>> ProcessPaymentSuccessAsync(int orderId, string transactionId, CancellationToken ct = default)
@@ -358,6 +386,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
             var list = items.Select(o => new OrderListItemDto
             {
                 Id = o.Id,
+                OrderId = $"ORD-00{o.Id}",
                 OrderDate = o.CreatedAt,
                 Status = o.Status,
                 TotalAmount = o.TotalAmount
@@ -382,6 +411,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
             return _serviceResultHandler.Success(dto);
         }
+
 
         public async Task<ServiceResult<OrderDetailsDto>> GetOrderDetailsAsync(int id, int? branchId, CancellationToken ct = default)
         {

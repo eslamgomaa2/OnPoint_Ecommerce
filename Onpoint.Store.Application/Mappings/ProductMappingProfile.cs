@@ -73,7 +73,6 @@ namespace Onpoint.Store.Application.Mappings
             // =========================================================
             CreateMap<CreateProductByBranchManagerDto, Product>()
                 .ForMember(dest => dest.AttributeValues, opt => opt.MapFrom(src => src.Attributes))
-                .ForMember(dest => dest.Stocks, opt => opt.MapFrom(src => src.BranchStocks))
                 .ForMember(dest => dest.Discounts, opt => opt.MapFrom(src =>
                     src.Discount != null ? new List<CreateDiscountDto> { src.Discount } : null));
 
@@ -88,7 +87,6 @@ namespace Onpoint.Store.Application.Mappings
             // =========================================================
             CreateMap<CreateProductDto, Product>()
                 .ForMember(dest => dest.AttributeValues, opt => opt.MapFrom(src => src.Attributes))
-                .ForMember(dest => dest.Stocks, opt => opt.MapFrom(src => src.BranchStocks))
                 .ForMember(dest => dest.Discounts, opt => opt.MapFrom(src =>
                     src.Discount != null ? new List<CreateDiscountDto> { src.Discount } : null));
 

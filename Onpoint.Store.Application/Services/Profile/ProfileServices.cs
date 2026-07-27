@@ -33,24 +33,32 @@ namespace Onpoint.Store.Application.Services.Profile
             return _resultHandler.Deleted<bool>();
         }
 
-        public async Task<ServiceResult<string>> UpdateMyAccount(int UserId, UpdateMyProfileDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<UpdateMyProfileDto>> UpdateMyAccount(int UserId, UpdateMyProfileDto dto, CancellationToken ct = default)
         {
             var user = await _userManager.FindByIdAsync(UserId.ToString());
             if (user == null)
-                return _resultHandler.NotFound<string>("User not found.");
+                return _resultHandler.NotFound<UpdateMyProfileDto>("User not found.");
 
-            user.UserName = dto.FullName ?? user.UserName;
-            user.PhoneNumber = dto.PhoneNumber ?? user.PhoneNumber;
+            if (!string.IsNullOrEmpty(dto.FullName))
+            {
+                user.UserName = dto.FullName;
+            }
 
+            if (!string.IsNullOrEmpty(dto.PhoneNumber))
+            {
+                user.PhoneNumber = dto.PhoneNumber;
+            }
 
             var updateResult = await _userManager.UpdateAsync(user);
             if (!updateResult.Succeeded)
             {
                 var errors = string.Join(", ", updateResult.Errors.Select(e => e.Description));
-                return _resultHandler.BadRequest<string>(errors);
+                return _resultHandler.BadRequest<UpdateMyProfileDto>(errors);
             }
 
-            return _resultHandler.Success<string>("Updated Successfully");
+            return _resultHandler.Success(dto);
         }
+
+
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Domin.Enums;
+
 namespace Onpoint.Store.Application.DTOs
 {
     public class CreateProductDto
@@ -12,10 +13,8 @@ namespace Onpoint.Store.Application.DTOs
         public int Brandid { get; set; }
         public int MinimumStockLevel { get; set; }
 
-
         public bool IsPopular { get; set; }
         public ProductStatus Status { get; set; } = ProductStatus.Draft;
-
 
         public CodeGenerationMode SkuMode { get; set; } = CodeGenerationMode.Auto;
         public string? Sku { get; set; }
@@ -30,9 +29,13 @@ namespace Onpoint.Store.Application.DTOs
         public CreateDiscountDto? Discount { get; set; }
         public List<CreateProductTranslationDto> Translations { get; set; } = new();
 
-        public List<CreateProductVariantDto>? Variants { get; set; } = new();
+
+        public List<CreateProductVariantDto> Variants { get; set; } = new();
+
         public List<CreateProductAttributeValueDto> Attributes { get; set; } = new();
-        public List<VariantBranchStockDto> BranchStocks { get; set; } = new();
+
+
+
         public CreateProductShippingDto? Shipping { get; set; }
     }
 }
