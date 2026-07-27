@@ -10,6 +10,13 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
         }
 
+        public async Task<Wishlist?> GetByUserAndProductIdAsync(int userId, int productId, CancellationToken ct = default)
+        {
+            return await _dbset
+                .FirstOrDefaultAsync(w => w.UserId == userId
+                                          && w.ProductId == productId
+                                          && !w.IsDeleted, ct);
+        }
         public async Task<List<Wishlist>> GetUserWishlistAsync(int userId, CancellationToken ct = default)
         {
             return await _dbset

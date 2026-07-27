@@ -4,7 +4,6 @@ using FluentValidation;
 using Onpoint.Store.Application.DTOs.Media;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
-using Onpoint.Store.Application.DTOs.ProductVariant;
 using Onpoint.Store.Application.Helpers;
 using Onpoint.Store.Application.Services.BranchManagerProductService;
 using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration;
@@ -91,17 +90,16 @@ namespace Onpoint.Store.Application.Services.ProductServ
         }
 
         public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(
-            int branchId,
-            int id,
-            LanguageCode? languageCode = null,
-            CancellationToken ct = default)
+      int branchId,
+      int id,
+      LanguageCode? languageCode = null,
+      CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             if (product is null)
                 return _resultHandler.NotFound<ProductDetailDto>("Product not found");
 
-            bool hasStockInBranch = product.Stocks.Any(s => s.BranchId == branchId && s.ProductVariantId == null) ||
-                                     product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
+            bool hasStockInBranch = product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
 
             if (!hasStockInBranch)
                 return _resultHandler.NotFound<ProductDetailDto>("Product not available in this branch");
@@ -112,26 +110,17 @@ namespace Onpoint.Store.Application.Services.ProductServ
             dto.TotalStock = baseDto.TotalStock;
             dto.StockStatus = baseDto.StockStatus;
 
-            if (!product.Variants.Any(v => v.IsActive))
+            foreach (var variantDto in dto.Variants)
             {
-                var stocks = product.Stocks.Where(s => s.BranchId == branchId && s.ProductVariantId == null);
-                dto.BranchStock = stocks.Select(s => _mapper.Map<VariantStockDto>(s)).ToList();
-            }
-            else
-            {
-                foreach (var variantDto in dto.Variants)
-                {
-                    variantDto.Stocks = variantDto.Stocks.Where(s => s.BranchId == branchId).ToList();
-                }
+                variantDto.Stocks = variantDto.Stocks.Where(s => s.BranchId == branchId).ToList();
             }
 
             ApplyTranslationToDetail(dto, product, languageCode);
 
             return _resultHandler.Success(dto);
         }
-
         public async Task<ServiceResult<ProductDto>> CreateAsync(int branchId, CreateProductByBranchManagerDto dto,
-            CancellationToken ct = default)
+     CancellationToken ct = default)
         {
             var validationResult = await _createValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
@@ -208,131 +197,110 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 });
             }
 
+            // ⚠️ VARIANTS: Always required - must have at least one
             var variantTracker = new List<(CreateProductVariantByBranchManagerDto Dto, ProductVariant Entity)>();
 
-            // إنشاء الـ Variants
-            if (dto.Variants?.Any() == true)
+            // Clear any variants mapped by AutoMapper (we'll rebuild them manually)
+            product.Variants.Clear();
+
+            foreach (var v in dto.Variants)
             {
-                product.Variants.Clear();
-
-                foreach (var v in dto.Variants)
+                var variant = new ProductVariant
                 {
-                    var variant = new ProductVariant
+                    Price = v.Price,
+                    IsActive = true,
+                    Sku = v.SkuMode == CodeGenerationMode.Manual
+                        ? v.Sku!
+                        : await _skuGeneratorService.GenerateUniqueSkuAsync($"{dto.Name}-VAR", dto.CategoryId)
+                };
+
+                variant.Barcode = v.BarcodeMode == CodeGenerationMode.Manual
+                    ? v.Barcode
+                    : _barcodeService.GenerateValue();
+
+                if (!string.IsNullOrEmpty(variant.Barcode))
+                {
+                    byte[] barcodeBytes = _barcodeService.GenerateImage(variant.Barcode);
+                    using var barcodeStream = new MemoryStream(barcodeBytes);
+                    var barcodeUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
                     {
-                        Price = v.Price,
-                        IsActive = true,
-                        Sku = v.SkuMode == CodeGenerationMode.Manual
-                            ? v.Sku!
-                            : await _skuGeneratorService.GenerateUniqueSkuAsync($"{dto.Name}-VAR", dto.CategoryId)
-                    };
+                        FileName = $"barcode_var_{variant.Sku}.png",
+                        FileContent = barcodeStream
+                    }, ct);
 
-                    variant.Barcode = v.BarcodeMode == CodeGenerationMode.Manual
-                        ? v.Barcode
-                        : _barcodeService.GenerateValue();
-
-                    if (!string.IsNullOrEmpty(variant.Barcode))
-                    {
-                        byte[] barcodeBytes = _barcodeService.GenerateImage(variant.Barcode);
-                        using var barcodeStream = new MemoryStream(barcodeBytes);
-                        var barcodeUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                        {
-                            FileName = $"barcode_var_{variant.Sku}.png",
-                            FileContent = barcodeStream
-                        }, ct);
-
-                        if (barcodeUploadResult.Succeeded)
-                            variant.BarcodeImagePath = barcodeUploadResult.Data;
-                    }
-
-                    variant.QrCodeValue = v.QrCodeMode == CodeGenerationMode.Manual
-                        ? v.QrCodeValue
-                        : _qrCodeService.GenerateValue(variant.Sku);
-
-                    if (!string.IsNullOrEmpty(variant.QrCodeValue))
-                    {
-                        byte[] qrCodeBytes = _qrCodeService.GenerateImage(variant.QrCodeValue);
-                        using var qrStream = new MemoryStream(qrCodeBytes);
-                        var qrUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                        {
-                            FileName = $"qrcode_var_{variant.Sku}.png",
-                            FileContent = qrStream
-                        }, ct);
-
-                        if (qrUploadResult.Succeeded)
-                            variant.QrCodeImagePath = qrUploadResult.Data;
-                    }
-
-                    if (v.Attributes?.Any() == true)
-                    {
-                        foreach (var a in v.Attributes)
-                        {
-                            variant.AttributeValues.Add(new VariantAttributeValue
-                            {
-                                ProductAttributeId = a.ProductAttributeId,
-                                Value = a.Value
-                            });
-                        }
-                    }
-
-                    product.Variants.Add(variant);
-                    variantTracker.Add((v, variant));
+                    if (barcodeUploadResult.Succeeded)
+                        variant.BarcodeImagePath = barcodeUploadResult.Data;
                 }
+
+                variant.QrCodeValue = v.QrCodeMode == CodeGenerationMode.Manual
+                    ? v.QrCodeValue
+                    : _qrCodeService.GenerateValue(variant.Sku);
+
+                if (!string.IsNullOrEmpty(variant.QrCodeValue))
+                {
+                    byte[] qrCodeBytes = _qrCodeService.GenerateImage(variant.QrCodeValue);
+                    using var qrStream = new MemoryStream(qrCodeBytes);
+                    var qrUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
+                    {
+                        FileName = $"qrcode_var_{variant.Sku}.png",
+                        FileContent = qrStream
+                    }, ct);
+
+                    if (qrUploadResult.Succeeded)
+                        variant.QrCodeImagePath = qrUploadResult.Data;
+                }
+
+                if (v.Attributes?.Any() == true)
+                {
+                    foreach (var a in v.Attributes)
+                    {
+                        variant.AttributeValues.Add(new VariantAttributeValue
+                        {
+                            ProductAttributeId = a.ProductAttributeId,
+                            Value = a.Value
+                        });
+                    }
+                }
+
+                product.Variants.Add(variant);
+                variantTracker.Add((v, variant));
             }
 
             await _unitOfWork.Products.AddAsync(product, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-
-
-            if (variantTracker.Any())
+            foreach (var (vDto, savedVariant) in variantTracker)
             {
-                foreach (var (vDto, savedVariant) in variantTracker)
+                if (vDto.BranchStocks?.Any() == true)
                 {
-                    if (vDto.BranchStocks?.Any() == true)
+                    foreach (var bs in vDto.BranchStocks)
                     {
-                        foreach (var bs in vDto.BranchStocks)
+                        var stock = new Stock
                         {
-                            var stock = new Stock
-                            {
-                                ProductId = product.Id,
-                                ProductVariantId = savedVariant.Id,
-                                BranchId = branchId,
-                                Quantity = bs.Quantity,
-                                ReservedQuantity = 0,
-                                MinimumStockLevel = dto.MinimumStockLevel
-                            };
+                            ProductId = product.Id,
+                            ProductVariantId = savedVariant.Id,
+                            BranchId = branchId,
+                            Quantity = bs.Quantity,
+                            ReservedQuantity = 0,
+                            MinimumStockLevel = dto.MinimumStockLevel
+                        };
 
-                            product.Stocks.Add(stock);
-                            savedVariant.Stocks.Add(stock);
-                        }
+                        product.Stocks.Add(stock);
+                        savedVariant.Stocks.Add(stock);
                     }
                 }
             }
-            else if (dto.BranchStocks?.Any() == true)
-            {
-                foreach (var bs in dto.BranchStocks)
-                {
-                    product.Stocks.Add(new Stock
-                    {
-                        ProductId = product.Id,
-                        ProductVariantId = null,
-                        BranchId = branchId,
-                        Quantity = bs.Quantity,
-                        ReservedQuantity = 0,
-                        MinimumStockLevel = dto.MinimumStockLevel != 0 ? dto.MinimumStockLevel : 0
-                    });
-                }
-            }
+
+
 
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Created(_mapper.Map<ProductDto>(product));
         }
-
         public async Task<ServiceResult<ProductDto>> UpdateAsync(
-            int branchId,
-            int id,
-            UpdateProductDto dto,
-            CancellationToken ct = default)
+      int branchId,
+      int id,
+      UpdateProductDto dto,
+      CancellationToken ct = default)
         {
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
@@ -342,12 +310,10 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (existingProduct is null)
                 return _resultHandler.NotFound<ProductDto>("Product not found to update");
 
-            bool hasStockInBranch = existingProduct.Stocks.Any(s => s.BranchId == branchId && s.ProductVariantId == null) ||
-                                     existingProduct.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
+            bool hasStockInBranch = existingProduct.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
 
             if (!hasStockInBranch)
                 return _resultHandler.BadRequest<ProductDto>("Product not available in this branch");
-
             if (!string.IsNullOrWhiteSpace(dto.Sku) && dto.Sku != existingProduct.Sku)
             {
                 if (await _unitOfWork.Products.SkuExistsAsync(dto.Sku, id, ct))
@@ -379,11 +345,12 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (product is null)
                 return _resultHandler.NotFound<string>("Product not found to delete");
 
-            bool hasStockInBranch = product.Stocks.Any(s => s.BranchId == branchId && s.ProductVariantId == null) ||
-                                     product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
+
+            bool hasStockInBranch = product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
 
             if (!hasStockInBranch)
                 return _resultHandler.BadRequest<string>("Product not available in this branch");
+
 
             product.IsDeleted = true;
             product.UpdatedAt = DateTime.UtcNow;
@@ -398,9 +365,10 @@ namespace Onpoint.Store.Application.Services.ProductServ
         {
             var dto = _mapper.Map<ProductDto>(p);
 
-            IEnumerable<Stock> relevantStocks = p.Variants.Any(v => v.IsActive)
-                ? p.Variants.Where(v => v.IsActive).SelectMany(v => v.Stocks)
-                : p.Stocks.Where(s => s.ProductVariantId == null);
+
+            IEnumerable<Stock> relevantStocks = p.Variants
+                .Where(v => v.IsActive)
+                .SelectMany(v => v.Stocks);
 
             if (branchId.HasValue)
                 relevantStocks = relevantStocks.Where(s => s.BranchId == branchId.Value);

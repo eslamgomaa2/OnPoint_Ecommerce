@@ -24,9 +24,16 @@ public class CreateProductDtoValidator : AbstractValidator<CreateProductDto>
             .NotEmpty()
             .When(x => x.BarcodeMode == CodeGenerationMode.Manual)
             .WithMessage("Barcode is required when BarcodeMode is Manual.");
+
         RuleFor(x => x.Discount)
             .SetValidator(new CreateDiscountDtoValidator()!)
             .When(x => x.Discount != null);
+
+        RuleFor(x => x.Variants)
+            .NotNull()
+            .WithMessage("Product must have at least one variant.")
+            .Must(v => v != null && v.Count > 0)
+            .WithMessage("Product must have at least one variant.");
 
         RuleForEach(x => x.Variants).SetValidator(new CreateProductVariantDtoValidator(unitOfWork));
     }

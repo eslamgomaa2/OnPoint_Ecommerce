@@ -17,7 +17,6 @@ namespace Onpoint.Store.Api.Controllers
             _orderService = orderService;
         }
 
-        // GET /api/dashboard/orders
         [HttpGet("orders")]
         public async Task<ActionResult<ServiceResult<PagedResult<OrderListItemDto>>>> GetDashboardOrders(
             [FromQuery] GetOrdersQueryDto query, CancellationToken ct)
@@ -27,7 +26,6 @@ namespace Onpoint.Store.Api.Controllers
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
-        // GET /api/dashboard/orders/paged
         [HttpGet("orders/paged")]
         public async Task<IActionResult> GetOrdersPaged([FromQuery] OrdersPaginationRequest request, CancellationToken ct)
         {

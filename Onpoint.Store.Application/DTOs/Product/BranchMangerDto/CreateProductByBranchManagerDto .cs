@@ -14,7 +14,6 @@ namespace Onpoint.Store.Application.DTOs.Product.BranchManger
         public bool IsPopular { get; set; }
         public ProductStatus Status { get; set; } = ProductStatus.Draft;
 
-
         public CodeGenerationMode SkuMode { get; set; } = CodeGenerationMode.Auto;
         public string? Sku { get; set; }
 
@@ -28,9 +27,13 @@ namespace Onpoint.Store.Application.DTOs.Product.BranchManger
         public CreateDiscountDto? Discount { get; set; }
         public List<CreateProductTranslationDto>? Translations { get; set; } = new();
 
-        public List<CreateProductVariantByBranchManagerDto>? Variants { get; set; } = new();
+
+        public List<CreateProductVariantByBranchManagerDto> Variants { get; set; } = new();
+
         public List<CreateProductAttributeValueDto>? Attributes { get; set; } = new();
-        public List<BranchManagerStockDto>? BranchStocks { get; set; } = new();
+
+
+
         public CreateProductShippingDto? Shipping { get; set; }
     }
 }

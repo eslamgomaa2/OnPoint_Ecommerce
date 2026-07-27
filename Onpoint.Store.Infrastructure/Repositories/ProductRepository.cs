@@ -159,23 +159,17 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Where(p => !p.IsDeleted)
                 .Select(p => new
                 {
-                    HasActiveVariants = p.Variants.Any(v => v.IsActive),
-                    TotalQty = p.Variants.Any(v => v.IsActive)
-                        ? p.Variants.Where(v => v.IsActive)
-                            .SelectMany(v => v.Stocks)
-                            .Where(s => !branchId.HasValue || s.BranchId == branchId.Value)
-                            .Sum(s => (int?)s.Quantity) ?? 0
-                        : p.Stocks
-                            .Where(s => s.ProductVariantId == null && (!branchId.HasValue || s.BranchId == branchId.Value))
-                            .Sum(s => (int?)s.Quantity) ?? 0,
-                    MinLevel = p.Variants.Any(v => v.IsActive)
-                        ? p.Variants.Where(v => v.IsActive)
-                            .SelectMany(v => v.Stocks)
-                            .Where(s => !branchId.HasValue || s.BranchId == branchId.Value)
-                            .Select(s => (int?)s.MinimumStockLevel).Max() ?? 0
-                        : p.Stocks
-                            .Where(s => s.ProductVariantId == null && (!branchId.HasValue || s.BranchId == branchId.Value))
-                            .Select(s => (int?)s.MinimumStockLevel).Max() ?? 0
+
+                    TotalQty = p.Variants
+                        .Where(v => v.IsActive)
+                        .SelectMany(v => v.Stocks)
+                        .Where(s => !branchId.HasValue || s.BranchId == branchId.Value)
+                        .Sum(s => (int?)s.Quantity) ?? 0,
+                    MinLevel = p.Variants
+                        .Where(v => v.IsActive)
+                        .SelectMany(v => v.Stocks)
+                        .Where(s => !branchId.HasValue || s.BranchId == branchId.Value)
+                        .Select(s => (int?)s.MinimumStockLevel).Max() ?? 0
                 })
                 .ToListAsync(ct);
 

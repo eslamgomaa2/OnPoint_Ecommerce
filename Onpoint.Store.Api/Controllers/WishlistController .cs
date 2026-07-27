@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Onpoint.Store.Application.Services.WishlistServ;
 using System.Security.Claims;
 
 namespace Onpoint.Store.Api.Controllers
@@ -29,11 +28,10 @@ namespace Onpoint.Store.Api.Controllers
         [HttpPost("products/{productId:int}")]
         public async Task<IActionResult> AddToWishlist(
             int productId,
-            [FromQuery] int? variantId,
             CancellationToken ct = default)
         {
             var userId = GetUserId();
-            var result = await _wishlistService.AddToWishlistAsync(userId, productId, variantId, ct);
+            var result = await _wishlistService.AddToWishlistAsync(userId, productId, null, ct);
             return ToResponse(result);
         }
 
@@ -41,23 +39,25 @@ namespace Onpoint.Store.Api.Controllers
         [HttpDelete("products/{productId:int}")]
         public async Task<IActionResult> RemoveFromWishlist(
             int productId,
-            [FromQuery] int? variantId,
             CancellationToken ct = default)
         {
             var userId = GetUserId();
-            var result = await _wishlistService.RemoveFromWishlistAsync(userId, productId, variantId, ct);
+            var result = await _wishlistService.RemoveFromWishlistAsync(userId, productId, null, ct);
             return ToResponse(result);
         }
 
-
-        [HttpPost("products/{productId:int}/move-to-cart")]
-        public async Task<IActionResult> MoveToCart(
-            int productId,
-            [FromQuery] int? variantId,
-            CancellationToken ct = default)
+        [HttpPatch("products/{productId:int}/variant")]
+        public async Task<IActionResult> SelectWishlistVariant(int productId, [FromQuery] int variantId, CancellationToken ct = default)
         {
             var userId = GetUserId();
-            var result = await _wishlistService.MoveToCartAsync(userId, productId, variantId, ct);
+            var result = await _wishlistService.SelectWishlistVariantAsync(userId, productId, variantId, ct);
+            return ToResponse(result);
+        }
+        [HttpPost("products/{productId:int}/move-to-cart")]
+        public async Task<IActionResult> MoveToCart(int productId, CancellationToken ct = default)
+        {
+            var userId = GetUserId();
+            var result = await _wishlistService.MoveToCartAsync(userId, productId, null, ct);
             return ToResponse(result);
         }
 
