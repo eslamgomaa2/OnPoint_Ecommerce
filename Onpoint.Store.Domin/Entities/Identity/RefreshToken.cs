@@ -9,12 +9,12 @@ namespace Onpoint.Store.Domin.Entities
         public DateTime ExpiresAt { get; set; }
         public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
         public DateTime CreatedAt { get; set; }
-        public DateTime? RevokedAt { get; set; } // لمعرفة هل تم إلغاؤه يدوياً (مثل عند عمل Logout)
+        public DateTime? RevokedAt { get; set; }
         public bool IsActive => !IsExpired && RevokedAt == null;
 
 
         public int ApplicationUserId { get; set; }
-        [ForeignKey("ApplicationUserId")]
+        [ForeignKey(nameof(ApplicationUserId))]
         public ApplicationUser ApplicationUser { get; set; } = null!;
     }
 }

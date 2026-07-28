@@ -51,32 +51,24 @@ namespace Onpoint.Store.Application.Services.CartServ
         {
             await _addToCartValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
-
             var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
             if (product == null)
                 throw new KeyNotFoundException("Product not found.");
 
-            decimal unitPrice;
+            // ⚠️ UPDATED: Variant is required
+            if (!dto.ProductVariantId.HasValue)
+                return _resultHandler.BadRequest<CartDto>("This product requires selecting a variant.");
 
-            if (dto.ProductVariantId.HasValue)
-            {
-                var variant = product.Variants.FirstOrDefault(v => v.Id == dto.ProductVariantId.Value);
-                if (variant == null || !variant.IsActive)
-                    return _resultHandler.BadRequest<CartDto>("Selected variant is not available.");
+            var variant = product.Variants.FirstOrDefault(v => v.Id == dto.ProductVariantId.Value);
+            if (variant == null || !variant.IsActive)
+                return _resultHandler.BadRequest<CartDto>("Selected variant is not available.");
 
-                unitPrice = PricingHelper.CalculateFinalPrice(product, variant);
-            }
-            else
-            {
-                if (product.Variants.Any(v => v.IsActive))
-                    return _resultHandler.BadRequest<CartDto>("This product requires selecting a variant.");
-
-                unitPrice = PricingHelper.CalculateFinalPrice(product);
-            }
+            var unitPrice = PricingHelper.CalculateFinalPrice(product, variant);
 
             var defaultBranch = await _unitOfWork.Branches.FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, ct);
             if (defaultBranch == null)
                 return _resultHandler.BadRequest<CartDto>("Default online branch is not configured.");
+
             var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(productId, dto.ProductVariantId, defaultBranch.Id, ct);
 
             var cart = await _unitOfWork.Carts.GetUserCartWithItemsAsync(userId, ct);
@@ -89,7 +81,6 @@ namespace Onpoint.Store.Application.Services.CartServ
 
             var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == productId && i.ProductVariantId == dto.ProductVariantId);
             var requestedTotalQuantity = (existingItem?.Quantity ?? 0) + dto.Quantity;
-
 
             if (stock == null)
                 return _resultHandler.BadRequest<CartDto>(
@@ -117,9 +108,6 @@ namespace Onpoint.Store.Application.Services.CartServ
 
             await RecalculateDiscountAsync(cart, ct);
 
-            // FIX #1: explicitly mark the cart (and its item graph) as modified before saving.
-            // Without this, if GetUserCartWithItemsAsync ever reads with AsNoTracking (or the
-            // Items collection isn't tracked), added/updated items silently never persist.
             _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
 
@@ -159,7 +147,6 @@ namespace Onpoint.Store.Application.Services.CartServ
 
             await RecalculateDiscountAsync(cart, ct);
 
-            // FIX #1
             _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
 
@@ -180,7 +167,6 @@ namespace Onpoint.Store.Application.Services.CartServ
             cart.Items.Remove(item);
             await RecalculateDiscountAsync(cart, ct);
 
-            // FIX #1
             _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
 
@@ -197,7 +183,6 @@ namespace Onpoint.Store.Application.Services.CartServ
             cart.AppliedCouponCode = null;
             cart.DiscountAmount = 0;
 
-            // FIX #1
             _unitOfWork.Carts.Update(cart);
             await _unitOfWork.SaveChangesAsync(ct);
             return _resultHandler.Success<string>("Cart cleared.");

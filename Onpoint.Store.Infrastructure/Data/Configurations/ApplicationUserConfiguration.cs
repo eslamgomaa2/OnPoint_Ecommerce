@@ -3,62 +3,47 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Identity;
 
-namespace Onpoint.Store.Infrastructure.Data.Configurations
+public class ApplicationUserConfiguration : IEntityTypeConfiguration<ApplicationUser>
 {
-    public class ApplicationUserConfiguration : IEntityTypeConfiguration<ApplicationUser>
+    public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
-        public void Configure(EntityTypeBuilder<ApplicationUser> builder)
-        {
+        builder.Property(u => u.FirstName).HasMaxLength(100);
+        builder.Property(u => u.LastName).HasMaxLength(100);
+        builder.Property(u => u.CreatedAt).IsRequired();
+        builder.Property(u => u.IsActive).HasDefaultValue(true);
+        builder.Property(u => u.IsDeleted).HasDefaultValue(false);
+        builder.Property(u => u.LockoutEscalationLevel).HasDefaultValue(0);
+        builder.Property(u => u.BranchRole)
+            .HasConversion<string>()
+            .HasMaxLength(30);
 
-            builder.Property(u => u.FirstName)
-                .HasMaxLength(100);
+        builder.HasOne(u => u.Branch)
+     .WithMany(b => b.Cashiers)
+     .HasForeignKey(u => u.BranchId)
+     .OnDelete(DeleteBehavior.Restrict);
+        // ✅ Cart Relationship - FK في Cart table
+        builder.HasOne(u => u.Cart)
+            .WithOne(c => c.User)
+            .HasForeignKey<Cart>(c => c.UserId)   // ← FK في Cart مش هنا
+            .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Property(u => u.LastName)
-                .HasMaxLength(100);
+        // ✅ RefreshTokens - FK في RefreshToken table
+        builder.HasMany(u => u.RefreshTokens)
+            .WithOne(r => r.ApplicationUser)
+            .HasForeignKey(r => r.ApplicationUserId)  // ← FK في RefreshToken
+            .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Property(u => u.CreatedAt)
-                .IsRequired();
-
-            builder.Property(u => u.IsActive)
-                .HasDefaultValue(true);
-
-            builder.Property(u => u.IsDeleted)
-                .HasDefaultValue(false);
-
-            builder.Property(u => u.LockoutEscalationLevel)
-                .HasDefaultValue(0);
-
-            builder.Property(u => u.BranchRole)
-                .HasConversion<string>()
-                .HasMaxLength(30);
-
-
-
-            builder.HasOne(u => u.Branch)
-                .WithMany()
-                .HasForeignKey(u => u.BranchId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.HasOne(u => u.Cart)
-                .WithOne(o => o.User)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.HasMany(u => u.RefreshTokens)
-                .WithOne(o => o.ApplicationUser)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.HasMany(u => u.Addresses)
-                .WithOne(o => o.User)
-                .OnDelete(DeleteBehavior.Cascade);
-        }
+        // ✅ Addresses - FK في Address table
+        builder.HasMany(u => u.Addresses)
+            .WithOne(a => a.User)
+            .HasForeignKey(a => a.UserId)     // ← FK في Address
+            .OnDelete(DeleteBehavior.Cascade);
     }
-
     public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
         public void Configure(EntityTypeBuilder<Customer> builder)
         {
             builder.ToTable("Customers");
-
             builder.HasKey(c => c.Id);
 
             builder.Property(c => c.FName).HasMaxLength(100);
@@ -71,16 +56,17 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             builder.HasIndex(c => c.Phone);
             builder.HasIndex(c => c.Email);
 
+            // ✅ Branch Relationship
             builder.HasOne(c => c.Branch)
-                .WithMany()
+                .WithMany(b => b.Customers)       // ← حدد الـ Collection في Branch
                 .HasForeignKey(c => c.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // ✅ Orders - FK في Order table
             builder.HasMany(c => c.Orders)
                 .WithOne(o => o.Customer)
-                .HasForeignKey(o => o.CustomerId)
+                .HasForeignKey(o => o.CustomerId) // ← FK في Order
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }
-
 }

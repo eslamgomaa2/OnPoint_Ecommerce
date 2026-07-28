@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Onpoint.Store.Application.Services.AuthServices.ExternalAuthService;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
+using Onpoint.Store.Domin.Repositories.Onpoint.Store.Application.Interfaces.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
 using Onpoint.Store.Infrastructure.ExternalAuthServices;
 using Onpoint.Store.Infrastructure.Repositories;
@@ -21,6 +22,7 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<IAddressRepository, AddressRepository>();
             services.AddScoped<ICouponRepository, CouponRepository>();
             services.AddScoped<IOrderRepo, OrderRepo>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IGenericRepository<OrderItem, int>, GenericRepository<OrderItem, int>>();
             services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
             services.AddScoped<IPossalesRepository, PosSalesRepository>();
@@ -38,6 +40,7 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<IProductVariantRepository, ProductVariantRepository>();
             services.AddScoped<IContactMessageRepository, ContactMessageRepository>();
             services.AddScoped<IStaticPageRepository, StaticPageRepository>();
+            services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
 
 
 

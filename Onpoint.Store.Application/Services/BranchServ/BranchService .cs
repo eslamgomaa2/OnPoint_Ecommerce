@@ -249,15 +249,35 @@ namespace Onpoint.Store.Application.Services.BranchServices
             if (!branch.IsActive)
                 return _resultHandler.BadRequest<bool>("Cannot set an inactive branch as default.");
 
-            branch.IsDefault = true;
-            branch.UpdatedAt = DateTime.UtcNow;
-            _unitOfWork.Branches.Update(branch);
 
-            await UnsetOtherDefaultsAsync(branch.Id, ct);
+            await _unitOfWork.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
 
-            await _unitOfWork.SaveChangesAsync();
+            try
+            {
 
-            return _resultHandler.Success(true);
+                await UnsetOtherDefaultsAsync(branch.Id, ct);
+
+
+                await _unitOfWork.SaveChangesAsync(ct);
+
+                // 3. Set the new default
+                branch.IsDefault = true;
+                branch.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Branches.Update(branch);
+
+                // 4. Save changes for setting
+                await _unitOfWork.SaveChangesAsync(ct);
+
+                // 5. Commit
+                await _unitOfWork.CommitTransactionAsync(ct);
+
+                return _resultHandler.Success(true);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync(ct);
+                throw;
+            }
         }
 
         public async Task<ServiceResult<BranchDto>> AssignManagerAsync(int branchId, CreateManagerDto dto, CancellationToken ct = default)

@@ -7,6 +7,7 @@ using Onpoint.Store.Application.Interfaces;
 using Onpoint.Store.Application.Mappings;
 using Onpoint.Store.Application.Services;
 using Onpoint.Store.Application.Services.AddressServ;
+using Onpoint.Store.Application.Services.AppSettingsServ;
 using Onpoint.Store.Application.Services.AuthServices;
 using Onpoint.Store.Application.Services.AuthServices.Email;
 using Onpoint.Store.Application.Services.AuthServices.Otp;
@@ -83,6 +84,7 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IContactMessageService, ContactMessageService>();
             services.AddScoped<IPosSalesService, PosSalesService>();
             services.AddScoped<IStaticPageService, StaticPageService>();
+            services.AddScoped<IAppSettingsService, AppSettingsService>();
 
 
 

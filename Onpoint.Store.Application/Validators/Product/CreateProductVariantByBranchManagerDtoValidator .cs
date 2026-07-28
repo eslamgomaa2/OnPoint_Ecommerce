@@ -5,29 +5,27 @@ using Onpoint.Store.Domin.Repositories;
 
 namespace Onpoint.Store.Application.Validators.Product
 {
-    public class CreateProductVariantByBranchManagerDtoValidator
-        : AbstractValidator<CreateProductVariantByBranchManagerDto>
+    public class CreateProductVariantByBranchManagerDtoValidator : AbstractValidator<CreateProductVariantByBranchManagerDto>
     {
         public CreateProductVariantByBranchManagerDtoValidator(IUnitOfWork unitOfWork)
         {
+            RuleFor(x => x.Price)
+                .GreaterThan(0)
+                .WithMessage("Variant price must be greater than 0.");
+
+            RuleFor(x => x.Cost)
+                .GreaterThanOrEqualTo(0)
+                .WithMessage("Variant cost must be greater than or equal to 0.");
+
             RuleFor(x => x.Sku)
                 .NotEmpty()
                 .When(x => x.SkuMode == CodeGenerationMode.Manual)
                 .WithMessage("SKU is required when SkuMode is Manual.");
 
-            RuleFor(x => x.Sku)
-                .MustAsync(async (sku, ct) => !await unitOfWork.Products.SkuExistsAsync(sku!, null, ct))
-                .When(x => x.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrWhiteSpace(x.Sku))
-                .WithMessage("SKU already exists.");
-
             RuleFor(x => x.Barcode)
                 .NotEmpty()
                 .When(x => x.BarcodeMode == CodeGenerationMode.Manual)
                 .WithMessage("Barcode is required when BarcodeMode is Manual.");
-
-            RuleFor(x => x.Price)
-                .GreaterThan(0)
-                .WithMessage("Variant price must be greater than 0.");
         }
     }
 }

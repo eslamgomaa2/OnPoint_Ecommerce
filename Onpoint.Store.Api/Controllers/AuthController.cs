@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Auth;
 using Onpoint.Store.Application.Services.AuthServices;
 using Onpoint.Store.Application.Services.AuthServices.ExternalAuthService;
+using System.Security.Claims;
 
 [Route("api/auth")]
 [ApiController]
@@ -42,7 +44,14 @@ public class AuthController : ControllerBase
         var result = await _authService.LoginAsync(dto, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
-
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _authService.LogoutAsync(userId);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
     [HttpPost("resend-otp")]
     public async Task<IActionResult> ResendOtp([FromBody] ResendOtpDto dto, CancellationToken ct = default)
     {

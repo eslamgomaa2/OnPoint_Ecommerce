@@ -8,7 +8,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
     public interface IProductService
     {
         Task<ServiceResult<ProductDashboardDto>> GetDashboardCountsAsync(int? branchId = null, CancellationToken ct = default);
-
+        Task<ServiceResult<PagedResult<ProductListItemDto>>> GetFilteredAsync(
+       ProductFilterRequestDto filter,
+       CancellationToken ct = default);
         Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
      PaginationRequest request, int? categoryId = null, string? searchTerm = null,
      int? branchId = null, LanguageCode? languageCode = null, int? currentUserId = null,

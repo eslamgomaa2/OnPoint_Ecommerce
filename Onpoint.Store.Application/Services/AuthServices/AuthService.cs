@@ -10,6 +10,7 @@ using Onpoint.Store.Application.Services.AuthServices.Otp;
 using Onpoint.Store.Application.Services.AuthServices.Token;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Enums;
+using Onpoint.Store.Domin.Repositories;
 using System.Net;
 
 namespace Onpoint.Store.Application.Services.AuthServices
@@ -31,6 +32,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
         private readonly IOtpService _otpService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly IUnitOfWork unitOfWork;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -47,7 +49,8 @@ namespace Onpoint.Store.Application.Services.AuthServices
             IValidator<ResendOtpDto> resendotpvalidator,
             IValidator<ResetPasswordDto> resetpasswordvalidator,
             IConfiguration configuration,
-            IValidator<ConfirmEmailDto> confirmEmailValidator)
+            IValidator<ConfirmEmailDto> confirmEmailValidator,
+            IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -64,6 +67,7 @@ namespace Onpoint.Store.Application.Services.AuthServices
             _resetpasswordvalidator = resetpasswordvalidator;
             _configuration = configuration;
             _confirmEmailValidator = confirmEmailValidator;
+            this.unitOfWork = unitOfWork;
         }
 
         public async Task<ServiceResult<string>> RegisterAsync(RegisterDto dto, CancellationToken ct = default)
@@ -196,18 +200,31 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 var roles = await _userManager.GetRolesAsync(user);
                 var roleList = roles.Count > 0 ? roles.ToList() : new List<string> { "Customer" };
                 var primaryRole = roleList.First();
+
+
                 var tokenData = _tokenService.GenerateToken(user, roleList);
+
+
+                var refreshTokenString = _tokenService.GenerateRefreshToken();
+                var refreshTokenEntity = _tokenService.CreateRefreshTokenEntity(user.Id, refreshTokenString);
+
+
+                await unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity);
+                await unitOfWork.SaveChangesAsync(ct);
+
 
                 return _resultHandler.Success(new AuthResponseDto
                 {
                     Token = tokenData.token,
                     Expiration = tokenData.expiresAt,
+                    RefreshToken = refreshTokenString,
                     UserId = user.Id,
                     Email = user.Email!,
-                    PHoneNumber = user.PhoneNumber,
+                    PhoneNumber = user.PhoneNumber,
                     FullName = $"{user.UserName}",
                     Role = primaryRole
                 });
+
             }
             catch (OperationCanceledException)
             {
@@ -215,7 +232,13 @@ namespace Onpoint.Store.Application.Services.AuthServices
                 return _resultHandler.InternalServerError<AuthResponseDto>("Request timed out due to weak network connection.");
             }
         }
+        public async Task<ServiceResult<string>> LogoutAsync(int userId, CancellationToken ct = default)
+        {
+            await unitOfWork.RefreshTokens.RevokeAllByUserIdAsync(userId, ct);
+            await unitOfWork.RefreshTokens.SaveChangesAsync(ct);
 
+            return _resultHandler.Success<string>("Logged out successfully.");
+        }
         public async Task<ServiceResult<string>> ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken ct = default)
         {
             var validation = await _confirmEmailValidator.ValidateAsync(dto, ct);
@@ -243,7 +266,51 @@ namespace Onpoint.Store.Application.Services.AuthServices
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
             return _resultHandler.BadRequest<string>(errors);
         }
+        public async Task<ServiceResult<AuthResponseDto>> RefreshTokenAsync(string refreshToken, CancellationToken ct = default)
+        {
+            var storedToken = await unitOfWork.RefreshTokens.GetByTokenWithUserAsync(refreshToken, ct);
 
+            if (storedToken == null || !storedToken.IsActive)
+                return _resultHandler.Unauthorized<AuthResponseDto>("Invalid or expired refresh token.");
+
+            var user = storedToken.ApplicationUser;
+
+            if (!user.IsActive || user.IsDeleted)
+                return _resultHandler.Unauthorized<AuthResponseDto>("Account is not active.");
+
+            // Revoke old token
+            storedToken.RevokedAt = DateTime.UtcNow;
+
+            // Generate new tokens
+            var roles = await _userManager.GetRolesAsync(user);
+            var roleList = roles.ToList();
+            var tokenData = _tokenService.GenerateToken(user, roleList);
+            var newRefreshTokenString = _tokenService.GenerateRefreshToken();
+            var newRefreshTokenEntity = _tokenService.CreateRefreshTokenEntity(user.Id, newRefreshTokenString);
+
+            await unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity);
+            await unitOfWork.SaveChangesAsync(ct);
+
+            return _resultHandler.Success(new AuthResponseDto
+            {
+                Token = tokenData.token,
+                Expiration = tokenData.expiresAt,
+                RefreshToken = newRefreshTokenString,
+                UserId = user.Id,
+                Email = user.Email!,
+                PhoneNumber = user.PhoneNumber,
+                FullName = $"{user.FirstName} {user.LastName}",
+                Role = roleList.FirstOrDefault() ?? "Customer"
+            });
+        }
+
+        public async Task<ServiceResult<string>> RevokeTokenAsync(int userId, CancellationToken ct = default)
+        {
+            await unitOfWork.RefreshTokens.RevokeAllByUserIdAsync(userId, ct);
+            await unitOfWork.SaveChangesAsync(ct);
+
+            return _resultHandler.Success<string>("Logged out successfully.");
+        }
         public async Task<ServiceResult<string>> ResendOtpAsync(ResendOtpDto dto, CancellationToken ct = default)
         {
             var validation = await _resendotpvalidator.ValidateAsync(dto, ct);

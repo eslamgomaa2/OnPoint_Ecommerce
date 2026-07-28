@@ -32,7 +32,7 @@ namespace Onpoint.Store.Application.Services.Customer
         }
 
         public async Task<ServiceResult<PagedResult<CustomerListItemDto>>> GetAllAsync(
-            int branchId,
+            int? branchId,
             string? search,
             bool? isActive,
             int pageNumber,
@@ -47,7 +47,7 @@ namespace Onpoint.Store.Application.Services.Customer
             return _resultHandler.Success(result);
         }
 
-        public async Task<ServiceResult<CustomerDetailsDto>> GetByIdAsync(int id, int branchId, CancellationToken ct = default)
+        public async Task<ServiceResult<CustomerDetailsDto>> GetByIdAsync(int id, int? branchId, CancellationToken ct = default)
         {
             var customer = await _unitOfWork.Customers.GetByIdWithOrdersAsync(id, branchId, ct);
             if (customer is null)
@@ -56,7 +56,7 @@ namespace Onpoint.Store.Application.Services.Customer
             return _resultHandler.Success(_mapper.Map<CustomerDetailsDto>(customer));
         }
 
-        public async Task<ServiceResult<CustomerStatsDto>> GetStatsAsync(int branchId, CancellationToken ct = default)
+        public async Task<ServiceResult<CustomerStatsDto>> GetStatsAsync(int? branchId, CancellationToken ct = default)
         {
             var (totalCustomers, active, newThisMonth) = await _unitOfWork.Customers.GetCustomerCountsAsync(branchId, ct);
 
@@ -75,7 +75,7 @@ namespace Onpoint.Store.Application.Services.Customer
             return _resultHandler.Success(dto);
         }
 
-        public async Task<ServiceResult<CustomerDetailsDto>> CreateAsync(CreateCustomerDto dto, int branchId, CancellationToken ct = default)
+        public async Task<ServiceResult<CustomerDetailsDto>> CreateAsync(CreateCustomerDto dto, int? branchId, CancellationToken ct = default)
         {
             await _createValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
@@ -89,7 +89,7 @@ namespace Onpoint.Store.Application.Services.Customer
             return _resultHandler.Created(result);
         }
 
-        public async Task<ServiceResult<CustomerDetailsDto>> UpdateAsync(int id, UpdateCustomerDto dto, int branchId, CancellationToken ct = default)
+        public async Task<ServiceResult<CustomerDetailsDto>> UpdateAsync(int id, UpdateCustomerDto dto, int? branchId, CancellationToken ct = default)
         {
             await _updateValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
 
@@ -107,7 +107,7 @@ namespace Onpoint.Store.Application.Services.Customer
             return _resultHandler.Success(_mapper.Map<CustomerDetailsDto>(updated));
         }
 
-        public async Task<ServiceResult<bool>> DeleteAsync(int id, int branchId, CancellationToken ct = default)
+        public async Task<ServiceResult<bool>> DeleteAsync(int id, int? branchId, CancellationToken ct = default)
         {
             var customer = await _unitOfWork.Customers.GetByIdAsync(id, ct);
             if (customer is null || customer.BranchId != branchId || customer.IsDeleted)
@@ -129,7 +129,7 @@ namespace Onpoint.Store.Application.Services.Customer
             return _resultHandler.Deleted<bool>();
         }
 
-        public async Task<ServiceResult<CustomerDetailsDto>> GetByPhoneNumberAsync(string phone, int branchId, CancellationToken ct = default)
+        public async Task<ServiceResult<CustomerDetailsDto>> GetByPhoneNumberAsync(string phone, int? branchId, CancellationToken ct = default)
         {
             var customer = await _unitOfWork.Customers.GetByPhoneNumberAsync(phone, branchId, ct);
             if (customer is null)

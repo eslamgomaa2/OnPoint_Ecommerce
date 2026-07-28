@@ -47,6 +47,10 @@ namespace Onpoint.Store.Domin.Entities
         public virtual ICollection<OrderStatusHistory> StatusHistory { get; set; } = new List<OrderStatusHistory>();
         public virtual ICollection<Refund> Refunds { get; set; } = new List<Refund>();
         public virtual Invoice? Invoice { get; set; }
-        public virtual PaymentTransaction? Transaction { get; set; }
+        [NotMapped]
+        public PaymentTransaction? LatestTransaction => Transactions
+      .OrderByDescending(t => t.CreatedAt)
+      .FirstOrDefault();
+
     }
 }

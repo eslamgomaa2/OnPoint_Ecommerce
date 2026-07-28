@@ -5,6 +5,7 @@ namespace Onpoint.Store.Application.Services.CodeGeneration.SkuGeneration
     public class SkuGeneratorService : ISkuGeneratorService
     {
         private readonly IUnitOfWork _unitOfWork;
+
         public SkuGeneratorService(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
 
         public async Task<string> GenerateUniqueSkuAsync(string productName, int categoryId)
@@ -19,15 +20,13 @@ namespace Onpoint.Store.Application.Services.CodeGeneration.SkuGeneration
                 candidate = $"{prefix}-{suffix}";
                 attempts++;
             }
-            while (await _unitOfWork.Products.SkuExistsAsync(candidate) && attempts < 10);
+            while (await _unitOfWork.ProductVariants.SkuExistsAsync(candidate, null) && attempts < 10);
 
             if (attempts >= 10)
                 throw new InvalidOperationException("Could not generate a unique SKU after multiple attempts.");
 
             return candidate;
         }
-
-
 
         private static string BuildPrefix(string productName, int categoryId)
         {

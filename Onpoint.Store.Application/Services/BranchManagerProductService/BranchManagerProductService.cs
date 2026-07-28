@@ -27,7 +27,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
         private readonly ISkuGeneratorService _skuGeneratorService;
         private readonly IBarcodeService _barcodeService;
         private readonly IQrCodeService _qrCodeService;
-        private readonly IImageStorageService _imageStorageService;
 
         public BranchManagerProductService(
             IUnitOfWork unitOfWork,
@@ -38,7 +37,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
             ISkuGeneratorService skuGenerator,
             IBarcodeService barcodeService,
             IQrCodeService qrCodeService,
-            IImageStorageService imageStorageService,
             IMediaService mediaService)
         {
             _unitOfWork = unitOfWork;
@@ -49,27 +47,30 @@ namespace Onpoint.Store.Application.Services.ProductServ
             _skuGeneratorService = skuGenerator;
             _barcodeService = barcodeService;
             _qrCodeService = qrCodeService;
-            _imageStorageService = imageStorageService;
             _mediaService = mediaService;
         }
 
+        // ============================================================================
+        // DASHBOARD
+        // ============================================================================
         public async Task<ServiceResult<ProductDashboardDto>> GetDashboardCountsAsync(int branchId, CancellationToken ct = default)
         {
             var inStock = await _unitOfWork.Stocks.GetInStockCountAsync(branchId, ct);
             var lowStock = await _unitOfWork.Stocks.GetLowStockCountAsync(branchId, ct);
             var outOfStock = await _unitOfWork.Stocks.GetOutOfStockCountAsync(branchId, ct);
 
-            var dto = new ProductDashboardDto
+            return _resultHandler.Success(new ProductDashboardDto
             {
                 TotalProducts = inStock + lowStock + outOfStock,
                 InStock = inStock,
                 LowStock = lowStock,
                 OutOfStock = outOfStock
-            };
-
-            return _resultHandler.Success(dto);
+            });
         }
 
+        // ============================================================================
+        // GET PAGED
+        // ============================================================================
         public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
             int branchId,
             PaginationRequest request,
@@ -89,19 +90,20 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return _resultHandler.Success(pagedResult);
         }
 
+        // ============================================================================
+        // GET BY ID
+        // ============================================================================
         public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(
-      int branchId,
-      int id,
-      LanguageCode? languageCode = null,
-      CancellationToken ct = default)
+            int branchId,
+            int id,
+            LanguageCode? languageCode = null,
+            CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             if (product is null)
                 return _resultHandler.NotFound<ProductDetailDto>("Product not found");
 
-            bool hasStockInBranch = product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
-
-            if (!hasStockInBranch)
+            if (!HasStockInBranch(product, branchId))
                 return _resultHandler.NotFound<ProductDetailDto>("Product not available in this branch");
 
             var dto = _mapper.Map<ProductDetailDto>(product);
@@ -110,17 +112,17 @@ namespace Onpoint.Store.Application.Services.ProductServ
             dto.TotalStock = baseDto.TotalStock;
             dto.StockStatus = baseDto.StockStatus;
 
-            foreach (var variantDto in dto.Variants)
-            {
-                variantDto.Stocks = variantDto.Stocks.Where(s => s.BranchId == branchId).ToList();
-            }
+
 
             ApplyTranslationToDetail(dto, product, languageCode);
 
             return _resultHandler.Success(dto);
         }
-        public async Task<ServiceResult<ProductDto>> CreateAsync(int branchId, CreateProductByBranchManagerDto dto,
-     CancellationToken ct = default)
+
+        // ============================================================================
+        // CREATE
+        // ============================================================================
+        public async Task<ServiceResult<ProductDto>> CreateAsync(int branchId, CreateProductByBranchManagerDto dto, CancellationToken ct = default)
         {
             var validationResult = await _createValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
@@ -128,64 +130,22 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             var branchExists = await _unitOfWork.Branches.GetByIdAsync(branchId, ct);
             if (branchExists is null)
-            {
                 return _resultHandler.NotFound<ProductDto>("Branch not found");
-            }
 
             var product = _mapper.Map<Product>(dto);
-            product.Stocks.Clear();
 
-            if (product.Translations?.Any() == true)
-            {
-                product.Translations = product.Translations
-                    .GroupBy(t => t.LanguageCode)
-                    .Select(g => g.First())
-                    .ToList();
-            }
-
-            product.Sku = dto.SkuMode == CodeGenerationMode.Manual
-                ? dto.Sku!
-                : await _skuGeneratorService.GenerateUniqueSkuAsync(dto.Name, dto.CategoryId);
-
+            product.Slug = await GenerateUniqueSlugAsync(product.Name, ct);
             product.Status = dto.Status;
-            product.Slug = SlugHelper.GenerateSlug(product.Name);
-            product.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual
-                ? dto.Barcode!
-                : _barcodeService.GenerateValue();
 
-            if (!string.IsNullOrEmpty(product.Barcode))
+            // Images
+            if (dto.Images?.Any() == true)
             {
-                byte[] barcodeBytes = _barcodeService.GenerateImage(product.Barcode);
-                using var barcodeStream = new MemoryStream(barcodeBytes);
-                var barcodeUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                {
-                    FileName = $"barcode_{product.Barcode}.png",
-                    FileContent = barcodeStream
-                }, ct);
-
-                if (barcodeUploadResult.Succeeded)
-                    product.BarcodeImagePath = barcodeUploadResult.Data;
+                product.Images.Clear();
+                foreach (var img in dto.Images)
+                    product.Images.Add(new ProductImage { ImageUrl = img.ImageUrl, IsPrimary = img.IsPrimary });
             }
 
-            product.QrCodeValue = dto.QrCodeMode == CodeGenerationMode.Manual
-                ? dto.QrCodeValue!
-                : _qrCodeService.GenerateValue(product.Sku);
-
-            if (!string.IsNullOrEmpty(product.QrCodeValue))
-            {
-                byte[] qrCodeBytes = _qrCodeService.GenerateImage(product.QrCodeValue);
-                using var qrStream = new MemoryStream(qrCodeBytes);
-                var qrUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                {
-                    FileName = $"qrcode_{product.Sku}.png",
-                    FileContent = qrStream
-                }, ct);
-
-                if (qrUploadResult.Succeeded)
-                    product.QrCodeImagePath = qrUploadResult.Data;
-            }
-
-            // الخصم (Discount)
+            // Discount
             if (dto.Discount != null)
             {
                 product.Discounts.Add(new Discount
@@ -197,70 +157,15 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 });
             }
 
-            // ⚠️ VARIANTS: Always required - must have at least one
+            // Variants (REQUIRED)
             var variantTracker = new List<(CreateProductVariantByBranchManagerDto Dto, ProductVariant Entity)>();
-
-            // Clear any variants mapped by AutoMapper (we'll rebuild them manually)
             product.Variants.Clear();
 
             foreach (var v in dto.Variants)
             {
-                var variant = new ProductVariant
-                {
-                    Price = v.Price,
-                    IsActive = true,
-                    Sku = v.SkuMode == CodeGenerationMode.Manual
-                        ? v.Sku!
-                        : await _skuGeneratorService.GenerateUniqueSkuAsync($"{dto.Name}-VAR", dto.CategoryId)
-                };
-
-                variant.Barcode = v.BarcodeMode == CodeGenerationMode.Manual
-                    ? v.Barcode
-                    : _barcodeService.GenerateValue();
-
-                if (!string.IsNullOrEmpty(variant.Barcode))
-                {
-                    byte[] barcodeBytes = _barcodeService.GenerateImage(variant.Barcode);
-                    using var barcodeStream = new MemoryStream(barcodeBytes);
-                    var barcodeUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                    {
-                        FileName = $"barcode_var_{variant.Sku}.png",
-                        FileContent = barcodeStream
-                    }, ct);
-
-                    if (barcodeUploadResult.Succeeded)
-                        variant.BarcodeImagePath = barcodeUploadResult.Data;
-                }
-
-                variant.QrCodeValue = v.QrCodeMode == CodeGenerationMode.Manual
-                    ? v.QrCodeValue
-                    : _qrCodeService.GenerateValue(variant.Sku);
-
-                if (!string.IsNullOrEmpty(variant.QrCodeValue))
-                {
-                    byte[] qrCodeBytes = _qrCodeService.GenerateImage(variant.QrCodeValue);
-                    using var qrStream = new MemoryStream(qrCodeBytes);
-                    var qrUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                    {
-                        FileName = $"qrcode_var_{variant.Sku}.png",
-                        FileContent = qrStream
-                    }, ct);
-
-                    if (qrUploadResult.Succeeded)
-                        variant.QrCodeImagePath = qrUploadResult.Data;
-                }
-
-                if (v.Attributes?.Any() == true)
-                {
-                    foreach (var a in v.Attributes)
-                    {
-                        variant.AttributeValues.Add(new VariantAttributeValue
-                        {
-                            ProductAttributeId = a.ProductAttributeId,
-                            Value = a.Value
-                        });
-                    }
-                }
+                var variant = await BuildVariantAsync(product.Id, v, dto.Name, dto.CategoryId, ct);
+                if (variant is null)
+                    return _resultHandler.BadRequest<ProductDto>("Failed to create variant.");
 
                 product.Variants.Add(variant);
                 variantTracker.Add((v, variant));
@@ -268,39 +173,26 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             await _unitOfWork.Products.AddAsync(product, ct);
             await _unitOfWork.SaveChangesAsync(ct);
+
+            // Add stocks to variants
             foreach (var (vDto, savedVariant) in variantTracker)
             {
-                if (vDto.BranchStocks?.Any() == true)
-                {
-                    foreach (var bs in vDto.BranchStocks)
-                    {
-                        var stock = new Stock
-                        {
-                            ProductId = product.Id,
-                            ProductVariantId = savedVariant.Id,
-                            BranchId = branchId,
-                            Quantity = bs.Quantity,
-                            ReservedQuantity = 0,
-                            MinimumStockLevel = dto.MinimumStockLevel
-                        };
-
-                        product.Stocks.Add(stock);
-                        savedVariant.Stocks.Add(stock);
-                    }
-                }
+                AddBranchStocks(savedVariant, vDto.BranchStocks, branchId, dto.MinimumStockLevel);
             }
-
-
 
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Created(_mapper.Map<ProductDto>(product));
         }
+
+        // ============================================================================
+        // UPDATE
+        // ============================================================================
         public async Task<ServiceResult<ProductDto>> UpdateAsync(
-      int branchId,
-      int id,
-      UpdateProductDto dto,
-      CancellationToken ct = default)
+            int branchId,
+            int id,
+            UpdateProductDto dto,
+            CancellationToken ct = default)
         {
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
@@ -310,23 +202,15 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (existingProduct is null)
                 return _resultHandler.NotFound<ProductDto>("Product not found to update");
 
-            bool hasStockInBranch = existingProduct.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
-
-            if (!hasStockInBranch)
+            if (!HasStockInBranch(existingProduct, branchId))
                 return _resultHandler.BadRequest<ProductDto>("Product not available in this branch");
-            if (!string.IsNullOrWhiteSpace(dto.Sku) && dto.Sku != existingProduct.Sku)
-            {
-                if (await _unitOfWork.Products.SkuExistsAsync(dto.Sku, id, ct))
-                    return _resultHandler.BadRequest<ProductDto>($"SKU '{dto.Sku}' already exists");
 
-                existingProduct.Sku = dto.Sku;
-            }
-
+            // Update basic info
             existingProduct.Name = dto.Name;
-            existingProduct.Slug = SlugHelper.GenerateSlug(dto.Name);
+            if (dto.Name != existingProduct.Name)
+                existingProduct.Slug = await GenerateUniqueSlugAsync(dto.Name, ct);
+
             existingProduct.Description = dto.Description;
-            existingProduct.Price = dto.Price;
-            existingProduct.Cost = dto.Cost;
             existingProduct.CategoryId = dto.CategoryId;
             existingProduct.BrandId = dto.BrandId;
             existingProduct.IsPopular = dto.IsPopular;
@@ -336,21 +220,21 @@ namespace Onpoint.Store.Application.Services.ProductServ
             _unitOfWork.Products.Update(existingProduct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Success(_mapper.Map<ProductDto>(existingProduct));
+            var updated = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
+            return _resultHandler.Success(_mapper.Map<ProductDto>(updated ?? existingProduct));
         }
 
+        // ============================================================================
+        // DELETE
+        // ============================================================================
         public async Task<ServiceResult<string>> DeleteAsync(int branchId, int id, CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetWithStocksForBranchCheckAsync(id, ct);
             if (product is null)
                 return _resultHandler.NotFound<string>("Product not found to delete");
 
-
-            bool hasStockInBranch = product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
-
-            if (!hasStockInBranch)
+            if (!HasStockInBranch(product, branchId))
                 return _resultHandler.BadRequest<string>("Product not available in this branch");
-
 
             product.IsDeleted = true;
             product.UpdatedAt = DateTime.UtcNow;
@@ -361,10 +245,132 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return _resultHandler.Deleted<string>();
         }
 
+        // ============================================================================
+        // PRIVATE HELPERS
+        // ============================================================================
+
+        private static bool HasStockInBranch(Product product, int branchId)
+        {
+            return product.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId));
+        }
+
+        private async Task<string> GenerateUniqueSlugAsync(string name, CancellationToken ct)
+        {
+            var baseSlug = SlugHelper.GenerateSlug(name);
+            var slug = baseSlug;
+            int counter = 1;
+
+            while (await _unitOfWork.Products.SlugExistsAsync(slug, ct))
+            {
+                slug = $"{baseSlug}-{counter}";
+                counter++;
+            }
+
+            return slug;
+        }
+
+        private async Task<ProductVariant?> BuildVariantAsync(int productId, CreateProductVariantByBranchManagerDto dto, string productName, int categoryId, CancellationToken ct)
+        {
+            var sku = dto.SkuMode == CodeGenerationMode.Manual
+                ? dto.Sku!
+                : await _skuGeneratorService.GenerateUniqueSkuAsync($"{productName}-VAR", categoryId);
+
+            if (dto.SkuMode == CodeGenerationMode.Manual && await _unitOfWork.ProductVariants.SkuExistsAsync(sku, null, ct))
+                return null;
+
+            var variant = new ProductVariant
+            {
+                ProductId = productId,
+                Price = dto.Price,
+                IsActive = true,
+                Sku = sku
+            };
+
+            // Barcode
+            if (dto.BarcodeMode is not null)
+            {
+                variant.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual ? dto.Barcode : _barcodeService.GenerateValue();
+                await GenerateBarcodeImageAsync(variant, ct);
+            }
+
+            // QR Code
+            if (dto.QrCodeMode is not null)
+            {
+                variant.QrCodeValue = dto.QrCodeMode == CodeGenerationMode.Manual ? dto.QrCodeValue : _qrCodeService.GenerateValue(variant.Sku);
+                await GenerateQrCodeImageAsync(variant, ct);
+            }
+
+            // Attributes
+            if (dto.Attributes?.Any() == true)
+            {
+                foreach (var a in dto.Attributes)
+                {
+                    variant.AttributeValues.Add(new VariantAttributeValue
+                    {
+                        ProductAttributeId = a.ProductAttributeId,
+                        Value = a.Value
+                    });
+                }
+            }
+
+            return variant;
+        }
+
+        private async Task GenerateBarcodeImageAsync(ProductVariant variant, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(variant.Barcode)) return;
+
+            byte[] bytes = _barcodeService.GenerateImage(variant.Barcode);
+            using var stream = new MemoryStream(bytes);
+
+            var upload = await _mediaService.UploadProductImageAsync(new FileUploadDto
+            {
+                FileName = $"barcode_var_{variant.Sku}.png",
+                FileContent = stream
+            }, ct);
+
+            if (upload.Succeeded)
+                variant.BarcodeImagePath = upload.Data;
+        }
+
+        private async Task GenerateQrCodeImageAsync(ProductVariant variant, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(variant.QrCodeValue)) return;
+
+            byte[] bytes = _qrCodeService.GenerateImage(variant.QrCodeValue);
+            using var stream = new MemoryStream(bytes);
+
+            var upload = await _mediaService.UploadProductImageAsync(new FileUploadDto
+            {
+                FileName = $"qrcode_var_{variant.Sku}.png",
+                FileContent = stream
+            }, ct);
+
+            if (upload.Succeeded)
+                variant.QrCodeImagePath = upload.Data;
+        }
+
+        private static void AddBranchStocks(ProductVariant variant, List<BranchManagerStockDto>? branchStocks, int branchId, int minimumStockLevel)
+        {
+            if (branchStocks?.Any() != true) return;
+
+            foreach (var bs in branchStocks)
+            {
+                variant.Stocks.Add(new Stock
+                {
+                    ProductId = variant.ProductId,
+                    ProductVariantId = variant.Id,
+                    BranchId = branchId,
+                    Quantity = bs.Quantity,
+                    ReservedQuantity = 0,
+                    MinimumStockLevel = bs.MinimumStockLevel != 0 ? bs.MinimumStockLevel : minimumStockLevel
+                });
+            }
+        }
+
         private ProductDto MapWithBranchStock(Product p, int? branchId)
         {
             var dto = _mapper.Map<ProductDto>(p);
-
 
             IEnumerable<Stock> relevantStocks = p.Variants
                 .Where(v => v.IsActive)

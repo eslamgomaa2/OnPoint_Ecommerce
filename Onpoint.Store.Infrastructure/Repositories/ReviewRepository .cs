@@ -11,6 +11,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
         }
 
+        public async Task<IReadOnlyList<Review>> GetAllWithDetailsAsync(CancellationToken ct = default)
+    => await _dbset
+        .AsNoTracking()
+        .Include(r => r.User)
+        .Include(r => r.Product)
+        .ToListAsync(ct);
         public async Task<List<Review>> GetProductReviewsAsync(int productId, bool onlyApproved, CancellationToken ct = default)
         {
             var query = _dbset

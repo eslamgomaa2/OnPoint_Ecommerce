@@ -23,11 +23,15 @@ namespace Onpoint.Store.Domin.Entities
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Cost { get; set; }
 
         public bool IsActive { get; set; } = true;
 
 
         public virtual ICollection<VariantAttributeValue> AttributeValues { get; set; } = new List<VariantAttributeValue>();
+
+
         public virtual ICollection<Stock> Stocks { get; set; } = new List<Stock>();
     }
 }

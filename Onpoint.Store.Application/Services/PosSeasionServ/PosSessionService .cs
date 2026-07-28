@@ -74,7 +74,7 @@ namespace Onpoint.Store.Application.Services.PosServ
             if (cashier == null || !cashier.IsActive || cashier.IsDeleted)
                 return _resultHandler.BadRequest<PosSessionDto>("Invalid cashier");
 
-            // Check if cashier already has an active session
+
             var existing = await _unitOfWork.PosSessions.GetActiveSessionByCashierAsync(cashierId);
             if (existing != null)
                 return _resultHandler.Success<PosSessionDto>(_mapper.Map<PosSessionDto>(existing));
@@ -194,13 +194,11 @@ namespace Onpoint.Store.Application.Services.PosServ
             if (string.IsNullOrWhiteSpace(dto.Phone))
                 return _resultHandler.BadRequest<PosSessionDto>("Phone number is required");
 
-
             var customer = await _unitOfWork.Customers
                 .FirstOrDefaultAsync(c => c.Phone == dto.Phone && c.BranchId == session.BranchId);
 
             if (customer == null)
             {
-
                 customer = new Domin.Entities.Identity.Customer
                 {
                     FName = dto.FName,
@@ -216,7 +214,6 @@ namespace Onpoint.Store.Application.Services.PosServ
             }
             else
             {
-
                 customer.FName = !string.IsNullOrWhiteSpace(dto.FName) ? dto.FName : customer.FName;
                 customer.LName = !string.IsNullOrWhiteSpace(dto.LName) ? dto.LName : customer.LName;
                 customer.Email = !string.IsNullOrWhiteSpace(dto.Email) ? dto.Email : customer.Email;
@@ -224,7 +221,6 @@ namespace Onpoint.Store.Application.Services.PosServ
                 customer.Note = !string.IsNullOrWhiteSpace(dto.Note) ? dto.Note : customer.Note;
                 _unitOfWork.Customers.Update(customer);
             }
-
 
             session.CustomerId = customer.Id;
             session.CustomerPhone = customer.Phone;
@@ -266,61 +262,42 @@ namespace Onpoint.Store.Application.Services.PosServ
             if (session.Status != PosSessionStatus.Active)
                 return _resultHandler.BadRequest<PosSessionDto>("POS Session is not active.");
 
+            // ⚠️ UPDATED: Search variant only (product no longer has SKU/Barcode)
             var variant = await _unitOfWork.ProductVariants.FirstOrDefaultAsync(
                 v => v.IsActive && (v.Barcode == scannedCode || v.QrCodeValue == scannedCode || v.Sku == scannedCode),
                 include: q => q.Include(v => v.Product!).ThenInclude(p => p.Images)
-                               .Include(v => v.AttributeValues),
+                               .Include(v => v.AttributeValues)
+                               .Include(v => v.Stocks),
                 ct: ct
             );
 
-            int productId;
-            int? variantId = null;
-            string productName;
-            string? variantDescription = null;
-            string? imageUrl = null;
-            string? sku = null;
-            decimal price;
+            if (variant == null)
+                return _resultHandler.NotFound<PosSessionDto>($"No variant found with code: '{scannedCode}'");
 
-            if (variant != null)
-            {
-                productId = variant.ProductId;
-                variantId = variant.Id;
-                productName = variant.Product?.Name ?? string.Empty;
-                price = variant.Price > 0 ? variant.Price : (variant.Product?.Price ?? 0);
-                imageUrl = variant.Product?.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
+
+            var stock = variant.Stocks.FirstOrDefault(s => s.BranchId == session.BranchId);
+            if (stock == null || stock.AvailableQuantity < dto.Quantity)
+                return _resultHandler.BadRequest<PosSessionDto>($"Insufficient stock. Available: {stock?.AvailableQuantity ?? 0}");
+
+            var productName = variant.Product?.Name ?? string.Empty;
+            var price = variant.Price;
+            var imageUrl = variant.Product?.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
                            ?? variant.Product?.Images.FirstOrDefault()?.ImageUrl;
-                sku = variant.Sku ?? variant.Product?.Sku;
 
-                if (variant.AttributeValues != null && variant.AttributeValues.Any())
-                {
-                    variantDescription = string.Join(", ", variant.AttributeValues.Select(av => av.Value));
-                }
-            }
-            else
-            {
-                var product = await _unitOfWork.Products.FirstOrDefaultAsync(
-                    p => (p.Barcode == scannedCode || p.QrCodeValue == scannedCode || p.Sku == scannedCode),
-                    include: q => q.Include(p => p.Images),
-                    ct: ct
-                );
-
-                if (product == null)
-                    return _resultHandler.NotFound<PosSessionDto>($"No product or variant found with code: '{scannedCode}'");
-
-                productId = product.Id;
-                productName = product.Name;
-                price = product.Price;
-                imageUrl = product.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
-                           ?? product.Images.FirstOrDefault()?.ImageUrl;
-                sku = product.Sku;
-            }
+            var variantDescription = variant.AttributeValues != null && variant.AttributeValues.Any()
+                ? string.Join(", ", variant.AttributeValues.Select(av => av.Value))
+                : null;
 
             var existingItem = session.Items.FirstOrDefault(i =>
-                i.ProductId == productId && i.ProductVariantId == variantId);
+                i.ProductId == variant.ProductId && i.ProductVariantId == variant.Id);
 
             if (existingItem != null)
             {
-                existingItem.Quantity += dto.Quantity;
+                var newQty = existingItem.Quantity + dto.Quantity;
+                if (stock.AvailableQuantity < newQty)
+                    return _resultHandler.BadRequest<PosSessionDto>($"Insufficient stock. Available: {stock.AvailableQuantity}");
+
+                existingItem.Quantity = newQty;
                 _unitOfWork.PosSessionItems.Update(existingItem);
             }
             else
@@ -328,8 +305,8 @@ namespace Onpoint.Store.Application.Services.PosServ
                 var newItem = new PosSessionItem
                 {
                     PosSessionId = session.Id,
-                    ProductId = productId,
-                    ProductVariantId = variantId,
+                    ProductId = variant.ProductId,
+                    ProductVariantId = variant.Id,
                     ProductName = productName,
                     VariantDescription = variantDescription,
                     ProductImageUrl = imageUrl,
@@ -358,33 +335,27 @@ namespace Onpoint.Store.Application.Services.PosServ
             var product = await _unitOfWork.Products.GetByIdAsync(productId);
             if (product == null) return _resultHandler.BadRequest<PosSessionDto>("Product not found");
 
-            ProductVariant? variant = null;
-            if (productVariantId.HasValue)
-            {
-                variant = await _unitOfWork.ProductVariants.GetByIdAsync(productVariantId.Value);
-                if (variant == null || variant.ProductId != productId)
-                    return _resultHandler.BadRequest<PosSessionDto>("Invalid product variant");
-                if (!variant.IsActive)
-                    return _resultHandler.BadRequest<PosSessionDto>("Product variant is not active");
-            }
-            else
-            {
-                bool hasActiveVariants = await _unitOfWork.ProductVariants.AnyAsync(v => v.ProductId == productId && v.IsActive);
-                if (hasActiveVariants)
-                    return _resultHandler.BadRequest<PosSessionDto>("Please select a product variant.");
-            }
+            // ⚠️ UPDATED: Variant is required
+            if (!productVariantId.HasValue)
+                return _resultHandler.BadRequest<PosSessionDto>("Product variant is required.");
+
+            var variant = await _unitOfWork.ProductVariants.GetByIdAsync(productVariantId.Value);
+            if (variant == null || variant.ProductId != productId)
+                return _resultHandler.BadRequest<PosSessionDto>("Invalid product variant");
+            if (!variant.IsActive)
+                return _resultHandler.BadRequest<PosSessionDto>("Product variant is not active");
 
             var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(productId, productVariantId, session.BranchId);
             if (stock == null || stock.AvailableQuantity < quantity)
                 return _resultHandler.BadRequest<PosSessionDto>($"Insufficient stock. Available: {stock?.AvailableQuantity ?? 0}");
 
-            decimal basePrice = variant?.Price ?? product.Price;
-            decimal unitPrice = basePrice;
+            // ⚠️ UPDATED: Price from variant only
+            decimal unitPrice = variant.Price;
 
             var activeDiscount = product.Discounts?.FirstOrDefault(d => d.IsActive && d.StartDate <= DateTime.UtcNow && d.EndDate >= DateTime.UtcNow);
             if (activeDiscount != null)
             {
-                unitPrice = basePrice - (basePrice * (activeDiscount.DiscountPercentage / 100m));
+                unitPrice = variant.Price - (variant.Price * (activeDiscount.DiscountPercentage / 100m));
             }
 
             var existingItem = session.Items.FirstOrDefault(i => i.ProductId == productId && i.ProductVariantId == productVariantId);
@@ -400,12 +371,17 @@ namespace Onpoint.Store.Application.Services.PosServ
             }
             else
             {
+                var variantDescription = variant.AttributeValues != null && variant.AttributeValues.Any()
+                    ? string.Join(", ", variant.AttributeValues.Select(av => av.Value))
+                    : null;
+
                 var item = new PosSessionItem
                 {
                     PosSessionId = sessionId,
                     ProductId = productId,
                     ProductVariantId = productVariantId,
                     ProductName = product.Name,
+                    VariantDescription = variantDescription,
                     ProductImageUrl = product.Images.FirstOrDefault()?.ImageUrl,
                     UnitPrice = unitPrice,
                     Quantity = quantity
@@ -570,7 +546,6 @@ namespace Onpoint.Store.Application.Services.PosServ
 
             try
             {
-
                 var stockKeys = session.Items.Select(i => (i.ProductId, i.ProductVariantId)).Distinct().ToList();
                 var stocks = await _unitOfWork.Stocks.GetByProductVariantsAndBranchAsync(stockKeys, session.BranchId);
 
@@ -589,7 +564,6 @@ namespace Onpoint.Store.Application.Services.PosServ
                     _unitOfWork.Stocks.Update(stock);
                 }
 
-
                 var orderItems = session.Items.Select(i => new OrderItem
                 {
                     ProductId = i.ProductId,
@@ -604,7 +578,6 @@ namespace Onpoint.Store.Application.Services.PosServ
                 var primaryMethod = dto.Payments.Count == 1
                     ? dto.Payments[0].Method
                     : PaymentMethod.Cash;
-
 
                 order = new Order
                 {
@@ -624,9 +597,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                     AmountReceived = dto.AmountReceived,
                     Change = dto.AmountReceived > total ? dto.AmountReceived - total : 0,
                     OrderItems = orderItems,
-
                 };
-
 
                 if (dto.Payments.Any())
                 {
@@ -658,7 +629,6 @@ namespace Onpoint.Store.Application.Services.PosServ
                     order.Transactions.Add(transaction);
                 }
 
-
                 order.StatusHistory.Add(new OrderStatusHistory
                 {
                     Status = OrderStatus.Completed,
@@ -686,7 +656,6 @@ namespace Onpoint.Store.Application.Services.PosServ
                     PerformedByUserId = session.CashierId
                 });
 
-
                 if (!string.IsNullOrEmpty(session.CouponCode))
                 {
                     var coupon = await _unitOfWork.Coupons.FirstOrDefaultAsync(c => c.Code == session.CouponCode);
@@ -697,10 +666,8 @@ namespace Onpoint.Store.Application.Services.PosServ
                     }
                 }
 
-
                 await _unitOfWork.Orders.AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();
-
 
                 session.Status = PosSessionStatus.Completed;
                 session.OrderId = order.Id;
@@ -716,7 +683,6 @@ namespace Onpoint.Store.Application.Services.PosServ
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
-
 
             try
             {

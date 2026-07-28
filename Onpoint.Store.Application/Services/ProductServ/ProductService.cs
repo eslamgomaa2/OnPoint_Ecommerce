@@ -27,7 +27,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
         private readonly ISkuGeneratorService _skuGeneratorService;
         private readonly IBarcodeService _barcodeService;
         private readonly IQrCodeService _qrCodeService;
-        private readonly IImageStorageService _imageStorageService;
 
         public ProductService(
             IUnitOfWork unitOfWork,
@@ -38,7 +37,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
             ISkuGeneratorService skuGenerator,
             IBarcodeService barcodeService,
             IQrCodeService qrCodeService,
-            IImageStorageService imageStorageService,
             IMediaService mediaService)
         {
             _unitOfWork = unitOfWork;
@@ -49,9 +47,12 @@ namespace Onpoint.Store.Application.Services.ProductServ
             _skuGeneratorService = skuGenerator;
             _barcodeService = barcodeService;
             _qrCodeService = qrCodeService;
-            _imageStorageService = imageStorageService;
             _mediaService = mediaService;
         }
+
+        // ============================================================================
+        // GET METHODS
+        // ============================================================================
 
         public async Task<ServiceResult<ProductDto>> GetBySkuAsync(string sku, CancellationToken ct = default)
         {
@@ -78,9 +79,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
         }
 
         public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
-      PaginationRequest request, int? categoryId = null, string? searchTerm = null,
-      int? branchId = null, LanguageCode? languageCode = null, int? currentUserId = null,
-      CancellationToken ct = default)
+            PaginationRequest request, int? categoryId = null, string? searchTerm = null,
+            int? branchId = null, LanguageCode? languageCode = null, int? currentUserId = null,
+            CancellationToken ct = default)
         {
             var (items, totalCount) = await _unitOfWork.Products.GetFilteredPagedAsync(
                 categoryId, searchTerm, branchId, request.PageNumber, request.PageSize, ct);
@@ -106,7 +107,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
         }
 
         public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(
-     int id, LanguageCode? languageCode = null, int? currentUserId = null, CancellationToken ct = default)
+            int id, LanguageCode? languageCode = null, int? currentUserId = null, CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             if (product is null)
@@ -118,6 +119,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             dto.TotalStock = baseDto.TotalStock;
             dto.StockStatus = baseDto.StockStatus;
 
+            // ⚠️ All stocks are on variants
             var stocks = product.Variants
                 .Where(v => v.IsActive)
                 .SelectMany(v => v.Stocks);
@@ -137,6 +139,11 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return _resultHandler.Success(dto);
         }
+
+        // ============================================================================
+        // CREATE
+        // ============================================================================
+
         public async Task<ServiceResult<ProductDto>> CreateAsync(CreateProductDto dto, CancellationToken ct = default)
         {
             var validationResult = await _createValidator.ValidateAsync(dto, ct);
@@ -144,48 +151,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 throw new FluentValidation.ValidationException(validationResult.Errors);
 
             var product = _mapper.Map<Product>(dto);
-            product.Stocks.Clear();
 
-            product.Slug = SlugHelper.GenerateSlug(product.Name);
-            product.Sku = dto.SkuMode == CodeGenerationMode.Manual
-                ? dto.Sku!
-                : await _skuGeneratorService.GenerateUniqueSkuAsync(dto.Name, dto.CategoryId);
-
+            product.Slug = await GenerateUniqueSlugAsync(product.Name, ct);
             product.Status = dto.Status;
-
-            product.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual
-                ? dto.Barcode!
-                : _barcodeService.GenerateValue();
-
-            if (!string.IsNullOrEmpty(product.Barcode))
-            {
-                byte[] barcodeBytes = _barcodeService.GenerateImage(product.Barcode);
-                using var barcodeStream = new MemoryStream(barcodeBytes);
-                var barcodeUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                {
-                    FileName = $"barcode_{product.Barcode}.png",
-                    FileContent = barcodeStream
-                }, ct);
-                if (barcodeUploadResult.Succeeded)
-                    product.BarcodeImagePath = barcodeUploadResult.Data;
-            }
-
-            product.QrCodeValue = dto.QrCodeMode == CodeGenerationMode.Manual
-                ? dto.QrCodeValue!
-                : _qrCodeService.GenerateValue(product.Sku);
-
-            if (!string.IsNullOrEmpty(product.QrCodeValue))
-            {
-                byte[] qrCodeBytes = _qrCodeService.GenerateImage(product.QrCodeValue);
-                using var qrStream = new MemoryStream(qrCodeBytes);
-                var qrUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
-                {
-                    FileName = $"qrcode_{product.Sku}.png",
-                    FileContent = qrStream
-                }, ct);
-                if (qrUploadResult.Succeeded)
-                    product.QrCodeImagePath = qrUploadResult.Data;
-            }
 
             if (dto.Images?.Any() == true)
             {
@@ -196,7 +164,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             if (dto.Discount != null)
             {
-                product.Discounts.Clear();
                 product.Discounts.Add(new Discount
                 {
                     DiscountPercentage = dto.Discount.DiscountPercentage,
@@ -206,23 +173,56 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 });
             }
 
-            if (dto.Attributes?.Any() == true)
+            var manualBarcodes = dto.Variants
+                .Where(v => v.BarcodeMode == CodeGenerationMode.Manual && !string.IsNullOrEmpty(v.Barcode))
+                .Select(v => v.Barcode!)
+                .ToList();
+
+            if (manualBarcodes.Any())
             {
-                product.AttributeValues.Clear();
-                foreach (var attr in dto.Attributes)
+                var duplicatesInRequest = manualBarcodes
+                    .GroupBy(b => b)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
+
+                if (duplicatesInRequest.Any())
+                    return _resultHandler.BadRequest<ProductDto>(
+                        $"الباركود مكرر داخل نفس الطلب: {string.Join(", ", duplicatesInRequest)}");
+
+                var existingBarcodes = await _unitOfWork.ProductVariants
+                    .GetExistingBarcodesAsync(manualBarcodes, ct);
+
+                if (existingBarcodes.Any())
+                    return _resultHandler.BadRequest<ProductDto>(
+                        $"الباركود مستخدم بالفعل: {string.Join(", ", existingBarcodes)}");
+            }
+
+            var manualSkus = dto.Variants
+                .Where(v => v.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrEmpty(v.Sku))
+                .Select(v => v.Sku!)
+                .ToList();
+
+            if (manualSkus.Any())
+            {
+                var duplicateSkusInRequest = manualSkus
+                    .GroupBy(s => s)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
+
+                if (duplicateSkusInRequest.Any())
+                    return _resultHandler.BadRequest<ProductDto>(
+                        $"الـ SKU مكرر داخل نفس الطلب: {string.Join(", ", duplicateSkusInRequest)}");
+
+                foreach (var sku in manualSkus)
                 {
-                    product.AttributeValues.Add(new ProductAttributeValue
-                    {
-                        ProductAttributeId = attr.ProductAttributeId,
-                        Value = attr.Value
-                    });
+                    if (await _unitOfWork.ProductVariants.SkuExistsAsync(sku, ct: ct))
+                        return _resultHandler.BadRequest<ProductDto>($"الـ SKU '{sku}' مستخدم بالفعل.");
                 }
             }
 
-
             var variantTracker = new List<(CreateProductVariantDto Dto, ProductVariant Entity)>();
-
-
             product.Variants.Clear();
 
             foreach (var v in dto.Variants)
@@ -230,6 +230,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 var variant = new ProductVariant
                 {
                     Price = v.Price,
+                    Cost = v.Cost,
                     IsActive = true,
                     Sku = v.SkuMode == CodeGenerationMode.Manual
                         ? v.Sku!
@@ -286,22 +287,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 variantTracker.Add((v, variant));
             }
 
-            if (dto.Translations?.Any() == true)
-            {
-                product.Translations.Clear();
-                foreach (var trans in dto.Translations)
-                {
-                    product.Translations.Add(new ProductTranslation
-                    {
-                        LanguageCode = trans.LanguageCode,
-                        Name = trans.Name,
-                        Description = trans.Description,
-                        MetaTitle = trans.MetaTitle,
-                        MetaDescription = trans.MetaDescription
-                    });
-                }
-            }
-
             if (dto.Shipping != null)
             {
                 product.Shipping = new ProductShipping
@@ -319,27 +304,24 @@ namespace Onpoint.Store.Application.Services.ProductServ
             await _unitOfWork.Products.AddAsync(product, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-
             foreach (var (vDto, savedVariant) in variantTracker)
             {
                 if (vDto.BranchStocks?.Any() == true)
                 {
                     foreach (var bs in vDto.BranchStocks)
                     {
-                        product.Stocks.Add(new Stock
+                        savedVariant.Stocks.Add(new Stock
                         {
                             ProductId = product.Id,
                             ProductVariantId = savedVariant.Id,
                             BranchId = bs.BranchId,
                             Quantity = bs.Quantity,
                             ReservedQuantity = 0,
-                            MinimumStockLevel = bs.MinimumStockLevel != 0 ? bs.MinimumStockLevel : dto.MinimumStockLevel
+                            MinimumStockLevel = bs.MinimumStockLevel
                         });
                     }
                 }
             }
-
-
 
             await _unitOfWork.SaveChangesAsync(ct);
 
@@ -347,35 +329,224 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return _resultHandler.Created(_mapper.Map<ProductDto>(createdWithDetails ?? product));
         }
 
+        // ============================================================================
+        // UPDATE
+        // ============================================================================
+
         public async Task<ServiceResult<ProductDto>> UpdateAsync(int id, UpdateProductDto dto, CancellationToken ct = default)
         {
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
             if (!validationResult.IsValid)
                 throw new FluentValidation.ValidationException(validationResult.Errors);
 
-
-            var existingProduct = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
+            var existingProduct = await _unitOfWork.Products.GetWithFullDetailsForAdminAsync(id, includeDeleted: false, ct);
             if (existingProduct is null)
                 return _resultHandler.NotFound<ProductDto>("Product not found to update");
 
-            if (!string.IsNullOrWhiteSpace(dto.Sku) && dto.Sku != existingProduct.Sku)
-            {
-                if (await _unitOfWork.Products.SkuExistsAsync(dto.Sku, id, ct))
-                    return _resultHandler.BadRequest<ProductDto>($"SKU '{dto.Sku}' already exists");
-
-                existingProduct.Sku = dto.Sku;
-            }
-
+            // Update basic info
+            var originalName = existingProduct.Name;
             existingProduct.Name = dto.Name;
-            existingProduct.Slug = SlugHelper.GenerateSlug(dto.Name);
+
+            if (dto.Name != originalName)
+                existingProduct.Slug = await GenerateUniqueSlugAsync(dto.Name, ct);
+
             existingProduct.Description = dto.Description;
-            existingProduct.Price = dto.Price;
-            existingProduct.Cost = dto.Cost;
             existingProduct.CategoryId = dto.CategoryId;
             existingProduct.BrandId = dto.BrandId;
             existingProduct.IsPopular = dto.IsPopular;
             existingProduct.Status = dto.Status;
             existingProduct.UpdatedAt = DateTime.UtcNow;
+
+            // Update Images (if provided)
+            if (dto.Images != null)
+            {
+                existingProduct.Images.Clear();
+                foreach (var img in dto.Images)
+                {
+                    existingProduct.Images.Add(new ProductImage
+                    {
+                        ImageUrl = img.ImageUrl,
+                        IsPrimary = img.IsPrimary
+                    });
+                }
+            }
+
+            // Update Discount (if provided)
+            if (dto.Discount != null)
+            {
+                existingProduct.Discounts.Clear();
+                existingProduct.Discounts.Add(new Discount
+                {
+                    DiscountPercentage = dto.Discount.DiscountPercentage,
+                    StartDate = dto.Discount.StartDate,
+                    EndDate = dto.Discount.EndDate,
+                    IsActive = true
+                });
+            }
+            else if (dto.Discount == null && existingProduct.Discounts.Any())
+            {
+                existingProduct.Discounts.Clear();
+            }
+
+
+            if (dto.Variants != null)
+            {
+                var existingVariantIds = existingProduct.Variants.Select(v => v.Id).ToList();
+                var updatedVariantIds = dto.Variants.Where(v => v.Id.HasValue).Select(v => v.Id!.Value).ToList();
+
+                // Delete variants that are not in the update list
+                var variantsToDelete = existingProduct.Variants
+                    .Where(v => !updatedVariantIds.Contains(v.Id))
+                    .ToList();
+
+                foreach (var variantToDelete in variantsToDelete)
+                {
+                    variantToDelete.IsDeleted = true;
+                    variantToDelete.IsActive = false;
+                }
+
+                // Update or create variants
+                foreach (var variantDto in dto.Variants)
+                {
+                    if (variantDto.Id.HasValue && existingVariantIds.Contains(variantDto.Id.Value))
+                    {
+                        // Update existing variant
+                        var existingVariant = existingProduct.Variants
+                            .First(v => v.Id == variantDto.Id.Value);
+
+                        existingVariant.Price = variantDto.Price;
+                        existingVariant.Cost = variantDto.Cost;
+                        existingVariant.IsActive = variantDto.IsActive;
+                        existingVariant.UpdatedAt = DateTime.UtcNow;
+
+                        // Update SKU if manual
+                        if (variantDto.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrEmpty(variantDto.Sku))
+                            existingVariant.Sku = variantDto.Sku;
+
+                        // Update Barcode if manual
+                        if (variantDto.BarcodeMode == CodeGenerationMode.Manual && !string.IsNullOrEmpty(variantDto.Barcode))
+                            existingVariant.Barcode = variantDto.Barcode;
+
+                        // Update QR Code if manual
+                        if (variantDto.QrCodeMode == CodeGenerationMode.Manual && !string.IsNullOrEmpty(variantDto.QrCodeValue))
+                            existingVariant.QrCodeValue = variantDto.QrCodeValue;
+
+                        // Update Attributes
+                        if (variantDto.Attributes != null)
+                        {
+                            existingVariant.AttributeValues.Clear();
+                            foreach (var attr in variantDto.Attributes)
+                            {
+                                existingVariant.AttributeValues.Add(new VariantAttributeValue
+                                {
+                                    ProductAttributeId = attr.ProductAttributeId,
+                                    Value = attr.Value
+                                });
+                            }
+                        }
+
+                        if (variantDto.BranchStocks != null)
+                        {
+                            var stocksToRemove = existingVariant.Stocks.ToList();
+                            foreach (var stock in stocksToRemove)
+                            {
+                                _unitOfWork.Stocks.Remove(stock);
+                            }
+
+                            foreach (var bs in variantDto.BranchStocks)
+                            {
+                                existingVariant.Stocks.Add(new Stock
+                                {
+                                    ProductId = existingProduct.Id,
+                                    ProductVariantId = existingVariant.Id,
+                                    BranchId = bs.BranchId,
+                                    Quantity = bs.Quantity,
+                                    ReservedQuantity = 0,
+                                    MinimumStockLevel = bs.MinimumStockLevel
+                                });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var newVariant = new ProductVariant
+                        {
+                            Price = variantDto.Price,
+                            Cost = variantDto.Cost,
+                            IsActive = variantDto.IsActive,
+                            Sku = variantDto.SkuMode == CodeGenerationMode.Manual
+                                ? variantDto.Sku!
+                                : await _skuGeneratorService.GenerateUniqueSkuAsync($"{dto.Name}-VAR", dto.CategoryId)
+                        };
+
+                        newVariant.Barcode = variantDto.BarcodeMode == CodeGenerationMode.Manual
+                            ? variantDto.Barcode
+                            : _barcodeService.GenerateValue();
+
+                        if (!string.IsNullOrEmpty(newVariant.Barcode))
+                        {
+                            byte[] barcodeBytes = _barcodeService.GenerateImage(newVariant.Barcode);
+                            using var barcodeStream = new MemoryStream(barcodeBytes);
+                            var barcodeUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
+                            {
+                                FileName = $"barcode_var_{newVariant.Sku}.png",
+                                FileContent = barcodeStream
+                            }, ct);
+                            if (barcodeUploadResult.Succeeded)
+                                newVariant.BarcodeImagePath = barcodeUploadResult.Data;
+                        }
+
+                        newVariant.QrCodeValue = variantDto.QrCodeMode == CodeGenerationMode.Manual
+                            ? variantDto.QrCodeValue
+                            : _qrCodeService.GenerateValue(newVariant.Sku);
+
+                        if (!string.IsNullOrEmpty(newVariant.QrCodeValue))
+                        {
+                            byte[] qrCodeBytes = _qrCodeService.GenerateImage(newVariant.QrCodeValue);
+                            using var qrStream = new MemoryStream(qrCodeBytes);
+                            var qrUploadResult = await _mediaService.UploadProductImageAsync(new FileUploadDto
+                            {
+                                FileName = $"qrcode_var_{newVariant.Sku}.png",
+                                FileContent = qrStream
+                            }, ct);
+                            if (qrUploadResult.Succeeded)
+                                newVariant.QrCodeImagePath = qrUploadResult.Data;
+                        }
+
+                        // Attributes
+                        if (variantDto.Attributes != null)
+                        {
+                            foreach (var attr in variantDto.Attributes)
+                            {
+                                newVariant.AttributeValues.Add(new VariantAttributeValue
+                                {
+                                    ProductAttributeId = attr.ProductAttributeId,
+                                    Value = attr.Value
+                                });
+                            }
+                        }
+
+                        // Stocks
+                        if (variantDto.BranchStocks != null)
+                        {
+                            foreach (var bs in variantDto.BranchStocks)
+                            {
+                                newVariant.Stocks.Add(new Stock
+                                {
+                                    ProductId = existingProduct.Id,
+                                    ProductVariantId = newVariant.Id,
+                                    BranchId = bs.BranchId,
+                                    Quantity = bs.Quantity,
+                                    ReservedQuantity = 0,
+                                    MinimumStockLevel = bs.MinimumStockLevel
+                                });
+                            }
+                        }
+
+                        existingProduct.Variants.Add(newVariant);
+                    }
+                }
+            }
 
             _unitOfWork.Products.Update(existingProduct);
             await _unitOfWork.SaveChangesAsync(ct);
@@ -383,6 +554,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
             var updated = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             return _resultHandler.Success(_mapper.Map<ProductDto>(updated ?? existingProduct));
         }
+        // ============================================================================
+        // DELETE
+        // ============================================================================
 
         public async Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default)
         {
@@ -402,6 +576,22 @@ namespace Onpoint.Store.Application.Services.ProductServ
         // ============================================================================
         // HELPERS
         // ============================================================================
+
+        private async Task<string> GenerateUniqueSlugAsync(string name, CancellationToken ct)
+        {
+            var baseSlug = SlugHelper.GenerateSlug(name);
+            var slug = baseSlug;
+            int counter = 1;
+
+            while (await _unitOfWork.Products.SlugExistsAsync(slug, ct))
+            {
+                slug = $"{baseSlug}-{counter}";
+                counter++;
+            }
+
+            return slug;
+        }
+
         private ProductDto MapWithBranchStock(Product p, int? branchId)
         {
             var dto = _mapper.Map<ProductDto>(p);
@@ -427,6 +617,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return dto;
         }
+
         private ProductDto ApplyTranslation(ProductDto dto, Product product, LanguageCode? languageCode)
         {
             if (languageCode == null || languageCode == LanguageCode.en)
@@ -462,6 +653,76 @@ namespace Onpoint.Store.Application.Services.ProductServ
             }
 
             return dto;
+        }
+
+
+        public async Task<ServiceResult<PagedResult<ProductListItemDto>>> GetFilteredAsync(ProductFilterRequestDto filter, CancellationToken ct = default)
+        {
+
+            var (products, totalCount) = await _unitOfWork.Products.GetFilteredAsync(
+                filter.CategoryId,
+                filter.MinRating,
+                filter.MinPrice,
+                filter.MaxPrice,
+                filter.InStockOnly,
+                filter.Search,
+                filter.SortBy,
+                filter.PageNumber,
+                filter.PageSize,
+                ct);
+
+            var dtos = products.Select(p => MapToListItem(p)).ToList();
+            var result = PagedResult<ProductListItemDto>.Create(dtos, totalCount, filter.PageNumber, filter.PageSize);
+
+            return _resultHandler.Success(result);
+        }
+
+        private ProductListItemDto MapToListItem(Product p)
+        {
+            var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
+            var minPrice = activeVariants.Any() ? activeVariants.Min(v => v.Price) : 0;
+
+            var activeDiscount = p.Discounts
+                .FirstOrDefault(d => d.IsActive && d.EndDate >= DateTime.UtcNow);
+
+            var discountPercentage = activeDiscount?.DiscountPercentage;
+
+
+            var originalPrice = discountPercentage.HasValue ? minPrice : (decimal?)null;
+            var finalPrice = discountPercentage.HasValue
+                ? minPrice * (1 - discountPercentage.Value / 100m)
+                : minPrice;
+
+            var inStock = activeVariants.Any(v =>
+                v.Stocks.Any(s => s.Quantity > s.MinimumStockLevel));
+
+            var approvedReviews = p.Reviews.Where(r => r.IsApproved).ToList();
+            var avgRating = approvedReviews.Any()
+                ? approvedReviews.Average(r => r.Rating)
+                : 0;
+
+            var primaryImage = p.Images
+                .OrderByDescending(i => i.IsPrimary)
+                .FirstOrDefault();
+
+            return new ProductListItemDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Slug = p.Slug,
+                Description = p.Description,
+                PrimaryImageUrl = primaryImage?.ImageUrl,
+                Price = finalPrice,
+                OriginalPrice = originalPrice,
+                DiscountPercentage = discountPercentage,
+                AverageRating = avgRating,
+                ReviewCount = approvedReviews.Count,
+                IsPopular = p.IsPopular,
+                InStock = inStock,
+                CategoryName = p.Category?.Name ?? string.Empty,
+                BrandName = p.Brand?.Name,
+                CreatedAt = p.CreatedAt
+            };
         }
     }
 }

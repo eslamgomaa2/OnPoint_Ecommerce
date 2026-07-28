@@ -8,6 +8,7 @@ using Onpoint.Store.Domin.Entities.Identity;
 using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Infrastructure.Data.Configurations;
 using System.Reflection;
+using static ApplicationUserConfiguration;
 namespace Onpoint.Store.Infrastructure.Data.Context
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
@@ -41,7 +42,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<RefundItem> RefundItems { get; set; }
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
         public DbSet<ContactMessage> ContactMessages { get; set; }
-
+        public DbSet<AppSettingsInfo> AppSettingsInfo { get; set; }
 
 
 
@@ -79,6 +80,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
             builder.ApplyConfiguration(new RefundItemConfiguration());
             builder.ApplyConfiguration(new OrderStatusHistoryConfiguration());
             builder.ApplyConfiguration(new StaticPageConfiguration());
+            builder.ApplyConfiguration(new InvoiceConfiguration());
 
 
             foreach (var entityType in builder.Model.GetEntityTypes())

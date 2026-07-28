@@ -14,9 +14,8 @@ namespace Onpoint.Store.Application.Mappings
         {
             // ✅ حماية Product عند جلب SKU
             CreateMap<PosSessionItem, PosSessionItemDto>()
-                .ForMember(dest => dest.SKU, opt => opt.MapFrom(src =>
-                    src.ProductVariant != null ? src.ProductVariant.Sku :
-                    src.Product != null ? src.Product.Sku : string.Empty));
+     .ForMember(dest => dest.SKU, opt => opt.MapFrom(src =>
+         src.ProductVariant != null ? src.ProductVariant.Sku : string.Empty));
 
             // ✅ حماية Items عند حساب المبالغ
             CreateMap<PosSession, PosSessionDto>()
