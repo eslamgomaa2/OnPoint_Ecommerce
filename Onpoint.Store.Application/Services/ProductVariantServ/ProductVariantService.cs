@@ -6,6 +6,7 @@ using Onpoint.Store.Application.DTOs.ProductVariant;
 using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration;
 using Onpoint.Store.Application.Services.CodeGeneration.QrCodeGeneration;
 using Onpoint.Store.Application.Services.CodeGeneration.SkuGeneration;
+using Onpoint.Store.Application.Services.MedioServices;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
@@ -22,7 +23,7 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
         private readonly ISkuGeneratorService _skuService;
         private readonly IBarcodeService _barcodeService;
         private readonly IQrCodeService _qrCodeService;
-        private readonly IImageStorageService _imageStorageService;
+        private readonly IMediaService _mediaService;
 
         public ProductVariantService(
             IUnitOfWork unitOfWork,
@@ -33,7 +34,7 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             ISkuGeneratorService skuService,
             IBarcodeService barcodeService,
             IQrCodeService qrCodeService,
-            IImageStorageService imageStorageService)
+            IMediaService mediaService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -43,9 +44,56 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             _skuService = skuService;
             _barcodeService = barcodeService;
             _qrCodeService = qrCodeService;
-            _imageStorageService = imageStorageService;
+            _mediaService = mediaService;
         }
 
+        // ============================================================================
+        // GET ALL VARIANTS (Admin)
+        // ============================================================================
+        public async Task<ServiceResult<List<ProductVariantDto>>> GetAllVariantsAsync(ProductVariantFilterRequestDto filter, CancellationToken ct = default)
+        {
+            var variants = await _unitOfWork.ProductVariants.GetAllVariants(
+                filter.Sku,
+                filter.MinPrice,
+                filter.MaxPrice,
+                filter.MinCost,
+                filter.MaxCost,
+                filter.IsActive,
+                filter.ProductId,
+                ct);
+
+            var dtos = _mapper.Map<List<ProductVariantDto>>(variants);
+            return _resultHandler.Success(dtos);
+        }
+
+        // ============================================================================
+        // GET VARIANTS BY PRODUCT ID
+        // ============================================================================
+        public async Task<ServiceResult<List<ProductVariantDto>>> GetVariantsByProductIdAsync(int productId, CancellationToken ct = default)
+        {
+            var variants = await _unitOfWork.ProductVariants.GetByProductIdAsync(productId, ct);
+
+            var dtos = variants.Select(v => MapToDto(v)).ToList();
+
+            return _resultHandler.Success(dtos);
+        }
+
+        // ============================================================================
+        // GET VARIANT BY ID
+        // ============================================================================
+        public async Task<ServiceResult<ProductVariantDto>> GetVariantByIdAsync(int id, CancellationToken ct = default)
+        {
+            var variant = await _unitOfWork.ProductVariants.GetByIdWithDetailsAsync(id, ct);
+
+            if (variant == null)
+                return _resultHandler.NotFound<ProductVariantDto>("Variant not found.");
+
+            return _resultHandler.Success(MapToDto(variant));
+        }
+
+        // ============================================================================
+        // ADD VARIANT TO PRODUCT
+        // ============================================================================
         public async Task<ServiceResult<ProductVariantDto>> AddVariantAsync(int productId, CreateProductVariantDto dto, CancellationToken ct = default)
         {
             var validationResult = await _addValidator.ValidateAsync(dto, ct);
@@ -55,51 +103,75 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 return _resultHandler.BadRequest<ProductVariantDto>(errors);
             }
 
-
-            var product = await _unitOfWork.Products.GetWithFullDetailsForAdminAsync(productId, ct: ct);
+            var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
             if (product is null)
                 return _resultHandler.NotFound<ProductVariantDto>("Product not found.");
+
+
+            var skuToUse = dto.SkuMode == CodeGenerationMode.Manual
+                ? dto.Sku!
+                : await _skuService.GenerateUniqueSkuAsync($"{product.Name}-VAR", product.CategoryId);
+
+            if (dto.SkuMode == CodeGenerationMode.Manual && await _unitOfWork.ProductVariants.SkuExistsAsync(skuToUse, null, ct))
+                return _resultHandler.BadRequest<ProductVariantDto>($"SKU '{skuToUse}' already exists.");
 
             var variant = new ProductVariant
             {
                 ProductId = productId,
                 Price = dto.Price,
+                Cost = dto.Cost,
                 IsActive = true,
-                Sku = dto.SkuMode == CodeGenerationMode.Manual
-                    ? dto.Sku!
-                    : await _skuService.GenerateUniqueSkuAsync($"{product.Name}-VAR", product.CategoryId)
+                Sku = skuToUse
             };
 
+            // Barcode
             if (dto.BarcodeMode is not null)
             {
                 variant.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual ? dto.Barcode : _barcodeService.GenerateValue();
-                var bytes = _barcodeService.GenerateImage(variant.Barcode!);
-                using var stream = new MemoryStream(bytes);
-                var upload = await _imageStorageService.UploadImageAsync(stream, $"{variant.Sku}-barcode.png", ct);
-                if (!upload.Succeeded)
-                    return _resultHandler.BadRequest<ProductVariantDto>(upload.Message ?? "Failed to upload variant barcode image.");
-                variant.BarcodeImagePath = upload.Data!;
+
+                if (!string.IsNullOrEmpty(variant.Barcode))
+                {
+                    byte[] bytes = _barcodeService.GenerateImage(variant.Barcode);
+                    using var stream = new MemoryStream(bytes);
+                    var upload = await _mediaService.UploadProductImageAsync(new DTOs.Media.FileUploadDto
+                    {
+                        FileName = $"{variant.Sku}-barcode.png",
+                        FileContent = stream
+                    }, ct);
+                    if (upload.Succeeded)
+                        variant.BarcodeImagePath = upload.Data;
+                }
             }
 
+            // QR Code
             if (dto.QrCodeMode is not null)
             {
-                var qrValue = _qrCodeService.GenerateValue(variant.Sku);
-                variant.QrCodeValue = qrValue;
-                var qrBytes = _qrCodeService.GenerateImage(qrValue);
-                using var qrStream = new MemoryStream(qrBytes);
-                var qrUpload = await _imageStorageService.UploadImageAsync(qrStream, $"{variant.Sku}-qr.png", ct);
-                if (!qrUpload.Succeeded)
-                    return _resultHandler.BadRequest<ProductVariantDto>(qrUpload.Message ?? "Failed to upload variant QR image.");
-                variant.QrCodeImagePath = qrUpload.Data!;
+                variant.QrCodeValue = dto.QrCodeMode == CodeGenerationMode.Manual ? dto.QrCodeValue : _qrCodeService.GenerateValue(variant.Sku);
+
+                if (!string.IsNullOrEmpty(variant.QrCodeValue))
+                {
+                    byte[] qrBytes = _qrCodeService.GenerateImage(variant.QrCodeValue);
+                    using var qrStream = new MemoryStream(qrBytes);
+                    var qrUpload = await _mediaService.UploadProductImageAsync(new DTOs.Media.FileUploadDto
+                    {
+                        FileName = $"{variant.Sku}-qr.png",
+                        FileContent = qrStream
+                    }, ct);
+                    if (qrUpload.Succeeded)
+                        variant.QrCodeImagePath = qrUpload.Data;
+                }
             }
 
+            // Attributes
             foreach (var a in dto.Attributes)
                 variant.AttributeValues.Add(new VariantAttributeValue { ProductAttributeId = a.ProductAttributeId, Value = a.Value });
 
+            // Stocks
             foreach (var bs in dto.BranchStocks)
             {
                 variant.Stocks.Add(new Stock
                 {
+                    ProductId = productId,
                     BranchId = bs.BranchId,
                     Quantity = bs.Quantity,
                     ReservedQuantity = 0,
@@ -111,9 +183,12 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             await _unitOfWork.SaveChangesAsync(ct);
 
             var saved = await _unitOfWork.ProductVariants.GetByIdWithDetailsAsync(variant.Id, ct);
-            return _resultHandler.Created(_mapper.Map<ProductVariantDto>(saved));
+            return _resultHandler.Created(MapToDto(saved!));
         }
 
+        // ============================================================================
+        // UPDATE VARIANT
+        // ============================================================================
         public async Task<ServiceResult<ProductVariantDto>> UpdateVariantAsync(int productId, int variantId, UpdateProductVariantDto dto, CancellationToken ct = default)
         {
             var validationResult = await _updateValidator.ValidateAsync(dto, ct);
@@ -128,15 +203,18 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 return _resultHandler.NotFound<ProductVariantDto>("Variant not found for this product.");
 
             variant.Price = dto.Price;
+            variant.Cost = dto.Cost;
 
+            // SKU
             if (dto.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrWhiteSpace(dto.Sku) && dto.Sku != variant.Sku)
             {
-                if (await _unitOfWork.Products.SkuExistsAsync(dto.Sku, null, ct))
+                if (await _unitOfWork.ProductVariants.SkuExistsAsync(dto.Sku, variantId, ct))
                     return _resultHandler.BadRequest<ProductVariantDto>($"SKU '{dto.Sku}' already exists.");
 
                 variant.Sku = dto.Sku;
             }
 
+            // Barcode
             if (dto.BarcodeMode is not null)
             {
                 var newBarcode = dto.BarcodeMode == CodeGenerationMode.Manual ? dto.Barcode : _barcodeService.GenerateValue();
@@ -145,43 +223,65 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 {
                     variant.Barcode = newBarcode;
 
-                    var bytes = _barcodeService.GenerateImage(variant.Barcode!);
-                    using var stream = new MemoryStream(bytes);
-
-                    var upload = await _imageStorageService.UploadImageAsync(stream, $"{variant.Sku}-barcode.png", ct);
-                    if (!upload.Succeeded)
-                        return _resultHandler.BadRequest<ProductVariantDto>(upload.Message ?? "Failed to upload variant barcode image.");
-
-                    variant.BarcodeImagePath = upload.Data!;
+                    if (!string.IsNullOrEmpty(variant.Barcode))
+                    {
+                        byte[] bytes = _barcodeService.GenerateImage(variant.Barcode);
+                        using var stream = new MemoryStream(bytes);
+                        var upload = await _mediaService.UploadProductImageAsync(new DTOs.Media.FileUploadDto
+                        {
+                            FileName = $"{variant.Sku}-barcode.png",
+                            FileContent = stream
+                        }, ct);
+                        if (upload.Succeeded)
+                            variant.BarcodeImagePath = upload.Data;
+                    }
                 }
             }
 
+            // QR Code
             if (dto.QrCodeMode is not null && string.IsNullOrEmpty(variant.QrCodeValue))
             {
-                var qrValue = _qrCodeService.GenerateValue(variant.Sku);
-                variant.QrCodeValue = qrValue;
+                variant.QrCodeValue = dto.QrCodeMode == CodeGenerationMode.Manual ? dto.QrCodeValue : _qrCodeService.GenerateValue(variant.Sku);
 
-                var qrBytes = _qrCodeService.GenerateImage(qrValue);
-                using var qrStream = new MemoryStream(qrBytes);
-
-                var qrUpload = await _imageStorageService.UploadImageAsync(qrStream, $"{variant.Sku}-qr.png", ct);
-                if (!qrUpload.Succeeded)
-                    return _resultHandler.BadRequest<ProductVariantDto>(qrUpload.Message ?? "Failed to upload variant QR image.");
-
-                variant.QrCodeImagePath = qrUpload.Data!;
+                if (!string.IsNullOrEmpty(variant.QrCodeValue))
+                {
+                    byte[] qrBytes = _qrCodeService.GenerateImage(variant.QrCodeValue);
+                    using var qrStream = new MemoryStream(qrBytes);
+                    var qrUpload = await _mediaService.UploadProductImageAsync(new DTOs.Media.FileUploadDto
+                    {
+                        FileName = $"{variant.Sku}-qr.png",
+                        FileContent = qrStream
+                    }, ct);
+                    if (qrUpload.Succeeded)
+                        variant.QrCodeImagePath = qrUpload.Data;
+                }
             }
 
+            // Attributes
             variant.AttributeValues.Clear();
             foreach (var a in dto.Attributes)
                 variant.AttributeValues.Add(new VariantAttributeValue { ProductAttributeId = a.ProductAttributeId, Value = a.Value });
 
+            // Stocks
             foreach (var bs in dto.BranchStocks)
             {
                 var stock = variant.Stocks.FirstOrDefault(s => s.BranchId == bs.BranchId);
                 if (stock != null)
+                {
                     stock.Quantity = bs.Quantity;
+                    stock.MinimumStockLevel = bs.MinimumStockLevel;
+                }
                 else
-                    variant.Stocks.Add(new Stock { BranchId = bs.BranchId, Quantity = bs.Quantity, ReservedQuantity = 0 });
+                {
+                    variant.Stocks.Add(new Stock
+                    {
+                        ProductId = productId,
+                        BranchId = bs.BranchId,
+                        Quantity = bs.Quantity,
+                        ReservedQuantity = 0,
+                        MinimumStockLevel = bs.MinimumStockLevel
+                    });
+                }
             }
 
             variant.UpdatedAt = DateTime.UtcNow;
@@ -189,57 +289,88 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             _unitOfWork.ProductVariants.Update(variant);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Success(_mapper.Map<ProductVariantDto>(variant));
+            return _resultHandler.Success(MapToDto(variant));
         }
 
-        public async Task<ServiceResult<string>> DeactivateVariantAsync(int productId, int variantId, CancellationToken ct = default)
+        // ============================================================================
+        // DELETE VARIANT (Soft Delete)
+        // ============================================================================
+        public async Task<ServiceResult<string>> DeleteVariantAsync(int productId, int variantId, CancellationToken ct = default)
         {
             var variant = await _unitOfWork.ProductVariants.GetByIdAsync(variantId, ct);
             if (variant is null || variant.ProductId != productId)
                 return _resultHandler.NotFound<string>("Variant not found for this product.");
 
+            // ⚠️ Check if this is the last variant - product must have at least one
+            var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
+            var activeVariantsCount = product?.Variants.Count(v => v.IsActive && v.Id != variantId) ?? 0;
+
+            if (activeVariantsCount == 0)
+                return _resultHandler.BadRequest<string>("Cannot delete the last variant. Product must have at least one variant.");
+
+            variant.IsDeleted = true;
             variant.IsActive = false;
             variant.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.ProductVariants.Update(variant);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Success<string>("Variant deactivated successfully.");
+            return _resultHandler.Success<string>("Variant deleted successfully.");
         }
 
-        public async Task<ServiceResult<string>> ActivateVariantAsync(int productId, int variantId, CancellationToken ct = default)
+        // ============================================================================
+        // TOGGLE ACTIVE STATUS
+        // ============================================================================
+        public async Task<ServiceResult<string>> ToggleVariantStatusAsync(int productId, int variantId, CancellationToken ct = default)
         {
             var variant = await _unitOfWork.ProductVariants.GetByIdAsync(variantId, ct);
             if (variant is null || variant.ProductId != productId)
                 return _resultHandler.NotFound<string>("Variant not found for this product.");
 
-            variant.IsActive = true;
+            // If deactivating, check if at least one variant remains active
+            if (variant.IsActive)
+            {
+                var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
+                var activeVariantsCount = product?.Variants.Count(v => v.IsActive && v.Id != variantId) ?? 0;
+
+                if (activeVariantsCount == 0)
+                    return _resultHandler.BadRequest<string>("Cannot deactivate the last variant. Product must have at least one active variant.");
+            }
+
+            variant.IsActive = !variant.IsActive;
             variant.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.ProductVariants.Update(variant);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Success<string>("Variant activated successfully.");
+            return _resultHandler.Success<string>($"Variant {(variant.IsActive ? "activated" : "deactivated")} successfully.");
         }
 
-        public async Task<ServiceResult<IReadOnlyList<ProductVariantDto>>> GetVariantsAsync(int productId, CancellationToken ct = default)
+        // ============================================================================
+        // HELPER: Map Entity to DTO
+        // ============================================================================
+        private ProductVariantDto MapToDto(ProductVariant v)
         {
-            var variants = await _unitOfWork.ProductVariants.GetByProductIdAsync(productId, ct);
+            return new ProductVariantDto
+            {
+                Id = v.Id,
+                ProductId = v.ProductId,
+                Sku = v.Sku,
+                Barcode = v.Barcode,
+                BarcodeImagePath = v.BarcodeImagePath,
+                QrCodeValue = v.QrCodeValue,
+                QrCodeImagePath = v.QrCodeImagePath,
+                Price = v.Price,
+                Cost = v.Cost,
+                IsActive = v.IsActive,
+                Attributes = v.AttributeValues?.Select(av => new VariantAttributeValueDto
+                {
+                    ProductAttributeId = av.ProductAttributeId,
+                    AttributeName = av.ProductAttribute?.Name ?? string.Empty,
+                    Value = av.Value
+                }).ToList() ?? new List<VariantAttributeValueDto>()
 
-            if (variants is null || !variants.Any())
-                return _resultHandler.NotFound<IReadOnlyList<ProductVariantDto>>("No variants found for this product.");
-
-            return _resultHandler.Success(_mapper.Map<IReadOnlyList<ProductVariantDto>>(variants));
-        }
-
-        public async Task<ServiceResult<ProductVariantDto>> GetVariantByIdAsync(int productId, int variantId, CancellationToken ct = default)
-        {
-            var variant = await _unitOfWork.ProductVariants.GetByIdAsync(variantId, ct);
-
-            if (variant is null || variant.ProductId != productId)
-                return _resultHandler.NotFound<ProductVariantDto>("Variant not found for this product.");
-
-            return _resultHandler.Success(_mapper.Map<ProductVariantDto>(variant));
+            };
         }
     }
 }

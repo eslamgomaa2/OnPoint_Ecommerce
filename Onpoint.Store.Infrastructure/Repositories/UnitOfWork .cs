@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Domin.Repositories;
+using Onpoint.Store.Domin.Repositories.Onpoint.Store.Application.Interfaces.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
 using System.Data;
 
@@ -25,6 +26,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IReviewRepository? _reviews;
         private IGenericRepository<OrderItem, int>? _orderItems;
         private IGenericRepository<RefundItem, int>? _refundItems;
+        private IGenericRepository<ProductShipping, int>? _productShippings;
+        private IRefreshTokenRepository? _refreshTokens;
         private IContactMessageRepository? _contactMessages;
         private IApplicationUserRepo? _applicationUsers;
         private IStockRepository? _stockRepository;
@@ -37,6 +40,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IStaticPageRepository? _staticPages;
 
         private ICustomerRepository? _customers;
+        private IAppSettingsRepository? _appSettings;
 
 
         private IGenericRepository<PosSessionItem, int>? _posSessionItems;
@@ -83,6 +87,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IContactMessageRepository ContactMessages => _contactMessages ??= new ContactMessageRepository(_context);
 
         public IStaticPageRepository StaticPages => _staticPages ??= new StaticPageRepository(_context);
+
+        public IAppSettingsRepository AppSettings => _appSettings ??= new AppSettingsRepository(_context);
+
+        public IGenericRepository<ProductShipping, int> ProductShippings => _productShippings ??= new GenericRepository<ProductShipping, int>(_context);
+
+        public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

@@ -18,10 +18,11 @@ namespace Onpoint.Store.Domin.Entities
         public DateTime? DeletedAt { get; set; }
         public int LockoutEscalationLevel { get; set; } = 0;
 
-        [ForeignKey("Branch")]
+
         public int? BranchId { get; set; }
         public UserBranchRole? BranchRole { get; set; }
         public virtual Cart? Cart { get; set; }
+        [ForeignKey(nameof(BranchId))]
         public virtual Branch? Branch { get; set; }
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public virtual ICollection<Address> Addresses { get; set; } = new List<Address>();

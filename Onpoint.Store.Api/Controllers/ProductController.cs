@@ -27,15 +27,22 @@ public class ProductController : ControllerBase
             return null;
         return userId;
     }
-
     [HttpGet]
+    public async Task<ActionResult<ServiceResult<PagedResult<ProductListItemDto>>>> GetFiltered(
+           [FromQuery] ProductFilterRequestDto filter,
+           CancellationToken ct = default)
+    {
+        var result = await productService.GetFilteredAsync(filter, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
+    [HttpGet("paged")]
     public async Task<IActionResult> GetFilteredPaged(
-        [FromQuery] PaginationRequest request,
-        [FromQuery] int? categoryId = null,
-        [FromQuery] string? searchTerm = null,
-        [FromQuery] int? branchId = null,
-        [FromQuery] LanguageCode? lang = null,
-        CancellationToken ct = default)
+     [FromQuery] PaginationRequest request,
+     [FromQuery] int? categoryId = null,
+     [FromQuery] string? searchTerm = null,
+     [FromQuery] int? branchId = null,
+     [FromQuery] LanguageCode? lang = null,
+     CancellationToken ct = default)
     {
         var currentUserId = GetCurrentUserId();
         var result = await productService.GetFilteredPagedAsync(

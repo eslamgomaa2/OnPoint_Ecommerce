@@ -31,7 +31,14 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public async Task<Order?> GetOrderItemsForUserAsync(int orderId, int userId, CancellationToken ct = default)
         {
             return await _dbset
+                .AsNoTracking()
                 .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                        .ThenInclude(p => p.Images)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.ProductVariant)
+                        .ThenInclude(pv => pv.AttributeValues)
+                            .ThenInclude(av => av.ProductAttribute)
                 .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId, ct);
         }
         public async Task<(IReadOnlyList<Order> Items, int TotalCount)> GetPosSalesPagedAsync(
@@ -101,7 +108,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(o => o.Branch)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
-                    .ThenInclude(p => p.Stocks)
+
                 .Include(o => o.StatusHistory.OrderBy(sh => sh.EventTime))
                 .Include(o => o.Refunds)
                     .ThenInclude(r => r.RefundItems)
@@ -123,7 +130,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public async Task<bool> HasUserReceivedProductAsync(int userId, int productId, CancellationToken ct = default)
         {
             return await _dbset
-                .Where(o => o.UserId == userId && o.Status == OrderStatus.Completed)
+                .Where(o => o.UserId == userId && o.Status == OrderStatus.Pending)
                 .SelectMany(o => o.OrderItems)
                 .AnyAsync(oi => oi.ProductId == productId, ct);
         }

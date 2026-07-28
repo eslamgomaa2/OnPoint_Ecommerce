@@ -1,5 +1,6 @@
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
+using Onpoint.Store.Domin.Repositories.Onpoint.Store.Application.Interfaces.Repositories;
 using System.Data;
 
 namespace Onpoint.Store.Domin.Repositories
@@ -27,11 +28,15 @@ namespace Onpoint.Store.Domin.Repositories
         IPosSessionRepository PosSessions { get; }
         IProductVariantRepository ProductVariants { get; }
         IGenericRepository<PosSessionItem, int> PosSessionItems { get; }
+        IGenericRepository<ProductShipping, int> ProductShippings { get; }
+        IRefreshTokenRepository RefreshTokens { get; }
         IGenericRepository<RefundItem, int> RefundItems { get; }
         IContactMessageRepository ContactMessages { get; }
         IProductAttributeRepository ProductAttributes { get; }
         IDiscountRepo Discounts { get; }
         IBrandRepository Brands { get; }
+        IAppSettingsRepository AppSettings { get; }
+
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

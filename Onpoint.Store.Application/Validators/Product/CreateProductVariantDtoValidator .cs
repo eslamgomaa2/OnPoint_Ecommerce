@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using Onpoint.Store.Application.DTOs.Product;
+using Onpoint.Store.Application.DTOs.ProductVariant;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
 
@@ -9,41 +9,34 @@ namespace Onpoint.Store.Application.Validators.Product
     {
         public CreateProductVariantDtoValidator(IUnitOfWork unitOfWork)
         {
+            RuleFor(x => x.Price)
+                .GreaterThan(0)
+                .WithMessage("Variant price must be greater than 0.");
+
+
+            RuleFor(x => x.Cost)
+                .GreaterThanOrEqualTo(0)
+                .WithMessage("Variant cost must be greater than or equal to 0.");
+
             RuleFor(x => x.Sku)
                 .NotEmpty()
                 .When(x => x.SkuMode == CodeGenerationMode.Manual)
-                .WithMessage("Variant SKU is required when SkuMode is Manual.");
-
-            RuleFor(x => x.Sku)
-                .MustAsync(async (sku, ct) => !await unitOfWork.Products.SkuExistsAsync(sku!, null, ct))
-                .When(x => x.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrWhiteSpace(x.Sku))
-                .WithMessage("Variant SKU already exists.");
+                .WithMessage("SKU is required when SkuMode is Manual.");
 
             RuleFor(x => x.Barcode)
                 .NotEmpty()
                 .When(x => x.BarcodeMode == CodeGenerationMode.Manual)
-                .WithMessage("Variant barcode is required when BarcodeMode is Manual.");
-
-            RuleFor(x => x.Price)
-                .GreaterThan(0)
-                .WithMessage("Variant price must be greater than zero.");
+                .WithMessage("Barcode is required when BarcodeMode is Manual.");
 
 
-
-            RuleFor(x => x.Attributes)
-                .NotEmpty()
-                .WithMessage("A variant must have at least one attribute (e.g. Color, Size).");
-
-            RuleForEach(x => x.Attributes).ChildRules(attr =>
-            {
-                attr.RuleFor(a => a.ProductAttributeId)
-                    .GreaterThan(0)
-                    .WithMessage("ProductAttributeId must be a valid attribute reference.");
-
-                attr.RuleFor(a => a.Value)
-                    .NotEmpty()
-                    .WithMessage("Attribute value cannot be empty.");
-            });
+            RuleForEach(x => x.BranchStocks)
+                .ChildRules(stock =>
+                {
+                    stock.RuleFor(s => s.Quantity)
+                        .GreaterThanOrEqualTo(0);
+                    stock.RuleFor(s => s.MinimumStockLevel)
+                        .GreaterThanOrEqualTo(0);
+                });
         }
     }
 }

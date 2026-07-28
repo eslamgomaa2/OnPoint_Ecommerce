@@ -1,6 +1,7 @@
 ﻿using BuildingBlocks.Results;
 using Microsoft.AspNetCore.Identity;
 using Onpoint.Store.Application.DTOs.Auth;
+using Onpoint.Store.Application.DTOs.Auth.Profile;
 using Onpoint.Store.Application.Services.AuthServices.Token;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
@@ -59,6 +60,41 @@ namespace Onpoint.Store.Application.Services.Profile
             return _resultHandler.Success(dto);
         }
 
+        public async Task<ServiceResult<UserLoginInfoDto>> GetMyLoginInfoAsync(int userId, CancellationToken ct = default)
+        {
 
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return _resultHandler.NotFound<UserLoginInfoDto>("User not found.");
+
+
+
+
+
+
+            string? branchName = null;
+            if (user.BranchId.HasValue)
+            {
+                var branch = await _unitOfWork.Branches.GetByIdAsync(user.BranchId.Value, ct);
+                branchName = branch?.Name;
+            }
+
+
+
+
+            var dto = new UserLoginInfoDto
+            {
+                Id = user.Id,
+                FullName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber,
+
+                BranchName = branchName,
+
+
+            };
+
+            return _resultHandler.Success(dto);
+        }
     }
 }

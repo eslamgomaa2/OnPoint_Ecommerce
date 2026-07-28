@@ -77,9 +77,11 @@ namespace Onpoint.Store.Application.Services
 
                     item.RefundedQuantity += refundQty;
 
-                    var stock = item.Product?.Stocks.FirstOrDefault(s =>
-                        s.BranchId == order.BranchId &&
-                        s.ProductVariantId == item.ProductVariantId);
+                    // ⚠️ UPDATED: Get stock from variant, not product
+                    var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(
+                        item.ProductId,
+                        item.ProductVariantId,
+                        order.BranchId);
 
                     if (stock != null)
                         stock.Quantity += refundQty;
@@ -179,9 +181,11 @@ namespace Onpoint.Store.Application.Services
                     orderItem.RefundedQuantity += itemDto.Quantity;
                     totalAmount += itemDto.Quantity * orderItem.UnitPrice;
 
-                    var stock = orderItem.Product?.Stocks.FirstOrDefault(s =>
-                        s.BranchId == order.BranchId &&
-                        s.ProductVariantId == orderItem.ProductVariantId);
+                    // ⚠️ UPDATED: Get stock from variant, not product
+                    var stock = await _unitOfWork.Stocks.GetByProductVariantAndBranchAsync(
+                        orderItem.ProductId,
+                        orderItem.ProductVariantId,
+                        order.BranchId);
 
                     if (stock != null)
                         stock.Quantity += itemDto.Quantity;
@@ -202,7 +206,6 @@ namespace Onpoint.Store.Application.Services
                     EventTime = DateTime.UtcNow,
                     PerformedByUserId = userId
                 });
-
 
                 await _unitOfWork.SaveChangesAsync(ct);
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Infrastructure.Data.Context;
 
@@ -14,24 +15,20 @@ namespace Onpoint.Store.Infrastructure.Repositories
             _context = context;
         }
 
-
         public async Task<Product?> GetWithDetailsAsync(int id, CancellationToken ct = default)
         {
             var product = await _dbset
                 .Where(p => !p.IsDeleted)
                 .Include(p => p.Category)
+                .Include(p => p.Shipping)
                 .Include(p => p.Brand)
                 .Include(p => p.Translations)
                 .Include(p => p.Images.OrderBy(i => !i.IsPrimary))
                 .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow))
-                .Include(p => p.Stocks)
                 .Include(p => p.Variants.Where(v => v.IsActive))
                     .ThenInclude(v => v.AttributeValues)
                         .ThenInclude(av => av.ProductAttribute)
-                .Include(p => p.Variants.Where(v => v.IsActive))
-                    .ThenInclude(v => v.Stocks)
-                .Include(p => p.AttributeValues)
-                    .ThenInclude(av => av.ProductAttribute)
+                .Include(p => p.Reviews.Where(r => r.IsApproved))
                 .FirstOrDefaultAsync(p => p.Id == id, ct);
 
             return product;
@@ -41,11 +38,11 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
             return await _dbset
                 .Where(p => !p.IsDeleted)
-                .Include(p => p.Stocks)
                 .Include(p => p.Variants.Where(v => v.IsActive))
                     .ThenInclude(v => v.Stocks)
                 .FirstOrDefaultAsync(p => p.Id == id, ct);
         }
+
         public async Task<Product?> GetWithFullDetailsForAdminAsync(int id, bool includeDeleted = false, CancellationToken ct = default)
         {
             IQueryable<Product> query = _dbset;
@@ -59,14 +56,12 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(p => p.Translations)
                 .Include(p => p.Images)
                 .Include(p => p.Discounts)
-                .Include(p => p.Stocks)
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.AttributeValues)
                         .ThenInclude(av => av.ProductAttribute)
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.Stocks)
-                .Include(p => p.AttributeValues)
-                    .ThenInclude(av => av.ProductAttribute)
+                .Include(p => p.Reviews)
                 .FirstOrDefaultAsync(p => p.Id == id, ct);
         }
 
@@ -85,7 +80,6 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id, ct);
         }
 
-
         public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetFilteredPagedAsync(
             int? categoryId, string? searchTerm, int? branchId, int pageNumber, int pageSize, CancellationToken ct = default)
         {
@@ -95,9 +89,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(p => p.Category)
                 .Include(p => p.Brand)
                 .Include(p => p.Translations)
-                .Include(p => p.Stocks)
-                .Include(p => p.Variants)
-                    .ThenInclude(v => v.Stocks);
+                .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow))
+                .Include(p => p.Variants.Where(v => v.IsActive))
+                    .ThenInclude(v => v.Stocks)
+                .Include(p => p.Reviews.Where(r => r.IsApproved));
 
             if (categoryId.HasValue && categoryId.Value > 0)
                 query = query.Where(p => p.CategoryId == categoryId.Value);
@@ -105,14 +100,14 @@ namespace Onpoint.Store.Infrastructure.Repositories
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(p => p.Name.Contains(searchTerm) ||
-                                          p.Sku.Contains(searchTerm) ||
+                                          p.Variants.Any(v => v.Sku.Contains(searchTerm)) ||
                                           (p.Description != null && p.Description.Contains(searchTerm)));
             }
 
             if (branchId.HasValue)
             {
+
                 query = query.Where(p =>
-                    p.Stocks.Any(s => s.BranchId == branchId.Value && s.ProductVariantId == null) ||
                     p.Variants.Any(v => v.IsActive && v.Stocks.Any(s => s.BranchId == branchId.Value)));
             }
 
@@ -128,16 +123,13 @@ namespace Onpoint.Store.Infrastructure.Repositories
             return (items, totalCount);
         }
 
-        public async Task<bool> SkuExistsAsync(string sku, int? excludeProductId = null, CancellationToken ct = default)
-        {
-            return await _dbset.AnyAsync(p => p.Sku == sku && (!excludeProductId.HasValue || p.Id != excludeProductId.Value), ct);
-        }
 
         public async Task<Product?> GetBySkuAsync(string sku, CancellationToken ct = default)
         {
+
             return await _dbset
                 .Where(p => !p.IsDeleted &&
-                       (p.Sku == sku || p.Variants.Any(v => v.Sku == sku)))
+                       p.Variants.Any(v => v.Sku == sku))
                 .Include(p => p.Category)
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
@@ -147,11 +139,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public async Task<List<Product>> SearchBySkuAsync(string skuTerm, CancellationToken ct = default)
         {
             return await _dbset
-                .Where(p => !p.IsDeleted && (p.Sku.Contains(skuTerm) || p.Variants.Any(v => v.Sku.Contains(skuTerm))))
+                .Where(p => !p.IsDeleted && p.Variants.Any(v => v.Sku.Contains(skuTerm)))
                 .Include(p => p.Variants)
                 .ToListAsync(ct);
         }
-
 
         public async Task<(int InStock, int LowStock, int OutOfStock, int Total)> GetStockCountsAsync(int? branchId, CancellationToken ct = default)
         {
@@ -186,6 +177,113 @@ namespace Onpoint.Store.Infrastructure.Repositories
             }
 
             return (inStock, lowStock, outOfStock, projection.Count);
+        }
+
+
+        public async Task<bool> SlugExistsAsync(string slug, CancellationToken ct = default)
+        {
+            return await _dbset.AnyAsync(p => p.Slug == slug && !p.IsDeleted, ct);
+        }
+
+
+        public async Task<Product?> GetBySlugAsync(string slug, CancellationToken ct = default)
+        {
+            return await _dbset
+                .Where(p => !p.IsDeleted && p.Slug == slug)
+                .Include(p => p.Category)
+                .Include(p => p.Brand)
+                .Include(p => p.Images)
+                .Include(p => p.Variants.Where(v => v.IsActive))
+                    .ThenInclude(v => v.AttributeValues)
+                        .ThenInclude(av => av.ProductAttribute)
+                .Include(p => p.Variants.Where(v => v.IsActive))
+                    .ThenInclude(v => v.Stocks)
+                .Include(p => p.Reviews.Where(r => r.IsApproved))
+                .FirstOrDefaultAsync(ct);
+        }
+
+        public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetFilteredAsync(
+     int? categoryId,
+     int? minRating,
+     decimal? minPrice,
+     decimal? maxPrice,
+     bool? inStockOnly,
+     string? search,
+     SortBy sortBy,
+     int pageNumber,
+     int pageSize,
+     CancellationToken ct = default)
+        {
+            IQueryable<Product> query = _dbset
+     .AsNoTracking()
+     .Where(p => !p.IsDeleted && p.Status == ProductStatus.Active)
+     .Include(p => p.Category)
+     .Include(p => p.Brand)
+     .Include(p => p.Images)
+     .Include(p => p.Reviews.Where(r => r.IsApproved))
+     .Include(p => p.Variants.Where(v => v.IsActive))
+         .ThenInclude(v => v.Stocks)
+     .Include(p => p.Variants.Where(v => v.IsActive))
+         .ThenInclude(v => v.AttributeValues)
+     .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow));
+            // 1. Category Filter
+            if (categoryId.HasValue && categoryId.Value > 0)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+
+            // 2. Search Filter
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                query = query.Where(p =>
+                    p.Name.ToLower().Contains(term) ||
+                    (p.Description != null && p.Description.ToLower().Contains(term)) ||
+                    p.Variants.Any(v => v.Sku.ToLower().Contains(term)));
+            }
+
+            // 3. Price Filter (on variants)
+            if (minPrice.HasValue)
+                query = query.Where(p => p.Variants.Any(v => v.Price >= minPrice.Value));
+
+            if (maxPrice.HasValue)
+                query = query.Where(p => p.Variants.Any(v => v.Price <= maxPrice.Value));
+
+            // 4. In Stock Filter (Quantity > MinimumStockLevel)
+            if (inStockOnly == true)
+            {
+                query = query.Where(p => p.Variants.Any(v =>
+                    v.Stocks.Any(s => s.Quantity > s.MinimumStockLevel)));
+            }
+
+            // 5. Rating Filter (Average >= minRating)
+            if (minRating.HasValue && minRating.Value > 0)
+            {
+                var minRatingValue = minRating.Value;
+                query = query.Where(p =>
+                    p.Reviews.Any() &&
+                    p.Reviews.Average(r => (double?)r.Rating) >= minRatingValue);
+            }
+
+            // Get total count before sorting/paging
+            var totalCount = await query.CountAsync(ct);
+
+            // 6. Sorting
+            query = sortBy switch
+            {
+                SortBy.price_asc => query.OrderBy(p => p.Variants.Min(v => v.Price)),
+                SortBy.price_desc => query.OrderByDescending(p => p.Variants.Max(v => v.Price)),
+                SortBy.rating => query.OrderByDescending(p =>
+                    p.Reviews.Any() ? p.Reviews.Average(r => (double?)r.Rating) : 0),
+                SortBy.newest => query.OrderByDescending(p => p.CreatedAt),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            // 7. Pagination
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, totalCount);
         }
     }
 }

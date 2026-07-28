@@ -1,4 +1,5 @@
-﻿using Onpoint.Store.Domin.Enums;
+﻿using Onpoint.Store.Application.DTOs.ProductVariant;
+using Onpoint.Store.Domin.Enums;
 
 namespace Onpoint.Store.Application.DTOs.Product.BranchManger
 {

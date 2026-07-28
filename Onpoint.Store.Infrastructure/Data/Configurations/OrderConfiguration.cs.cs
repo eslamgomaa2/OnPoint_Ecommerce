@@ -74,9 +74,9 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
     .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(o => o.ShippingAddress)
-                .WithMany()
-                .HasForeignKey(o => o.AddressId)
-                .OnDelete(DeleteBehavior.Restrict);
+      .WithMany(a => a.Orders)   // ✅ اربطها صراحة بالـ Collection الموجودة فعلاً
+      .HasForeignKey(o => o.AddressId)
+      .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(o => o.OrderItems)
                 .WithOne(oi => oi.Order)
@@ -94,13 +94,11 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            builder.HasOne(o => o.Invoice)
-                .WithOne()
-                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(o => o.Transaction)
-                .WithOne()
-                .OnDelete(DeleteBehavior.Restrict);
+            builder.HasMany(o => o.Transactions)
+     .WithOne(t => t.Order)
+     .HasForeignKey(t => t.OrderId)
+     .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
@@ -179,43 +177,7 @@ public class OrderStatusHistoryConfiguration : IEntityTypeConfiguration<OrderSta
     }
 }
 
-public class RefundConfiguration : IEntityTypeConfiguration<Refund>
-{
-    public void Configure(EntityTypeBuilder<Refund> builder)
-    {
-        builder.ToTable("Refunds");
 
-        builder.HasKey(r => r.Id);
-
-        builder.Property(r => r.Type)
-            .HasConversion<string>()
-            .HasMaxLength(30);
-
-        builder.Property(r => r.TotalAmount)
-            .HasColumnType("decimal(18,2)");
-
-        builder.Property(r => r.Reason)
-            .HasMaxLength(500);
-
-        builder.Property(r => r.RefundedAt)
-            .IsRequired();
-
-        builder.HasOne(r => r.Order)
-            .WithMany(o => o.Refunds)
-            .HasForeignKey(r => r.OrderId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(r => r.Branch)
-            .WithMany()
-            .HasForeignKey(r => r.BranchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(r => r.RefundItems)
-            .WithOne(ri => ri.Refund)
-            .HasForeignKey(ri => ri.RefundId)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
-}
 
 public class RefundItemConfiguration : IEntityTypeConfiguration<RefundItem>
 {
@@ -249,15 +211,7 @@ public class AddressConfiguration : IEntityTypeConfiguration<Address>
     }
 }
 
-public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
-{
-    public void Configure(EntityTypeBuilder<Invoice> builder)
-    {
-        builder.Property(i => i.SubTotal).HasColumnType("decimal(18,3)");
-        builder.Property(i => i.TaxAmount).HasColumnType("decimal(18,3)");
-        builder.Property(i => i.TotalAmount).HasColumnType("decimal(18,3)");
-    }
-}
+
 
 public class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentTransaction>
 {

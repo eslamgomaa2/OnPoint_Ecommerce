@@ -10,8 +10,14 @@
         public string? QrCodeValue { get; set; }
         public string? QrCodeImagePath { get; set; }
         public decimal Price { get; set; }
+
+
+        public decimal Cost { get; set; }
+
         public bool IsActive { get; set; }
+
+
+
         public List<VariantAttributeValueDto> Attributes { get; set; } = new();
-        public List<VariantStockDto> Stocks { get; set; } = new();
     }
 }

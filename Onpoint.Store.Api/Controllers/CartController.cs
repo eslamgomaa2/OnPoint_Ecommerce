@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 [Route("api/cart")]
 [ApiController]
-[Authorize(Roles = "Customer")]
+[Authorize(Roles = "Customer" + "," + "Cashier")]
 public class CartController : ControllerBase
 {
     private readonly ICartService _cartService;

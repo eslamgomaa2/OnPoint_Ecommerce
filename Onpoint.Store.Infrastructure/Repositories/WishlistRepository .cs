@@ -25,7 +25,6 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(w => w.Product!)
                     .ThenInclude(p => p.Discounts)
                 .Include(w => w.Product!)
-                    .ThenInclude(p => p.Stocks)
                 .Where(w => w.UserId == userId)
                 .OrderByDescending(w => w.CreatedAt)
                 .ToListAsync(ct);

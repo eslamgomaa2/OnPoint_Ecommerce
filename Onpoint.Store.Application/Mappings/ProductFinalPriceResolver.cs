@@ -8,8 +8,7 @@ namespace Onpoint.Store.Application.Mappings
     {
         public decimal Resolve(Product source, object destination, decimal destMember, ResolutionContext context)
         {
-
-            return PricingHelper.CalculateFinalPrice(source);
+            return PricingHelper.CalculateMinFinalPrice(source);
         }
     }
 }

@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/customers")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin" + "," + "Cashier")]
 public class CustomersController : ControllerBase
 {
     private readonly ICustomerService _customerService;
@@ -27,10 +27,9 @@ public class CustomersController : ControllerBase
         CancellationToken ct = default)
     {
         var (_, branchId) = GetUserAndBranchId();
-        if (branchId is null)
-            return BadRequest("Branch not found for current user.");
 
-        var result = await _customerService.GetAllAsync(branchId.Value, search, isActive, pageNumber, pageSize, ct);
+
+        var result = await _customerService.GetAllAsync(branchId, search, isActive, pageNumber, pageSize, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
@@ -39,10 +38,9 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<ServiceResult<CustomerStatsDto>>> GetStats(CancellationToken ct = default)
     {
         var (_, branchId) = GetUserAndBranchId();
-        if (branchId is null)
-            return BadRequest("Branch not found for current user.");
 
-        var result = await _customerService.GetStatsAsync(branchId.Value, ct);
+
+        var result = await _customerService.GetStatsAsync(branchId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
@@ -51,10 +49,9 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<ServiceResult<CustomerDetailsDto>>> GetByPhoneNumber(string phone, CancellationToken ct = default)
     {
         var (_, branchId) = GetUserAndBranchId();
-        if (branchId is null)
-            return BadRequest("Branch not found for current user.");
 
-        var result = await _customerService.GetByPhoneNumberAsync(phone, branchId.Value, ct);
+
+        var result = await _customerService.GetByPhoneNumberAsync(phone, branchId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
@@ -63,23 +60,19 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<ServiceResult<CustomerDetailsDto>>> GetById(int id, CancellationToken ct = default)
     {
         var (_, branchId) = GetUserAndBranchId();
-        if (branchId is null)
-            return BadRequest("Branch not found for current user.");
 
-        var result = await _customerService.GetByIdAsync(id, branchId.Value, ct);
+
+        var result = await _customerService.GetByIdAsync(id, branchId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
 
     [HttpPost]
     public async Task<ActionResult<ServiceResult<CustomerDetailsDto>>> Create(
-        [FromBody] CreateCustomerDto dto, CancellationToken ct = default)
+     [FromBody] CreateCustomerDto dto, CancellationToken ct = default)
     {
         var (_, branchId) = GetUserAndBranchId();
-        if (branchId is null)
-            return BadRequest("Branch not found for current user.");
-
-        var result = await _customerService.CreateAsync(dto, branchId.Value, ct);
+        var result = await _customerService.CreateAsync(dto, branchId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
@@ -89,10 +82,9 @@ public class CustomersController : ControllerBase
         int id, [FromBody] UpdateCustomerDto dto, CancellationToken ct = default)
     {
         var (_, branchId) = GetUserAndBranchId();
-        if (branchId is null)
-            return BadRequest("Branch not found for current user.");
 
-        var result = await _customerService.UpdateAsync(id, dto, branchId.Value, ct);
+
+        var result = await _customerService.UpdateAsync(id, dto, branchId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
@@ -101,10 +93,9 @@ public class CustomersController : ControllerBase
     public async Task<ActionResult<ServiceResult<bool>>> Delete(int id, CancellationToken ct = default)
     {
         var (_, branchId) = GetUserAndBranchId();
-        if (branchId is null)
-            return BadRequest("Branch not found for current user.");
 
-        var result = await _customerService.DeleteAsync(id, branchId.Value, ct);
+
+        var result = await _customerService.DeleteAsync(id, branchId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 

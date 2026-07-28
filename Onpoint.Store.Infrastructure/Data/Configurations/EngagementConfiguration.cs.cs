@@ -27,10 +27,7 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             builder.HasIndex(r => new { r.ProductId, r.IsApproved });
             builder.HasIndex(r => r.UserId);
 
-            builder.HasOne(r => r.Product)
-                .WithMany()
-                .HasForeignKey(r => r.ProductId)
-                .OnDelete(DeleteBehavior.Restrict);
+
 
             builder.HasOne(r => r.User)
                 .WithMany()

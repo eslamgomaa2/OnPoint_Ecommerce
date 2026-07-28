@@ -16,6 +16,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using QuestPDFDocument = QuestPDF.Fluent.Document;
+
 namespace Onpoint.Store.Application.Services.PosSales
 {
     public class PosSalesService : IPosSalesService
@@ -61,12 +62,10 @@ namespace Onpoint.Store.Application.Services.PosSales
                 .Include(o => o.Branch)
                 .AsQueryable();
 
-
             if (forcedBranchId.HasValue)
                 query = query.Where(o => o.BranchId == forcedBranchId.Value);
             else if (filter.BranchId.HasValue)
                 query = query.Where(o => o.BranchId == filter.BranchId.Value);
-
 
             if (!string.IsNullOrWhiteSpace(filter.Search))
             {
@@ -75,7 +74,6 @@ namespace Onpoint.Store.Application.Services.PosSales
                     (o.InvoiceNumber != null && o.InvoiceNumber.ToLower().Contains(search)) ||
                     (o.Customer != null && (o.Customer.FName + " " + o.Customer.LName).ToLower().Contains(search)));
             }
-
 
             if (filter.Status.HasValue)
                 query = query.Where(o => o.Status == filter.Status.Value);
@@ -90,7 +88,6 @@ namespace Onpoint.Store.Application.Services.PosSales
                 query = query.Where(o => o.CreatedAt <= filter.DateTo.Value);
 
             var totalCount = await query.CountAsync(ct);
-
 
             query = filter.SortBy switch
             {
@@ -107,7 +104,6 @@ namespace Onpoint.Store.Application.Services.PosSales
                     ? query.OrderByDescending(o => o.CreatedAt)
                     : query.OrderBy(o => o.CreatedAt)
             };
-
 
             var items = await query
                 .Skip((filter.PageNumber - 1) * filter.PageSize)
@@ -139,7 +135,7 @@ namespace Onpoint.Store.Application.Services.PosSales
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(orderId,
                 include: q => q.Include(o => o.OrderItems)
-                               .ThenInclude(oi => oi.Product)
+                               .ThenInclude(oi => oi.ProductVariant)
                                .Include(o => o.Customer)
                                .Include(o => o.Cashier)
                                .Include(o => o.Branch)
@@ -179,7 +175,7 @@ namespace Onpoint.Store.Application.Services.PosSales
                     ProductName = oi.ProductName,
                     ProductImageUrl = oi.ProductImageUrl,
                     VariantDescription = oi.VariantDescription,
-                    Sku = oi.Product?.Sku ?? string.Empty,
+                    Sku = oi.ProductVariant?.Sku ?? string.Empty,
                     UnitPrice = oi.UnitPrice,
                     Quantity = oi.Quantity,
                     Total = oi.TotalPrice
@@ -263,7 +259,7 @@ namespace Onpoint.Store.Application.Services.PosSales
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(orderId,
                 include: q => q.Include(o => o.OrderItems)
-                               .ThenInclude(oi => oi.Product)
+                               .ThenInclude(oi => oi.ProductVariant)
                                .Include(o => o.Customer)
                                .Include(o => o.Cashier)
                                .Include(o => o.Branch),
@@ -283,7 +279,7 @@ namespace Onpoint.Store.Application.Services.PosSales
                 Items = order.OrderItems.Select(oi => new SalesOrderItemDto
                 {
                     ProductName = oi.ProductName,
-                    Sku = oi.Product?.Sku ?? string.Empty,
+                    Sku = oi.ProductVariant?.Sku ?? string.Empty,
                     Quantity = oi.Quantity,
                     UnitPrice = oi.UnitPrice,
                     Total = oi.TotalPrice
@@ -340,7 +336,6 @@ namespace Onpoint.Store.Application.Services.PosSales
                     page.Margin(2, Unit.Centimetre);
                     page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
 
-
                     page.Header().Column(col =>
                     {
                         col.Item().Text("Company Name").Bold().FontSize(20).AlignCenter();
@@ -349,11 +344,9 @@ namespace Onpoint.Store.Application.Services.PosSales
                         col.Item().PaddingTop(8).LineHorizontal(1);
                     });
 
-
                     page.Content().PaddingTop(10).Column(column =>
                     {
                         column.Spacing(6);
-
 
                         column.Item().Row(row =>
                         {
@@ -396,7 +389,6 @@ namespace Onpoint.Store.Application.Services.PosSales
 
                         column.Item().PaddingTop(5).LineHorizontal(1);
 
-
                         column.Item().AlignRight().Width(220).Column(totals =>
                         {
                             totals.Spacing(3);
@@ -434,7 +426,6 @@ namespace Onpoint.Store.Application.Services.PosSales
                             });
                         });
 
-
                         column.Item().PaddingTop(15).AlignCenter().Column(qrCol =>
                         {
                             if (qrImageBytes != null)
@@ -450,7 +441,6 @@ namespace Onpoint.Store.Application.Services.PosSales
                         column.Item().PaddingTop(10).AlignCenter()
                             .Text("Thank you for your purchase!").Italic();
                     });
-
 
                     page.Footer().AlignCenter().Text(x =>
                     {
@@ -559,7 +549,6 @@ namespace Onpoint.Store.Application.Services.PosSales
             var order = await _unitOfWork.Orders.GetByIdAsync(orderId, ct: ct);
             if (order == null)
                 return _resultHandler.NotFound<string>("Order not found.");
-
 
             var frontendBaseUrl = _configuration["FrontendBaseUrl"];
             var qrValue = $"{frontendBaseUrl}/invoice/{order.Id}";

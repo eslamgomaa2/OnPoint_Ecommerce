@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
-using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
 
 namespace Onpoint.Store.Application.Validators.Product
@@ -9,24 +8,15 @@ namespace Onpoint.Store.Application.Validators.Product
     {
         public CreateProductByBranchManagerDtoValidator(IUnitOfWork unitOfWork)
         {
-            RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-
-            RuleFor(x => x.Sku)
+            RuleFor(x => x.Name)
                 .NotEmpty()
-                .When(x => x.SkuMode == CodeGenerationMode.Manual)
-                .WithMessage("SKU is required when SkuMode is Manual.");
+                .MaximumLength(200);
 
-            RuleFor(x => x.Sku)
-                .MustAsync(async (sku, ct) => !await unitOfWork.Products.SkuExistsAsync(sku!, null, ct))
-                .When(x => x.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrWhiteSpace(x.Sku))
-                .WithMessage("SKU already exists.");
+            RuleFor(x => x.CategoryId)
+                .GreaterThan(0)
+                .WithMessage("Category is required.");
 
-            RuleFor(x => x.Barcode)
-                .NotEmpty()
-                .When(x => x.BarcodeMode == CodeGenerationMode.Manual)
-                .WithMessage("Barcode is required when BarcodeMode is Manual.");
 
-            // ⚠️ NEW: Variants is required and must have at least one item
             RuleFor(x => x.Variants)
                 .NotNull()
                 .WithMessage("Product must have at least one variant.")

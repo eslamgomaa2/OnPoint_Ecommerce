@@ -61,6 +61,16 @@ namespace Onpoint.Store.Application.Services.AuthServices.Token
             rng.GetBytes(randomNumber);
             return Convert.ToBase64String(randomNumber);
         }
+        public RefreshToken CreateRefreshTokenEntity(int userId, string tokenString, int expiryDays = 7)
+        {
+            return new RefreshToken
+            {
+                Token = tokenString,
+                ApplicationUserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(expiryDays)
+            };
+        }
     }
 
 

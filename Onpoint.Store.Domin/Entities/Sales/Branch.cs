@@ -15,8 +15,9 @@ namespace Onpoint.Store.Domin.Entities
         public string? WorkingHours { get; set; }
         public bool IsDefault { get; set; } = false;
 
-        [ForeignKey("Manager")]
+
         public int? ManagerId { get; set; }
+        [ForeignKey(nameof(ManagerId))]
         public virtual ApplicationUser? Manager { get; set; }
 
 

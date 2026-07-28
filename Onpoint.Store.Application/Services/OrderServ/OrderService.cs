@@ -166,16 +166,18 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 Id = oi.Id,
                 ProductId = oi.ProductId,
                 ProductVariantId = oi.ProductVariantId,
-                ProductName = oi.Product?.Name ?? "Unknown Product",
 
+                // ⭐ دلوقتي Product مش هيكون null
+                ProductName = oi.Product?.Name ?? oi.ProductName ?? "Unknown Product",
 
-                ProductImageUrl = oi.Product?.Images
+                ProductImageUrl = oi.Product?.Images?
                     .Where(i => i.IsPrimary)
                     .Select(i => i.ImageUrl)
                     .FirstOrDefault()
-                    ?? oi.Product?.Images
+                    ?? oi.Product?.Images?
                         .Select(i => i.ImageUrl)
-                        .FirstOrDefault(),
+                        .FirstOrDefault()
+                    ?? oi.ProductImageUrl,
 
 
                 VariantAttributes = oi.ProductVariant?.AttributeValues?
@@ -188,6 +190,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
 
                 Quantity = oi.Quantity,
                 UnitPrice = oi.UnitPrice,
+
 
             }).ToList();
 

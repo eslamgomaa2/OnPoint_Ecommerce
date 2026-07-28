@@ -143,7 +143,7 @@ namespace Onpoint.Store.Application.Services.ReviewServ
 
         public async Task<ServiceResult<List<ReviewDto>>> GetPendingReviewsAsync(CancellationToken ct = default)
         {
-            var reviews = await _unitOfWork.Reviews.GetAllAsync(ct);
+            var reviews = await _unitOfWork.Reviews.GetAllWithDetailsAsync(ct);
             var pending = reviews.Where(r => !r.IsApproved).ToList();
             return _resultHandler.Success(_mapper.Map<List<ReviewDto>>(pending));
         }

@@ -17,9 +17,5 @@
         public decimal TotalPrice => UnitPrice * Quantity;
     }
 
-    public class VariantAttributeDto
-    {
-        public string AttributeName { get; set; } = string.Empty;
-        public string AttributeValue { get; set; } = string.Empty;
-    }
+
 }

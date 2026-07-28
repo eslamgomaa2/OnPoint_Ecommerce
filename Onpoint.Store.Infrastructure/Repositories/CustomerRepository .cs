@@ -12,12 +12,17 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
         }
 
-        public async Task<(IReadOnlyList<Customer> Items, int TotalCount)> GetPagedAsync(int branchId, string? search, bool? isActive, int pageNumber, int pageSize, CancellationToken ct = default)
+        public async Task<(IReadOnlyList<Customer> Items, int TotalCount)> GetPagedAsync(int? branchId, string? search, bool? isActive, int pageNumber, int pageSize,
+     CancellationToken ct = default)
         {
             IQueryable<Customer> query = _dbset
                 .AsNoTracking()
                 .Include(c => c.Orders)
-                .Where(c => c.BranchId == branchId && !c.IsDeleted);
+                .Where(c => !c.IsDeleted);
+
+
+            if (branchId.HasValue)
+                query = query.Where(c => c.BranchId == branchId.Value);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -43,18 +48,30 @@ namespace Onpoint.Store.Infrastructure.Repositories
             return (items, totalCount);
         }
 
-        public async Task<Customer?> GetByIdWithOrdersAsync(int id, int branchId, CancellationToken ct = default)
-            => await _dbset
+        public async Task<Customer?> GetByIdWithOrdersAsync(int id, int? branchId, CancellationToken ct = default)
+        {
+            IQueryable<Customer> query = _dbset
                 .AsNoTracking()
                 .Include(c => c.Orders)
-                .FirstOrDefaultAsync(c => c.Id == id && c.BranchId == branchId && !c.IsDeleted, ct);
+                .Where(c => c.Id == id && !c.IsDeleted);
 
-        public async Task<(int TotalCustomers, int Active, int NewThisMonth)> GetCustomerCountsAsync(
-            int branchId,
-            CancellationToken ct = default)
+
+            if (branchId.HasValue)
+                query = query.Where(c => c.BranchId == branchId.Value);
+
+            return await query.FirstOrDefaultAsync(ct);
+        }
+        public async Task<(int TotalCustomers, int Active, int NewThisMonth)> GetCustomerCountsAsync(int? branchId, CancellationToken ct = default)
         {
             var now = DateTime.UtcNow;
-            var baseQuery = _dbset.AsNoTracking().Where(c => c.BranchId == branchId && !c.IsDeleted);
+
+            IQueryable<Customer> baseQuery = _dbset
+                .AsNoTracking()
+                .Where(c => !c.IsDeleted);
+
+
+            if (branchId.HasValue)
+                baseQuery = baseQuery.Where(c => c.BranchId == branchId.Value);
 
             var totalCustomers = await baseQuery.CountAsync(ct);
             var active = await baseQuery.CountAsync(c => c.IsActive, ct);
@@ -64,11 +81,17 @@ namespace Onpoint.Store.Infrastructure.Repositories
             return (totalCustomers, active, newThisMonth);
         }
 
-        public async Task<Customer?> GetByPhoneNumberAsync(string phone, int branchId, CancellationToken ct = default)
+        public async Task<Customer?> GetByPhoneNumberAsync(string phone, int? branchId, CancellationToken ct = default)
         {
-            return await _dbset
-                 .AsNoTracking()
-                 .FirstOrDefaultAsync(c => c.Phone == phone && c.BranchId == branchId && !c.IsDeleted, ct);
+            IQueryable<Customer> query = _dbset
+                .AsNoTracking()
+                .Where(c => c.Phone == phone && !c.IsDeleted);
+
+
+            if (branchId.HasValue)
+                query = query.Where(c => c.BranchId == branchId.Value);
+
+            return await query.FirstOrDefaultAsync(ct);
         }
     }
 }

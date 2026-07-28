@@ -8,11 +8,7 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<Product> builder)
         {
-            builder.Property(p => p.Price).HasColumnType("decimal(18,2)");
 
-            builder.HasIndex(p => p.Slug).IsUnique();
-            builder.HasIndex(p => p.Sku).IsUnique();
-            builder.HasIndex(p => p.Barcode).IsUnique().HasFilter("[Barcode] IS NOT NULL");
 
             builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
 
@@ -31,22 +27,25 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                    .HasForeignKey(v => v.ProductId)
                    .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasMany(p => p.AttributeValues)
-                   .WithOne(av => av.Product)
-                   .HasForeignKey(av => av.ProductId)
-                   .OnDelete(DeleteBehavior.Cascade);
+
             builder.HasOne(p => p.Shipping)
                     .WithOne(s => s.Product)
                     .HasForeignKey<ProductShipping>(s => s.ProductId)
                     .OnDelete(DeleteBehavior.Cascade);
-            builder.Property(p => p.Cost).HasColumnType("decimal(18,2)");
+
 
             builder.HasMany(p => p.Translations)
                     .WithOne(t => t.Product)
                     .HasForeignKey(t => t.ProductId)
                      .OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(p => p.Reviews)
+               .WithOne(r => r.Product)
+               .HasForeignKey(r => r.ProductId)
+               .OnDelete(DeleteBehavior.Restrict); // زي ما هي في الميجريشن الأصلية (Restrict)
+
         }
     }
+
 
     public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVariant>
     {
@@ -56,13 +55,28 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             builder.HasIndex(v => v.Sku).IsUnique();
             builder.HasIndex(v => v.Barcode).IsUnique().HasFilter("[Barcode] IS NOT NULL");
 
+            // تعريف العلاقة بشكل صريح مع الـ Product لمنع إنشاء ProductId1
+            builder.HasOne(v => v.Product)
+                   .WithMany(p => p.Variants)
+                   .HasForeignKey(v => v.ProductId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
             builder.HasMany(v => v.AttributeValues)
                    .WithOne(av => av.ProductVariant)
                    .HasForeignKey(av => av.ProductVariantId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+            // إضافه علاقة الـ Stocks أيضاً لضمان سلامتها
+            builder.HasMany(v => v.Stocks)
+                   .WithOne(s => s.ProductVariant)
+                   .HasForeignKey(s => s.ProductVariantId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+
             builder.HasIndex(v => new { v.Id });
         }
     }
+
 
     public class ProductAttributeConfiguration : IEntityTypeConfiguration<ProductAttribute>
     {
@@ -120,11 +134,12 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
         {
             builder.HasKey(s => s.Id);
 
+
             builder.HasOne(s => s.Product)
-                   .WithMany(p => p.Stocks)
+                   .WithMany()
                    .HasForeignKey(s => s.ProductId)
                    .IsRequired()
-                   .OnDelete(DeleteBehavior.Restrict);
+                   .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(s => s.ProductVariant)
                    .WithMany(v => v.Stocks)
@@ -141,7 +156,6 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             builder.HasIndex(s => new { s.ProductId, s.ProductVariantId, s.BranchId })
                    .IsUnique();
         }
-
     }
     public class ProductShippingConfiguration : IEntityTypeConfiguration<ProductShipping>
     {

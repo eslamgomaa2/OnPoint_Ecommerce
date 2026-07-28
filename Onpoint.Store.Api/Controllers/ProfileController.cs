@@ -1,41 +1,45 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using BuildingBlocks.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Auth;
+using Onpoint.Store.Application.DTOs.Auth.Profile;
 using Onpoint.Store.Application.Services.Profile;
 using System.Security.Claims;
 
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/profile")]
 [Authorize]
-
 public class ProfileController : ControllerBase
 {
     private readonly IProfileServices _profileServices;
+
     public ProfileController(IProfileServices profileServices)
     {
         _profileServices = profileServices;
     }
 
-    private int GetUserId()
+    [HttpGet("me")]
+    public async Task<ActionResult<ServiceResult<UserLoginInfoDto>>> GetMyInfo(CancellationToken ct)
     {
-        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
-        if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out var userId))
-            throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
-        return userId;
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _profileServices.GetMyLoginInfoAsync(userId, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [HttpPut]
-    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileDto dto, CancellationToken ct = default)
+    [HttpPut("me")]
+    public async Task<ActionResult<ServiceResult<UpdateMyProfileDto>>> UpdateMyProfile(
+        [FromBody] UpdateMyProfileDto dto,
+        CancellationToken ct)
     {
-        var userId = GetUserId();
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var result = await _profileServices.UpdateMyAccount(userId, dto, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [HttpDelete]
-    public async Task<IActionResult> DeleteMyAccount(CancellationToken ct = default)
+    [HttpDelete("me")]
+    public async Task<ActionResult<ServiceResult<bool>>> DeleteMyAccount(CancellationToken ct)
     {
-        var userId = GetUserId();
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var result = await _profileServices.DeleteMyAccountAsync(userId);
         return StatusCode((int)result.HttpStatusCode, result);
     }

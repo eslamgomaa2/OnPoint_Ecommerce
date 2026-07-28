@@ -8,5 +8,6 @@ namespace Onpoint.Store.Application.Services.AuthServices.Token
     {
         (string token, DateTime expiresAt) GenerateToken(ApplicationUser user, IList<string> roles);
         string GenerateRefreshToken();
+        RefreshToken CreateRefreshTokenEntity(int userId, string tokenString, int expiryDays = 7);
     }
 }
