@@ -214,8 +214,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
      int pageSize,
      CancellationToken ct = default)
         {
-            IQueryable<Product> query = _dbset
-     .AsNoTracking()
+            IQueryable<Product> query = _dbset.AsNoTrackingWithIdentityResolution()
      .Where(p => !p.IsDeleted && p.Status == ProductStatus.Active)
      .Include(p => p.Category)
      .Include(p => p.Brand)
