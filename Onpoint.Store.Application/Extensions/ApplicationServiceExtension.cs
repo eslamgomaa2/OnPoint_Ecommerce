@@ -1,4 +1,6 @@
-﻿using BuildingBlocks.Common.Helpers;
+﻿using Application.Interfaces;
+using Application.Services;
+using BuildingBlocks.Common.Helpers;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,6 +87,7 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IPosSalesService, PosSalesService>();
             services.AddScoped<IStaticPageService, StaticPageService>();
             services.AddScoped<IAppSettingsService, AppSettingsService>();
+            services.AddScoped<INotificationService, NotificationService>();
 
 
 

@@ -15,5 +15,6 @@ namespace BuildingBlocks.Results
 
         public string? SearchTerm { get; set; }
         public bool? IsActive { get; set; }
+        public bool? IsRead { get; set; }
     }
 }
