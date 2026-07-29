@@ -1,3 +1,5 @@
+using Domain.Interfaces;
+using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Onpoint.Store.Application.Services.AuthServices.ExternalAuthService;
@@ -41,6 +43,7 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<IContactMessageRepository, ContactMessageRepository>();
             services.AddScoped<IStaticPageRepository, StaticPageRepository>();
             services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
 
 
 

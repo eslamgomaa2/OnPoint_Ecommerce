@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Onpoint.Store.Domin.Common;
 using Onpoint.Store.Domin.Entities;
+using Onpoint.Store.Domin.Entities.CustomerEngagement;
 using Onpoint.Store.Domin.Entities.Identity;
 using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Infrastructure.Data.Configurations;
@@ -43,6 +44,8 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
         public DbSet<ContactMessage> ContactMessages { get; set; }
         public DbSet<AppSettingsInfo> AppSettingsInfo { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+
 
 
 

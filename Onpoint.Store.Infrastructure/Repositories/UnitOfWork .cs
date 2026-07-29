@@ -1,3 +1,5 @@
+using Domain.Interfaces;
+using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore.Storage;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
@@ -12,6 +14,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
     {
         private readonly ApplicationDbContext _context;
         private IDbContextTransaction? _currentTransaction;
+        private INotificationRepository? _notifications;
         private IBrandRepository? _brands;
         private ICategoryRepository? _categories;
         private IProductRepository? _products;
@@ -93,6 +96,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IGenericRepository<ProductShipping, int> ProductShippings => _productShippings ??= new GenericRepository<ProductShipping, int>(_context);
 
         public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
+
+        public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

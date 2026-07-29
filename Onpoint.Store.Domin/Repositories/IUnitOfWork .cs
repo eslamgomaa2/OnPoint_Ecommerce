@@ -1,3 +1,4 @@
+using Domain.Interfaces;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Entities.Sales;
 using Onpoint.Store.Domin.Repositories.Onpoint.Store.Application.Interfaces.Repositories;
@@ -8,6 +9,7 @@ namespace Onpoint.Store.Domin.Repositories
     public interface IUnitOfWork
     {
         ICustomerRepository Customers { get; }
+        INotificationRepository Notifications { get; }
         IStaticPageRepository StaticPages { get; }
         ICategoryRepository Categories { get; }
         IProductRepository Products { get; }
