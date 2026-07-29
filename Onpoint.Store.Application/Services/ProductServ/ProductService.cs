@@ -684,17 +684,14 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             var activeDiscount = p.Discounts
                 .FirstOrDefault(d => d.IsActive && d.EndDate >= DateTime.UtcNow);
-
             var discountPercentage = activeDiscount?.DiscountPercentage;
-
-
             var originalPrice = discountPercentage.HasValue ? minPrice : (decimal?)null;
             var finalPrice = discountPercentage.HasValue
                 ? minPrice * (1 - discountPercentage.Value / 100m)
                 : minPrice;
 
             var inStock = activeVariants.Any(v =>
-                v.Stocks.Any(s => s.Quantity > s.MinimumStockLevel));
+                v.Stocks != null && v.Stocks.Any(s => s.Quantity > s.MinimumStockLevel));
 
             var approvedReviews = p.Reviews.Count(r => r.IsApproved);
             var avgRating = approvedReviews > 0
@@ -721,7 +718,28 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 InStock = inStock,
                 CategoryName = p.Category?.Name ?? string.Empty,
                 BrandName = p.Brand?.Name,
-                CreatedAt = p.CreatedAt
+                CreatedAt = p.CreatedAt,
+
+
+                Variants = activeVariants.Select(v => new ProductVariantDto
+                {
+                    Id = v.Id,
+                    ProductId = p.Id,
+                    ProductName = p.Name,
+                    Sku = v.Sku ?? string.Empty,
+                    Barcode = v.Barcode,
+                    BarcodeImagePath = v.BarcodeImagePath,
+                    QrCodeValue = v.QrCodeValue,
+                    QrCodeImagePath = v.QrCodeImagePath,
+                    Price = v.Price,
+                    Cost = v.Cost,
+                    IsActive = v.IsActive,
+                    Attributes = v.AttributeValues?.Select(av => new VariantAttributeValueDto
+                    {
+                        AttributeName = av.ProductAttribute?.Name ?? string.Empty,
+                        Value = av.Value ?? string.Empty
+                    }).ToList() ?? new List<VariantAttributeValueDto>()
+                }).ToList()
             };
         }
     }

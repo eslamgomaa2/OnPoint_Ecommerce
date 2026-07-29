@@ -4,6 +4,7 @@
     {
         public int Id { get; set; }
         public int ProductId { get; set; }
+        public string ProductName { get; set; }
         public string Sku { get; set; } = string.Empty;
         public string? Barcode { get; set; }
         public string? BarcodeImagePath { get; set; }
@@ -15,7 +16,6 @@
         public decimal Cost { get; set; }
 
         public bool IsActive { get; set; }
-
 
 
         public List<VariantAttributeValueDto> Attributes { get; set; } = new();

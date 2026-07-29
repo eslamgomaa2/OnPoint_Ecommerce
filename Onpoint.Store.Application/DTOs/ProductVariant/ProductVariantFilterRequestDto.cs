@@ -9,5 +9,7 @@
         public decimal? MinCost { get; set; }
         public decimal? MaxCost { get; set; }
         public bool? IsActive { get; set; }
+        public string? SearchTerm { get; set; }
+
     }
 }

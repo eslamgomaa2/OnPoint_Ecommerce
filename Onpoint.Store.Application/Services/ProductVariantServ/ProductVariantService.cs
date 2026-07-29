@@ -60,6 +60,7 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 filter.MaxCost,
                 filter.IsActive,
                 filter.ProductId,
+                filter.SearchTerm,
                 ct);
 
             var dtos = _mapper.Map<List<ProductVariantDto>>(variants);
