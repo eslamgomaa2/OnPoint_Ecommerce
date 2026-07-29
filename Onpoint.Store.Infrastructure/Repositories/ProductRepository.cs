@@ -215,19 +215,25 @@ namespace Onpoint.Store.Infrastructure.Repositories
      CancellationToken ct = default)
         {
             IQueryable<Product> query = _dbset.AsNoTrackingWithIdentityResolution()
-     .Where(p => !p.IsDeleted && p.Status == ProductStatus.Active)
-     .Include(p => p.Category)
-     .Include(p => p.Brand)
-     .Include(p => p.Images)
-     .Include(p => p.Reviews.Where(r => r.IsApproved))
-     .Include(p => p.Variants.Where(v => v.IsActive))
-         .ThenInclude(v => v.Stocks)
-     .Include(p => p.Variants.Where(v => v.IsActive))
-         .ThenInclude(v => v.AttributeValues)
-     .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow));
-            // 1. Category Filter
-            if (categoryId.HasValue && categoryId.Value > 0)
-                query = query.Where(p => p.CategoryId == categoryId.Value);
+         .Where(p => !p.IsDeleted && p.Status == ProductStatus.Active)
+
+
+         .Include(p => p.Category)
+         .Include(p => p.Brand)
+         .Include(p => p.Images)
+         .Include(p => p.Reviews)
+
+
+         .Include(p => p.Variants)
+             .ThenInclude(v => v.Stocks)
+                 .ThenInclude(s => s.Branch)
+
+         .Include(p => p.Variants)
+             .ThenInclude(v => v.AttributeValues)
+                 .ThenInclude(av => av.ProductAttribute)
+
+         .Include(p => p.Discounts);
+
 
             // 2. Search Filter
             if (!string.IsNullOrWhiteSpace(search))

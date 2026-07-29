@@ -51,7 +51,7 @@ namespace Onpoint.Store.Application.Services.WishlistServ
             if (product == null || product.IsDeleted)
                 return _resultHandler.NotFound<WishlistItemDto>("Product not found.");
 
-            var existing = await _unitOfWork.Wishlists.GetByUserAndProductIdAsync(userId, productId, ct);
+            var existing = await _unitOfWork.Wishlists.GetByUserAndProductIdAsync(userId, productId, productVariantId, ct);
             if (existing != null)
                 return _resultHandler.BadRequest<WishlistItemDto>("Product is already in your wishlist.");
 
@@ -69,9 +69,15 @@ namespace Onpoint.Store.Application.Services.WishlistServ
             return _resultHandler.Created(_mapper.Map<WishlistItemDto>(saved));
         }
 
-        public async Task<ServiceResult<string>> RemoveFromWishlistAsync(int userId, int productId, int? productVariantId, CancellationToken ct = default)
+        public async Task<ServiceResult<string>> RemoveFromWishlistAsync(int userId, int productId, int? productVariantId,
+      CancellationToken ct = default)
         {
-            var item = await _unitOfWork.Wishlists.GetByUserAndProductIdAsync(userId, productId, ct);
+            var item = await _unitOfWork.Wishlists.GetByUserAndProductIdAsync(
+                userId,
+                productId,
+                productVariantId,
+                ct);
+
             if (item == null)
                 return _resultHandler.NotFound<string>("Item not found in wishlist.");
 
@@ -104,7 +110,7 @@ namespace Onpoint.Store.Application.Services.WishlistServ
 
         public async Task<ServiceResult<CartDto>> MoveToCartAsync(int userId, int productId, int? productVariantId, CancellationToken ct = default)
         {
-            var wishlistItem = await _unitOfWork.Wishlists.GetByUserAndProductIdAsync(userId, productId, ct);
+            var wishlistItem = await _unitOfWork.Wishlists.GetByUserAndProductIdAsync(userId, productId, productVariantId, ct);
             if (wishlistItem == null)
                 return _resultHandler.NotFound<CartDto>("Item not found in wishlist.");
 

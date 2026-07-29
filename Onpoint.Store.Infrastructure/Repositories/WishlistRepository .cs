@@ -10,22 +10,30 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
         }
 
-        public async Task<Wishlist?> GetByUserAndProductIdAsync(int userId, int productId, CancellationToken ct = default)
+        public async Task<Wishlist?> GetByUserAndProductIdAsync(int userId, int productId, int? productVariantId, CancellationToken ct = default)
         {
             return await _dbset
                 .FirstOrDefaultAsync(w => w.UserId == userId
                                           && w.ProductId == productId
+                                          && w.ProductVariantId == productVariantId
                                           && !w.IsDeleted, ct);
         }
         public async Task<List<Wishlist>> GetUserWishlistAsync(int userId, CancellationToken ct = default)
         {
             return await _dbset
+                .AsNoTracking()
                 .Include(w => w.Product!)
                     .ThenInclude(p => p.Images.Where(img => img.IsPrimary))
+
                 .Include(w => w.Product!)
                     .ThenInclude(p => p.Discounts)
+
+
                 .Include(w => w.Product!)
-                .Where(w => w.UserId == userId)
+                    .ThenInclude(p => p.Variants.Where(v => v.IsActive))
+                        .ThenInclude(v => v.Stocks)
+
+                .Where(w => w.UserId == userId && !w.IsDeleted)
                 .OrderByDescending(w => w.CreatedAt)
                 .ToListAsync(ct);
         }

@@ -18,6 +18,7 @@
         public bool IsActive { get; set; }
 
 
+        public List<VariantStockDto> Stocks { get; set; } = new();
         public List<VariantAttributeValueDto> Attributes { get; set; } = new();
     }
 }
