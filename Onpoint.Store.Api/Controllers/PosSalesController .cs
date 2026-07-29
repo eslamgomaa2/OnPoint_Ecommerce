@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/pos-sales")]
-[Authorize(Roles = "SuperAdmin" + "," + "Cashier")]
+[Authorize(Roles = "SuperAdmin" + "," + "Cashier " + "," + "BranchManager")]
 public class PosSalesController : ControllerBase
 {
     private readonly IPosSalesService _posSalesService;

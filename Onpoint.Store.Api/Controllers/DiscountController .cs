@@ -5,7 +5,7 @@ using Onpoint.Store.Application.Services.DiscountServ;
 
 [Route("api/discounts")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
 public class DiscountController : ControllerBase
 {
     private readonly IDiscountService _discountService;

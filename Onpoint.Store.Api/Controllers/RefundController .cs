@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/orders/{orderId}/refunds")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
 
 public class RefundController : ControllerBase
 {
