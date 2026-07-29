@@ -1,4 +1,6 @@
-﻿namespace Onpoint.Store.Application.DTOs.Product
+﻿using Onpoint.Store.Application.DTOs.ProductVariant;
+
+namespace Onpoint.Store.Application.DTOs.Product
 {
     public class ProductListItemDto
     {
@@ -16,6 +18,7 @@
         public bool InStock { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public string? BrandName { get; set; }
+        public List<ProductVariantDto> Variants { get; set; } = new();
         public DateTime CreatedAt { get; set; }
     }
 }

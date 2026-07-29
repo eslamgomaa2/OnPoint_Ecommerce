@@ -23,7 +23,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
         Task<ServiceResult<IEnumerable<OrderDto>>> GetUserOrdersAsync(int userId, CancellationToken ct = default);
         Task<ServiceResult<OrderDto>> GetOrderAsync(int orderId, CancellationToken ct = default);
         // في IOrderService
-        Task<ServiceResult<List<OrderItemDto>>> GetOrderItemsAsync(int orderId, int userId, CancellationToken ct = default);
+        Task<ServiceResult<UserOrderDetailsResponseDto>> GetOrderItemsAsync(int orderId, int userId, CancellationToken ct = default);
 
         // Internal Processing
         Task FinalizeOrderAsync(Order order, Cart? cart, Coupon? coupon, CancellationToken ct = default);

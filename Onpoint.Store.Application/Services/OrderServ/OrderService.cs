@@ -154,22 +154,18 @@ namespace Onpoint.Store.Application.Services.OrderServ
             }
         }
 
-        public async Task<ServiceResult<List<OrderItemDto>>> GetOrderItemsAsync(int orderId, int userId, CancellationToken ct = default)
+        public async Task<ServiceResult<UserOrderDetailsResponseDto>> GetOrderItemsAsync(int orderId, int userId, CancellationToken ct = default)
         {
             var order = await _unitOfWork.Orders.GetOrderItemsForUserAsync(orderId, userId, ct);
-
             if (order == null)
-                return _serviceResultHandler.NotFound<List<OrderItemDto>>("Order not found.");
+                return _serviceResultHandler.NotFound<UserOrderDetailsResponseDto>("Order not found.");
 
             var items = order.OrderItems.Select(oi => new OrderItemDto
             {
                 Id = oi.Id,
                 ProductId = oi.ProductId,
                 ProductVariantId = oi.ProductVariantId,
-
-                // ⭐ دلوقتي Product مش هيكون null
                 ProductName = oi.Product?.Name ?? oi.ProductName ?? "Unknown Product",
-
                 ProductImageUrl = oi.Product?.Images?
                     .Where(i => i.IsPrimary)
                     .Select(i => i.ImageUrl)
@@ -178,8 +174,6 @@ namespace Onpoint.Store.Application.Services.OrderServ
                         .Select(i => i.ImageUrl)
                         .FirstOrDefault()
                     ?? oi.ProductImageUrl,
-
-
                 VariantAttributes = oi.ProductVariant?.AttributeValues?
                     .Select(av => new VariantAttributeDto
                     {
@@ -187,14 +181,30 @@ namespace Onpoint.Store.Application.Services.OrderServ
                         AttributeValue = av.Value
                     })
                     .ToList() ?? new List<VariantAttributeDto>(),
-
                 Quantity = oi.Quantity,
                 UnitPrice = oi.UnitPrice,
-
-
             }).ToList();
 
-            return _serviceResultHandler.Success(items);
+            var summary = new UserOrderSummaryDto
+            {
+                SubTotal = order.SubTotal,
+                CouponCode = order.CouponCode,
+                CouponDiscountPercentage = order.SubTotal > 0
+                    ? Math.Round((order.DiscountAmount / order.SubTotal) * 100, 2)
+                    : null,
+                DiscountAmount = order.DiscountAmount,
+                ShippingCost = order.ShippingCost,
+                TotalAmount = order.TotalAmount,
+                PaymentMethod = order.PaymentMethod.ToString()
+            };
+
+            var response = new UserOrderDetailsResponseDto
+            {
+                Items = items,
+                Summary = summary
+            };
+
+            return _serviceResultHandler.Success(response);
         }
         public async Task<ServiceResult<bool>> ProcessPaymentSuccessAsync(int orderId, string transactionId, CancellationToken ct = default)
         {
