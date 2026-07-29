@@ -720,7 +720,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 BrandName = p.Brand?.Name,
                 CreatedAt = p.CreatedAt,
 
-
                 Variants = activeVariants.Select(v => new ProductVariantDto
                 {
                     Id = v.Id,
@@ -734,8 +733,22 @@ namespace Onpoint.Store.Application.Services.ProductServ
                     Price = v.Price,
                     Cost = v.Cost,
                     IsActive = v.IsActive,
+
+                    // ✅ Stocks = List<VariantStockDto>
+                    Stocks = v.Stocks?.Select(s => new VariantStockDto
+                    {
+                        Id = s.Id,
+                        Quantity = s.Quantity,
+                        // Add other properties if needed:
+                        BranchId = s.BranchId,
+                        BranchName = s.Branch?.Name,
+                        ReservedQuantity = s.ReservedQuantity,
+                        AvailableQuantity = s.Quantity - s.ReservedQuantity
+                    }).ToList() ?? new List<VariantStockDto>(),
+
                     Attributes = v.AttributeValues?.Select(av => new VariantAttributeValueDto
                     {
+                        ProductAttributeId = av.ProductAttributeId,
                         AttributeName = av.ProductAttribute?.Name ?? string.Empty,
                         Value = av.Value ?? string.Empty
                     }).ToList() ?? new List<VariantAttributeValueDto>()
