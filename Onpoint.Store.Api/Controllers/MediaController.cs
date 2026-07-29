@@ -5,7 +5,7 @@ using Onpoint.Store.Application.Services.MedioServices;
 
 [Route("api/media")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
 public class MediaController : ControllerBase
 {
     private readonly IMediaService _mediaService;

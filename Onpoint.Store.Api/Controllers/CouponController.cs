@@ -6,7 +6,7 @@ using Onpoint.Store.Application.Services.CouponServ;
 
 [Route("api/coupons")]
 [ApiController]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
 public class CouponController : ControllerBase
 {
     private readonly ICouponService _couponService;

@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 [Route("api/reviews")]
 [ApiController]
-[Authorize(Roles = "Customer" + "," + "SuperAdmin")]
+[Authorize(Roles = "Customer" + "," + "SuperAdmin" + "," + "BranchManager")]
 public class ReviewController : ControllerBase
 {
     private readonly IReviewService _reviewService;

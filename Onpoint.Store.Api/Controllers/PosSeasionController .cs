@@ -9,7 +9,7 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/pos-sessions")]
-[Authorize(Roles = "SuperAdmin" + "," + "Cashier")]
+[Authorize(Roles = "SuperAdmin" + "," + "Cashier" + "," + "BranchManager")]
 public class PosSessionController : ControllerBase
 {
     private readonly IPosSessionService _posSessionService;

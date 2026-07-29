@@ -5,7 +5,7 @@ using Onpoint.Store.Application.Interfaces;
 
 [ApiController]
 [Route("api/products/{productId}/shipping")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
 
 public class ShippingController : ControllerBase
 {

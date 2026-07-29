@@ -37,7 +37,7 @@ public class StockController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
     [HttpPost("initialize/{Productid}")]
     public async Task<IActionResult> Initialize(int Productid, [FromBody] InitializeStockDto dto, CancellationToken ct = default)
     {
@@ -45,7 +45,7 @@ public class StockController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
     [HttpPost("adjust")]
     public async Task<IActionResult> Adjust([FromBody] AdjustStockDto dto, CancellationToken ct = default)
     {
@@ -53,7 +53,7 @@ public class StockController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
     [HttpPost("transfer")]
     public async Task<IActionResult> Transfer([FromBody] TransferStockDto dto, CancellationToken ct = default)
     {
