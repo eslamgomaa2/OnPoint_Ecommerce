@@ -25,8 +25,6 @@ namespace Onpoint.Store.Application.Mappings
                         : null))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
 
-
-
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src =>
                     src.Variants != null && src.Variants.Any(v => v.IsActive)
                         ? src.Variants.Where(v => v.IsActive).Min(v => v.Price) // or Average, or First
@@ -50,13 +48,17 @@ namespace Onpoint.Store.Application.Mappings
                 .ForMember(dest => dest.StockStatus, opt => opt.MapFrom(src =>
                     src.Variants != null && src.Variants.Where(v => v.IsActive).SelectMany(v => v.Stocks ?? Enumerable.Empty<Stock>()).Sum(s => s.Quantity) > 0
                         ? "InStock"
-                        : "OutOfStock"));
+                        : "OutOfStock"))
+                .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src =>
+        src.Reviews != null && src.Reviews.Any(r => r.IsApproved)
+            ? src.Reviews.Where(r => r.IsApproved).Average(r => r.Rating)
+            : 0));
+
 
             // ⚠️ Product -> ProductDetailDto
             CreateMap<Product, ProductDetailDto>()
-                .IncludeBase<Product, ProductDto>()
-                // ⚠️ REMOVED: .ForMember(dest => dest.Attributes, opt => opt.MapFrom(src => src.AttributeValues))
-                // Product no longer has AttributeValues
+
+
                 .ForMember(dest => dest.Variants, opt => opt.MapFrom(src => src.Variants != null ? src.Variants.Where(v => v.IsActive) : null))
                 .ForMember(dest => dest.BranchStock, opt => opt.Ignore())
                 .ForMember(dest => dest.Shipping, opt => opt.MapFrom(src => src.Shipping))

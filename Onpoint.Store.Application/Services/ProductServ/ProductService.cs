@@ -696,9 +696,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
             var inStock = activeVariants.Any(v =>
                 v.Stocks.Any(s => s.Quantity > s.MinimumStockLevel));
 
-            var approvedReviews = p.Reviews.Where(r => r.IsApproved).ToList();
-            var avgRating = approvedReviews.Any()
-                ? approvedReviews.Average(r => r.Rating)
+            var approvedReviews = p.Reviews.Count(r => r.IsApproved);
+            var avgRating = approvedReviews > 0
+                ? p.Reviews.Where(r => r.IsApproved).Average(r => r.Rating)
                 : 0;
 
             var primaryImage = p.Images
@@ -716,7 +716,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 OriginalPrice = originalPrice,
                 DiscountPercentage = discountPercentage,
                 AverageRating = avgRating,
-                ReviewCount = approvedReviews.Count,
+                ReviewCount = approvedReviews,
                 IsPopular = p.IsPopular,
                 InStock = inStock,
                 CategoryName = p.Category?.Name ?? string.Empty,
