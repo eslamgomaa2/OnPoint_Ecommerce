@@ -8,6 +8,7 @@ namespace Onpoint.Store.Domin.Repositories
 {
     public interface IUnitOfWork
     {
+        IShippingRepo Shipping { get; }
         ICustomerRepository Customers { get; }
         INotificationRepository Notifications { get; }
         IStaticPageRepository StaticPages { get; }

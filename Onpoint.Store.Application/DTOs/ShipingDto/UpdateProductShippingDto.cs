@@ -4,7 +4,7 @@ namespace Onpoint.Store.Application.DTOs.Product
 {
     public class UpdateProductShippingDto
     {
-        public int? Id { get; set; }
+
         public decimal? WeightKg { get; set; }
         public decimal? LengthCm { get; set; }
         public decimal? WidthCm { get; set; }

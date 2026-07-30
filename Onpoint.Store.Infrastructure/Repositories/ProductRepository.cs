@@ -14,7 +14,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
             _context = context;
         }
-
+        public async Task<Product?> GetByIdWithShippingAsync(int id, CancellationToken ct = default)
+    => await _dbset
+        .Include(p => p.Shipping)
+        .FirstOrDefaultAsync(p => p.Id == id, ct);
         public async Task<Product?> GetWithDetailsAsync(int id, CancellationToken ct = default)
         {
             var product = await _dbset
@@ -222,8 +225,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
          .Include(p => p.Brand)
          .Include(p => p.Images)
          .Include(p => p.Reviews)
-
-
+         .Include(p => p.Discounts)
          .Include(p => p.Variants)
              .ThenInclude(v => v.Stocks)
                  .ThenInclude(s => s.Branch)

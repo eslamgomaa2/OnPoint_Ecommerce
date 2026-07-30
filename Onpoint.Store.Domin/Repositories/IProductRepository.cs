@@ -6,6 +6,7 @@ namespace Onpoint.Store.Domin.Repositories
     public interface IProductRepository : IGenericRepository<Product, int>
     {
         Task<Product?> GetWithDetailsAsync(int id, CancellationToken ct = default);
+        Task<Product?> GetByIdWithShippingAsync(int id, CancellationToken ct = default);
         Task<Product?> GetWithStocksForBranchCheckAsync(int id, CancellationToken ct = default);
         Task<Product?> GetWithFullDetailsForAdminAsync(int id, bool includeDeleted = false, CancellationToken ct = default);
         Task<List<Product>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default);

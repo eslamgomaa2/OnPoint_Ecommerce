@@ -12,6 +12,11 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
         }
 
+        public Task<bool> ExistsAsync(int id, CancellationToken ct)
+        {
+            return _dbset.AnyAsync(c => c.Id == id, ct);
+        }
+
         public async Task<Category?> GetCategoryByName(string Name, CancellationToken ct)
         {
             return await _dbset.FirstOrDefaultAsync(c => c.Name == Name, ct);
