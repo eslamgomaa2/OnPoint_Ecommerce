@@ -21,7 +21,7 @@ namespace Onpoint.Store.Domin.Repositories
      string? searchTerm = null,
      CancellationToken ct = default);
         Task<bool> SkuExistsAsync(string sku, int? excludeVariantId = null, CancellationToken ct = default);
-        Task<bool> BarcodeExistsAsync(string barcode, CancellationToken ct = default);
+        Task<bool> BarcodeExistsAsync(string barcode, int? excludeVariantId = null, CancellationToken ct = default);
         Task<List<string>> GetExistingBarcodesAsync(IEnumerable<string> barcodes, CancellationToken ct = default);
 
     }

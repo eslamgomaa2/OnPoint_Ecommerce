@@ -70,5 +70,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
             return (items, totalCount);
         }
+
+        public Task<bool> ExistsAsync(int? id, CancellationToken ct = default)
+        {
+            return _dbset.AnyAsync(b => b.Id == id, ct);
+        }
     }
 }

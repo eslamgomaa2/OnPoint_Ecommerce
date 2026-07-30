@@ -8,10 +8,12 @@ namespace Onpoint.Store.Application.DTOs.Product
         public string Name { get; set; } = string.Empty;
         public string Slug { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public string? PrimaryImageUrl { get; set; }
+
+        public List<ProductImageDto> Images { get; set; } = new();
         public decimal Price { get; set; }
         public decimal? OriginalPrice { get; set; }
         public decimal? DiscountPercentage { get; set; }
+        public List<DiscountDto>? Discounts { get; set; }
         public double AverageRating { get; set; }
         public int ReviewCount { get; set; }
         public bool IsPopular { get; set; }

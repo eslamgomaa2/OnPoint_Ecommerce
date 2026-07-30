@@ -23,20 +23,18 @@ namespace Onpoint.Store.Application.Services.ShippingServ
 
         public async Task<ServiceResult<ProductShippingDto>> GetByProductIdAsync(int productId, CancellationToken ct = default)
         {
-            var product = await _unitOfWork.Products.GetByIdAsync(productId, ct);
-            if (product is null)
+            var shipping = await _unitOfWork.Shipping.GetByIdAsync(productId, ct);
+            if (shipping is null)
                 return _resultHandler.NotFound<ProductShippingDto>("Product not found");
 
-            if (product.Shipping is null)
-                return _resultHandler.NotFound<ProductShippingDto>("Shipping data not found for this product");
 
-            var dto = _mapper.Map<ProductShippingDto>(product.Shipping);
+            var dto = _mapper.Map<ProductShippingDto>(shipping);
             return _resultHandler.Success(dto);
         }
 
         public async Task<ServiceResult<ProductShippingDto>> CreateAsync(int productId, CreateProductShippingDto dto, CancellationToken ct = default)
         {
-            var product = await _unitOfWork.Products.GetByIdAsync(productId, ct);
+            var product = await _unitOfWork.Products.GetByIdWithShippingAsync(productId, ct);
             if (product is null)
                 return _resultHandler.NotFound<ProductShippingDto>("Product not found");
 
@@ -56,7 +54,7 @@ namespace Onpoint.Store.Application.Services.ShippingServ
 
         public async Task<ServiceResult<ProductShippingDto>> UpdateAsync(int productId, UpdateProductShippingDto dto, CancellationToken ct = default)
         {
-            var product = await _unitOfWork.Products.GetByIdAsync(productId, ct);
+            var product = await _unitOfWork.Products.GetByIdWithShippingAsync(productId, ct);
             if (product is null)
                 return _resultHandler.NotFound<ProductShippingDto>("Product not found");
 
@@ -80,17 +78,15 @@ namespace Onpoint.Store.Application.Services.ShippingServ
 
         public async Task<ServiceResult<string>> DeleteAsync(int productId, CancellationToken ct = default)
         {
-            var product = await _unitOfWork.Products.GetByIdAsync(productId, ct);
+            var product = await _unitOfWork.Products.GetByIdWithShippingAsync(productId, ct);
             if (product is null)
                 return _resultHandler.NotFound<string>("Product not found");
 
             if (product.Shipping is null)
                 return _resultHandler.NotFound<string>("Shipping data not found for this product");
 
-            product.Shipping.IsDeleted = true;
-            product.Shipping.UpdatedAt = DateTime.UtcNow;
 
-            _unitOfWork.Products.Update(product);
+            _unitOfWork.Products.Remove(product);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Deleted<string>();

@@ -1,17 +1,20 @@
 ﻿using FluentValidation;
 using Onpoint.Store.Application.DTOs.Product;
 
-namespace Onpoint.Store.Application.Validators.Product
+public class CreateDiscountDtoValidator : AbstractValidator<CreateDiscountDto>
 {
-    public class CreateDiscountDtoValidator : AbstractValidator<CreateDiscountDto>
+    public CreateDiscountDtoValidator()
     {
-        public CreateDiscountDtoValidator()
-        {
-            RuleFor(x => x.DiscountPercentage)
-                .InclusiveBetween(1, 99).WithMessage("Discount must be between 1% and 99%.");
+        RuleFor(x => x.DiscountPercentage)
+            .InclusiveBetween(0, 100)
+            .WithMessage("Discount percentage must be between 0 and 100.");
 
-            RuleFor(x => x.StartDate)
-                .LessThanOrEqualTo(x => x.EndDate).WithMessage("Start date must be before or equal to end date.");
-        }
+        RuleFor(x => x.EndDate)
+            .GreaterThan(x => x.StartDate)
+            .WithMessage("End date must be after start date.");
+
+        RuleFor(x => x.StartDate)
+            .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
+            .WithMessage("Start date cannot be in the past.");
     }
 }

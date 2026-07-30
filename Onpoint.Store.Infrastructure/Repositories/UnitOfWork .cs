@@ -13,6 +13,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
+        private IShippingRepo? _shipping;
         private IDbContextTransaction? _currentTransaction;
         private INotificationRepository? _notifications;
         private IBrandRepository? _brands;
@@ -98,6 +99,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
 
         public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
+
+        public IShippingRepo Shipping => _shipping ??= new ShippingRepo(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

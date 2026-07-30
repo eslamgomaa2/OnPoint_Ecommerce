@@ -44,6 +44,7 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<IStaticPageRepository, StaticPageRepository>();
             services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IShippingRepo, ShippingRepo>();
 
 
 

@@ -9,8 +9,15 @@ namespace Onpoint.Store.Infrastructure.Repositories
     {
         public ProductVariantRepository(ApplicationDbContext context) : base(context) { }
 
-        public async Task<bool> BarcodeExistsAsync(string barcode, CancellationToken ct = default)
-    => await _dbset.AnyAsync(v => v.Barcode == barcode && !v.IsDeleted, ct);
+        public async Task<bool> BarcodeExistsAsync(string barcode, int? excludeVariantId = null, CancellationToken ct = default)
+        {
+            var query = _dbset.Where(v => v.Barcode == barcode && !v.IsDeleted);
+
+            if (excludeVariantId.HasValue)
+                query = query.Where(v => v.Id != excludeVariantId.Value);
+
+            return await query.AnyAsync(ct);
+        }
 
         public async Task<List<string>> GetExistingBarcodesAsync(IEnumerable<string> barcodes, CancellationToken ct = default)
             => await _dbset

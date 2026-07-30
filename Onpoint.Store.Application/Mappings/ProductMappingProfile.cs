@@ -19,17 +19,29 @@ namespace Onpoint.Store.Application.Mappings
             CreateMap<Product, ProductDto>()
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : string.Empty))
                 .ForMember(dest => dest.BrandName, opt => opt.MapFrom(src => src.Brand != null ? src.Brand.Name : null))
-                .ForMember(dest => dest.PrimaryImageUrl, opt => opt.MapFrom(src =>
-                    src.Images != null && src.Images.Any(i => i.IsPrimary)
-                        ? src.Images.First(i => i.IsPrimary).ImageUrl
-                        : null))
+                .ForMember(dest => dest.Images, opt => opt.MapFrom(src =>
+                                src.Images != null
+                               ? src.Images.Select(i => new ProductImageDto
+                               {
+                                   Id = i.Id,
+                                   ImageUrl = i.ImageUrl,
+                                   IsPrimary = i.IsPrimary
+                               }).ToList()
+        : new List<ProductImageDto>()))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
 
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src =>
                     src.Variants != null && src.Variants.Any(v => v.IsActive)
                         ? src.Variants.Where(v => v.IsActive).Min(v => v.Price) // or Average, or First
                         : 0))
-
+                .ForMember(dest => dest.Sku, opt => opt.MapFrom(src =>
+                          src.Variants != null && src.Variants.Any(v => v.IsActive)
+                        ? src.Variants.Where(v => v.IsActive).OrderBy(v => v.Price).First().Sku
+                                : null))
+                 .ForMember(dest => dest.Cost, opt => opt.MapFrom(src =>
+                            src.Variants != null && src.Variants.Any(v => v.IsActive)
+                           ? src.Variants.Where(v => v.IsActive).OrderBy(v => v.Price).First().Cost
+                           : 0))
                 .ForMember(dest => dest.DiscountedPrice, opt => opt.MapFrom(src =>
                     src.Variants != null && src.Variants.Any(v => v.IsActive) &&
                     src.Discounts != null && src.Discounts.Any(d => d.IsActive && d.EndDate >= DateTime.UtcNow)

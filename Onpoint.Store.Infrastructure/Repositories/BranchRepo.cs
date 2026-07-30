@@ -9,6 +9,11 @@ namespace Onpoint.Store.Infrastructure.Repositories
     {
         public BranchRepo(ApplicationDbContext context) : base(context) { }
 
+        public Task<bool> ExistsAsync(int id, CancellationToken ct = default)
+        {
+            return _dbset.AnyAsync(b => b.Id == id, ct);
+        }
+
         public async Task<int> GetDefaultBranchIdAsync(CancellationToken ct = default)
         {
             var defaultBranch = await _dbset.FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, ct);

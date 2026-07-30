@@ -708,10 +708,23 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 Name = p.Name,
                 Slug = p.Slug,
                 Description = p.Description,
-                PrimaryImageUrl = primaryImage?.ImageUrl,
+                Images = p.Images.Select(i => new ProductImageDto
+                {
+                    Id = i.Id,
+                    ImageUrl = i.ImageUrl,
+                    IsPrimary = i.IsPrimary
+                }).ToList(),
                 Price = finalPrice,
                 OriginalPrice = originalPrice,
                 DiscountPercentage = discountPercentage,
+                Discounts = p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow)
+                    .Select(d => new DiscountDto
+                    {
+                        Id = d.Id,
+                        DiscountPercentage = d.DiscountPercentage,
+                        StartDate = d.StartDate,
+                        EndDate = d.EndDate
+                    }).ToList(),
                 AverageRating = avgRating,
                 ReviewCount = approvedReviews,
                 IsPopular = p.IsPopular,
