@@ -7,6 +7,8 @@ namespace Onpoint.Store.Application.Services.DiscountServ
     {
         Task<ServiceResult<DiscountDto>> AddDiscountAsync(AddDiscountDto dto, CancellationToken ct = default);
         Task<ServiceResult<List<DiscountDto>>> GetByProductAsync(int productId, CancellationToken ct = default);
+        Task<ServiceResult<DiscountDto>> UpdateDiscountAsync(int id, UpdateDiscountDto dto, CancellationToken ct = default);
         Task<ServiceResult<string>> DeactivateAsync(int discountId, CancellationToken ct = default);
+        Task<ServiceResult<PagedResult<DiscountDto>>> GetAllAsync(DiscountFilterRequest filter, CancellationToken ct = default);
     }
 }

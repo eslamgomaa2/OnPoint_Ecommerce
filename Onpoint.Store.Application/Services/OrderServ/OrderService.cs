@@ -88,6 +88,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 var order = new Order
                 {
                     UserId = userId,
+                    InvoiceNumber = $"INV-{Guid.NewGuid():N}".ToUpper(),
                     AddressId = dto.AddressId,
                     PhoneNumber = dto.PhoneNumber,
                     PaymentMethod = dto.PaymentMethod,
@@ -103,6 +104,7 @@ namespace Onpoint.Store.Application.Services.OrderServ
                 {
                     var orderItem = new OrderItem
                     {
+
                         ProductId = item.ProductId,
                         ProductVariantId = item.ProductVariantId,
                         ProductName = item.Product?.Name ?? string.Empty,

@@ -10,6 +10,6 @@ namespace Onpoint.Store.Application.DTOs.ProductAttribute
         public AttributeValueType ValueType { get; set; } = AttributeValueType.Text;
 
 
-        public List<int> CategoryIds { get; set; } = new();
+
     }
 }

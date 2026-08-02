@@ -3,7 +3,7 @@ using Onpoint.Store.Application.DTOs.Product.BranchManger;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
 
-namespace Onpoint.Store.Application.Validators.Product
+namespace Onpoint.Store.Application.Validators.Product.Variant
 {
     public class CreateProductVariantByBranchManagerDtoValidator : AbstractValidator<CreateProductVariantByBranchManagerDto>
     {

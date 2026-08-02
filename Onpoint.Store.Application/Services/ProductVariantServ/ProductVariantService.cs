@@ -125,10 +125,13 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 Sku = skuToUse
             };
 
+
             // Barcode
             if (dto.BarcodeMode is not null)
             {
-                variant.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual ? dto.Barcode : _barcodeService.GenerateValue();
+                variant.Barcode = dto.BarcodeMode == CodeGenerationMode.Manual
+                    ? dto.Barcode
+                    : await GenerateUniqueBarcodeAsync(ct);
 
                 if (!string.IsNullOrEmpty(variant.Barcode))
                 {
@@ -240,12 +243,15 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             }
 
             // QR Code
-            if (dto.QrCodeMode is not null && string.IsNullOrEmpty(variant.QrCodeValue))
+            if (dto.QrCodeMode is not null)
             {
-                variant.QrCodeValue = dto.QrCodeMode == CodeGenerationMode.Manual ? dto.QrCodeValue : _qrCodeService.GenerateValue(variant.Sku);
+                var newQrValue = dto.QrCodeMode == CodeGenerationMode.Manual
+                    ? dto.QrCodeValue
+                    : _qrCodeService.GenerateValue(variant.Sku);
 
-                if (!string.IsNullOrEmpty(variant.QrCodeValue))
+                if (newQrValue != variant.QrCodeValue)
                 {
+                    variant.QrCodeValue = newQrValue;
                     byte[] qrBytes = _qrCodeService.GenerateImage(variant.QrCodeValue);
                     using var qrStream = new MemoryStream(qrBytes);
                     var qrUpload = await _mediaService.UploadProductImageAsync(new DTOs.Media.FileUploadDto
@@ -259,11 +265,14 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             }
 
             // Attributes
+            var existingAttrIds = variant.AttributeValues.Select(a => a.Id).ToList();
+            _unitOfWork.VariantAttributes.RemoveRange(
+                variant.AttributeValues.Where(a => true));
             variant.AttributeValues.Clear();
+
             foreach (var a in dto.Attributes)
                 variant.AttributeValues.Add(new VariantAttributeValue { ProductAttributeId = a.ProductAttributeId, Value = a.Value });
 
-            // Stocks
             foreach (var bs in dto.BranchStocks)
             {
                 var stock = variant.Stocks.FirstOrDefault(s => s.BranchId == bs.BranchId);
@@ -302,18 +311,14 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
             if (variant is null || variant.ProductId != productId)
                 return _resultHandler.NotFound<string>("Variant not found for this product.");
 
-            // ⚠️ Check if this is the last variant - product must have at least one
             var product = await _unitOfWork.Products.GetByIdWithVariantsAsync(productId, ct);
             var activeVariantsCount = product?.Variants.Count(v => v.IsActive && v.Id != variantId) ?? 0;
 
             if (activeVariantsCount == 0)
                 return _resultHandler.BadRequest<string>("Cannot delete the last variant. Product must have at least one variant.");
 
-            variant.IsDeleted = true;
-            variant.IsActive = false;
-            variant.UpdatedAt = DateTime.UtcNow;
 
-            _unitOfWork.ProductVariants.Update(variant);
+            _unitOfWork.ProductVariants.Remove(variant);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Success<string>("Variant deleted successfully.");
@@ -372,6 +377,17 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 }).ToList() ?? new List<VariantAttributeValueDto>()
 
             };
+        }
+        private async Task<string> GenerateUniqueBarcodeAsync(CancellationToken ct, int maxAttempts = 5)
+        {
+            for (var i = 0; i < maxAttempts; i++)
+            {
+                var candidate = _barcodeService.GenerateValue();
+                var existing = await _unitOfWork.ProductVariants.GetExistingBarcodesAsync(new List<string> { candidate }, ct);
+                if (!existing.Any())
+                    return candidate;
+            }
+            throw new InvalidOperationException("Failed to generate a unique barcode after multiple attempts.");
         }
     }
 }

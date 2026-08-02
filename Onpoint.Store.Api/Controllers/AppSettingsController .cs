@@ -7,6 +7,7 @@ namespace Onpoint.Store.Api.Controllers
 {
     [Route("api/settings")]
     [ApiController]
+    [Authorize(Roles = "SuperAdmin" + "," + "ONPointManager")]
     public class AppSettingsController : ControllerBase
     {
         private readonly IAppSettingsService _appSettingsService;

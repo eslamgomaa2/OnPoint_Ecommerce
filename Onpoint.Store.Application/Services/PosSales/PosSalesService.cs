@@ -174,7 +174,7 @@ namespace Onpoint.Store.Application.Services.PosSales
                     Id = oi.Id,
                     ProductName = oi.ProductName,
                     ProductImageUrl = oi.ProductImageUrl,
-                    VariantDescription = oi.VariantDescription,
+                    ProductDescription = oi.VariantDescription,
                     Sku = oi.ProductVariant?.Sku ?? string.Empty,
                     UnitPrice = oi.UnitPrice,
                     Quantity = oi.Quantity,
@@ -254,7 +254,22 @@ namespace Onpoint.Store.Application.Services.PosSales
                 return _resultHandler.Unauthorized<RefundDto>(ex.Message);
             }
         }
+        /*  public async Task<ServiceResult<SalesReceiptPreviewDto>> GetReceiptAsync(int orderId, CancellationToken ct = default)
+          {
+              var order = await _unitOfWork.Orders.GetByIdAsync(orderId,
+                  include: q => q.Include(o => o.OrderItems)
+                                 .ThenInclude(oi => oi.ProductVariant)
+                                 .Include(o => o.Customer)
+                                 .Include(o => o.Cashier)
+                                 .Include(o => o.Branch),
+                  ct: ct);
 
+              if (order == null)
+                  return _resultHandler.NotFound<SalesReceiptPreviewDto>("Order not found.");
+
+              var receipt = _mapper.Map<SalesReceiptPreviewDto>(order);
+              return _resultHandler.Success(receipt);
+          }*/
         public async Task<ServiceResult<SalesReceiptPreviewDto>> GetReceiptAsync(int orderId, CancellationToken ct = default)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(orderId,
@@ -280,6 +295,8 @@ namespace Onpoint.Store.Application.Services.PosSales
                 {
                     ProductName = oi.ProductName,
                     Sku = oi.ProductVariant?.Sku ?? string.Empty,
+                    ProductDescription = oi.VariantDescription,
+                    ProductImageUrl = oi.ProductImageUrl,
                     Quantity = oi.Quantity,
                     UnitPrice = oi.UnitPrice,
                     Total = oi.TotalPrice
@@ -291,15 +308,15 @@ namespace Onpoint.Store.Application.Services.PosSales
                 AmountReceived = order.AmountReceived,
                 Change = order.Change,
                 Payments = new List<PaymentSummaryDto>
-                {
-                    new PaymentSummaryDto
-                    {
-                        Method = order.PaymentMethod.ToString(),
-                        TotalPaid = order.TotalAmount,
-                        AmountReceived = order.AmountReceived,
-                        Change = order.Change
-                    }
-                },
+                 {
+                     new PaymentSummaryDto
+                     {
+                         Method = order.PaymentMethod.ToString(),
+                         TotalPaid = order.TotalAmount,
+                         AmountReceived = order.AmountReceived,
+                         Change = order.Change
+                     }
+                 },
                 QrCodeData = order.QRCode
             };
 

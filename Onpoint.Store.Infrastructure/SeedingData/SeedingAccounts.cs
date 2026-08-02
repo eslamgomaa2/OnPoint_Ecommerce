@@ -42,7 +42,40 @@ namespace Onpoint.Store.Infrastructure.SeedingData
                 throw new Exception($"Failed to assign Admin role: {errors}");
             }
         }
+        public static async Task SeedONPointManagerAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
+        {
+            const string ONPointManagerEmail = "ONPointManager@Gmail.com";
+            const string ONPointManagerPassword = "ONPointManager@123456";
 
+            var ONPointManagerExists = await userManager.FindByEmailAsync(ONPointManagerEmail);
+            if (ONPointManagerExists is not null)
+                return;
+
+            var ONPointManager = new ApplicationUser
+            {
+                FirstName = "OnPoint",
+                LastName = "Manager",
+                UserName = "ONPoint_Manager",
+                Email = ONPointManagerEmail,
+                EmailConfirmed = true,
+                IsActive = true,
+            };
+
+            var result = await userManager.CreateAsync(ONPointManager, ONPointManagerPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+
+                throw new Exception($"Failed to seed ONPointManager account: {errors}");
+            }
+
+            var roleResult = await userManager.AddToRoleAsync(ONPointManager, "ONPointManager");
+            if (!roleResult.Succeeded)
+            {
+                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to assign ONPointManager role: {errors}");
+            }
+        }
 
 
         public static async Task SeedCashierAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context)

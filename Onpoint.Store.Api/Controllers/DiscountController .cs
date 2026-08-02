@@ -21,9 +21,21 @@ public class DiscountController : ControllerBase
         var result = await _discountService.AddDiscountAsync(dto, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] DiscountFilterRequest filter, CancellationToken ct = default)
+    {
+        var result = await _discountService.GetAllAsync(filter, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
+
+    [HttpPut("{discountId}")]
+    public async Task<IActionResult> Update(int discountId, [FromBody] UpdateDiscountDto dto, CancellationToken ct = default)
+    {
 
 
-
+        var result = await _discountService.UpdateDiscountAsync(discountId, dto, ct);
+        return StatusCode((int)result.HttpStatusCode, result);
+    }
 
 
     [HttpPatch("{discountId}/deactivate")]

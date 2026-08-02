@@ -9,6 +9,6 @@ namespace Onpoint.Store.Application.Services.CouponServ
         Task<ServiceResult<CouponDto>> UpdateAsync(int id, UpdateCouponDto dto, CancellationToken ct = default);
         Task<ServiceResult<bool>> DeleteAsync(int id, CancellationToken ct = default);
         Task<ServiceResult<CouponDto>> GetByIdAsync(int id, CancellationToken ct = default);
-        Task<ServiceResult<IEnumerable<CouponDto>>> GetAllAsync(CancellationToken ct = default);
+        Task<ServiceResult<PagedResult<CouponDto>>> GetAllAsync(CouponFilterRequest filter, CancellationToken ct = default);
     }
 }

@@ -16,9 +16,9 @@ public class CouponController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ServiceResult<IEnumerable<CouponDto>>>> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] CouponFilterRequest filter, CancellationToken ct = default)
     {
-        var result = await _couponService.GetAllAsync();
+        var result = await _couponService.GetAllAsync(filter, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 

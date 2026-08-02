@@ -10,5 +10,6 @@ namespace Onpoint.Store.Domin.Repositories
         Task<bool> KeyExistsAsync(string key, int? excludeId = null, CancellationToken ct = default);
         Task<List<Category>> GetCategoriesByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default);
         Task<bool> IsInUseAsync(int id, CancellationToken ct = default);
+        Task<bool> ExistsAsync(int id, CancellationToken ct);
     }
 }

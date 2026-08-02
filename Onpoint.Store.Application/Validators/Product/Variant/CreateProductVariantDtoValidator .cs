@@ -56,6 +56,22 @@ public class CreateProductVariantDtoValidator : AbstractValidator<CreateProductV
             .Must(a => a == null || a.Count <= 30)
             .WithMessage("Too many attributes for a single variant.");
 
+        RuleFor(x => x.Attributes)
+            .Must(a => a == null || a.Select(v => v.ProductAttributeId).Distinct().Count() == a.Count)
+            .WithMessage("Duplicate attribute assigned to the same variant.");
+
+        RuleForEach(x => x.Attributes)
+            .ChildRules(a =>
+            {
+                a.RuleFor(v => v.ProductAttributeId)
+                    .MustAsync(async (id, ct) => await unitOfWork.ProductAttributes.ExistsAsync(id, ct))
+                    .WithMessage(v => $"Attribute with id {v.ProductAttributeId} does not exist.");
+
+                a.RuleFor(v => v.Value)
+                    .NotEmpty()
+                    .WithMessage("Attribute value cannot be empty.");
+            });
+
         RuleForEach(x => x.BranchStocks)
             .ChildRules(bs =>
             {
@@ -72,5 +88,9 @@ public class CreateProductVariantDtoValidator : AbstractValidator<CreateProductV
                     .MustAsync(async (id, ct) => await unitOfWork.Branches.ExistsAsync(id, ct))
                     .WithMessage("Branch not found.");
             });
+
+        RuleFor(x => x.BranchStocks)
+            .Must(b => b == null || b.Select(x => x.BranchId).Distinct().Count() == b.Count)
+            .WithMessage("Duplicate branch entries in stock list.");
     }
 }
