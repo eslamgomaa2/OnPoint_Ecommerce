@@ -8,6 +8,40 @@ namespace Onpoint.Store.Infrastructure.SeedingData
 {
     public static class SeedingAccounts
     {
+        public static async Task SeedAppleAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
+        {
+            const string appleEmail = "apple@gmail.com";
+            const string applePassword = "Abood@2002";
+
+            var appleExists = await userManager.FindByEmailAsync(appleEmail);
+            if (appleExists is not null)
+                return;
+
+            var apple = new ApplicationUser
+            {
+                FirstName = "Apple",
+                LastName = "Account",
+                UserName = "Apple_Account",
+                Email = appleEmail,
+                EmailConfirmed = true,
+                IsActive = true,
+            };
+
+            var result = await userManager.CreateAsync(apple, applePassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+
+                throw new Exception($"Failed to seed apple account: {errors}");
+            }
+
+            var roleResult = await userManager.AddToRoleAsync(apple, "Customer");
+            if (!roleResult.Succeeded)
+            {
+                var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to assign Customer role: {errors}");
+            }
+        }
         public static async Task SeedAdminAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context)
         {
             const string adminEmail = "Admin@Gmail.com";

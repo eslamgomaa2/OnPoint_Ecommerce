@@ -15,7 +15,6 @@ public class ProductAttributeController : ControllerBase
 
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<IActionResult> GetAll(CancellationToken ct = default)
     {
         var result = await _attributeService.GetAllAsync(ct);
@@ -30,7 +29,7 @@ public class ProductAttributeController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "ONPointManager")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProductAttributeDto dto, CancellationToken ct = default)
     {
@@ -38,7 +37,7 @@ public class ProductAttributeController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "ONPointManager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProductAttributeDto dto, CancellationToken ct = default)
     {
@@ -46,7 +45,7 @@ public class ProductAttributeController : ControllerBase
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "ONPointManager")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
