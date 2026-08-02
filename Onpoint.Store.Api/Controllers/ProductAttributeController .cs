@@ -15,9 +15,11 @@ public class ProductAttributeController : ControllerBase
 
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken ct = default)
+    public async Task<IActionResult> GetAll(
+           [FromQuery] ProductAttributeFilter filter,
+           CancellationToken ct = default)
     {
-        var result = await _attributeService.GetAllAsync(ct);
+        var result = await _attributeService.GetAllWithCategoriesAsync(filter, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 

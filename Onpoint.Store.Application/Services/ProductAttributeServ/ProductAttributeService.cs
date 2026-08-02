@@ -28,10 +28,32 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             _updateValidator = updateValidator;
         }
 
-        public async Task<ServiceResult<List<ProductAttributeDto>>> GetAllAsync(CancellationToken ct = default)
+        public async Task<ServiceResult<PagedResult<ProductAttributeDto>>> GetAllWithCategoriesAsync(
+     ProductAttributeFilter filter,
+     CancellationToken ct = default)
         {
-            var attributes = await _unitOfWork.ProductAttributes.GetAllWithCategoriesAsync(ct);
-            return _resultHandler.Success<List<ProductAttributeDto>>(_mapper.Map<List<ProductAttributeDto>>(attributes));
+            var (items, totalCount) = await _unitOfWork.ProductAttributes
+                .GetAllWithCategoriesAsync(
+                    filter.PageNumber,
+                    filter.PageSize,
+                    filter.SearchTerm,
+                    filter.IsActive,
+                    filter.ValueType,
+                    ct);
+
+            var dtos = items.Select(a => new ProductAttributeDto
+            {
+                Id = a.Id,
+                Name = a.Name,
+                Key = a.Key,
+                IsActive = a.IsActive,
+                ValueType = a.ValueType,
+
+            }).ToList();
+
+            var pagedResult = PagedResult<ProductAttributeDto>.Create(dtos, totalCount, filter.PageNumber, filter.PageSize);
+
+            return _resultHandler.Success(pagedResult);
         }
 
         public async Task<ServiceResult<ProductAttributeDto>> GetByIdAsync(int id, CancellationToken ct = default)
@@ -78,13 +100,7 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             existing.Key = dto.Key;
             existing.ValueType = dto.ValueType;
 
-            existing.Categories.Clear();
-            if (dto.CategoryIds.Any())
-            {
-                var categories = await _unitOfWork.ProductAttributes.GetCategoriesByIdsAsync(dto.CategoryIds, ct);
-                foreach (var category in categories)
-                    existing.Categories.Add(category);
-            }
+
 
             existing.UpdatedAt = DateTime.UtcNow;
 

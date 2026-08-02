@@ -5,7 +5,9 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
 {
     public interface IProductAttributeService
     {
-        Task<ServiceResult<List<ProductAttributeDto>>> GetAllAsync(CancellationToken ct = default);
+        Task<ServiceResult<PagedResult<ProductAttributeDto>>> GetAllWithCategoriesAsync(
+            ProductAttributeFilter filter,
+            CancellationToken ct = default);
         Task<ServiceResult<ProductAttributeDto>> GetByIdAsync(int id, CancellationToken ct = default);
         Task<ServiceResult<ProductAttributeDto>> CreateAsync(CreateProductAttributeDto dto, CancellationToken ct = default);
         Task<ServiceResult<ProductAttributeDto>> UpdateAsync(int id, UpdateProductAttributeDto dto, CancellationToken ct = default);
