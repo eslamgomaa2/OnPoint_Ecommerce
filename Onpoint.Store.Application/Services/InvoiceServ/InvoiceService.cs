@@ -15,7 +15,20 @@ namespace Onpoint.Store.Application.Services.InvoiceServ
             _unitOfWork = unitOfWork;
             _serviceResultHandler = serviceResultHandler;
         }
+        public async Task<ServiceResult<InvoiceStatisticsDto>> GetInvoiceStatisticsAsync(int? branchId, CancellationToken ct = default)
+        {
+            var (total, paid, pending, overdue) = await _unitOfWork.Invoices.GetInvoiceStatisticsAsync(branchId, ct);
 
+            var dto = new InvoiceStatisticsDto
+            {
+                TotalInvoices = total,
+                Paid = paid,
+                Pending = pending,
+                Overdue = overdue
+            };
+
+            return _serviceResultHandler.Success(dto);
+        }
         public async Task<ServiceResult<PagedResult<InvoiceListItemDto>>> GetInvoicesPagedAsync(
             int? branchId,
             InvoiceFilter filter,

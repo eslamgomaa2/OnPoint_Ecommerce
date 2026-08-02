@@ -13,5 +13,8 @@ namespace Onpoint.Store.Application.Services.InvoiceServ
             int id,
             int? branchId = null,
             CancellationToken ct = default);
+        public Task<ServiceResult<InvoiceStatisticsDto>> GetInvoiceStatisticsAsync(int? branchId, CancellationToken ct = default);
+
+
     }
 }
