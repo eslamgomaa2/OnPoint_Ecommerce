@@ -47,7 +47,7 @@ namespace Onpoint.Store.Api.Controllers
 
 
         [HttpPost]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
         public async Task<IActionResult> Add(int productId, [FromBody] CreateProductVariantDto dto, CancellationToken ct = default)
         {
             var result = await _variantService.AddVariantAsync(productId, dto, ct);
@@ -56,7 +56,7 @@ namespace Onpoint.Store.Api.Controllers
 
 
         [HttpPut("{variantId}")]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
         public async Task<IActionResult> Update(int productId, int variantId, [FromBody] UpdateProductVariantDto dto, CancellationToken ct = default)
         {
             var result = await _variantService.UpdateVariantAsync(productId, variantId, dto, ct);
@@ -65,7 +65,7 @@ namespace Onpoint.Store.Api.Controllers
 
 
         [HttpDelete("{variantId}")]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
         public async Task<IActionResult> Delete(int productId, int variantId, CancellationToken ct = default)
         {
             var result = await _variantService.DeleteVariantAsync(productId, variantId, ct);
@@ -74,7 +74,7 @@ namespace Onpoint.Store.Api.Controllers
 
 
         [HttpPatch("{variantId}/toggle-status")]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = "SuperAdmin" + "," + "BranchManager")]
         public async Task<IActionResult> ToggleStatus(int productId, int variantId, CancellationToken ct = default)
         {
             var result = await _variantService.ToggleVariantStatusAsync(productId, variantId, ct);
