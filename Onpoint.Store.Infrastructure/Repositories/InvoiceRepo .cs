@@ -66,7 +66,25 @@ namespace Onpoint.Store.Infrastructure.Repositories
 
             return (items, totalCount);
         }
+        public async Task<(int Total, int Paid, int Pending, int Overdue)> GetInvoiceStatisticsAsync(int? branchId, CancellationToken ct = default)
+        {
+            var query = _dbset
+                .AsNoTracking()
+                .Where(o => !string.IsNullOrWhiteSpace(o.InvoiceNumber))
+                .AsQueryable();
 
+            if (branchId.HasValue)
+                query = query.Where(o => o.BranchId == branchId.Value);
+
+            var oneMonthAgo = DateTime.UtcNow.AddMonths(-1);
+
+            var total = await query.CountAsync(ct);
+            var paid = await query.CountAsync(o => o.Status == OrderStatus.Completed, ct);
+            var pending = await query.CountAsync(o => o.Status == OrderStatus.Pending && o.CreatedAt > oneMonthAgo, ct);
+            var overdue = await query.CountAsync(o => o.Status == OrderStatus.Pending && o.CreatedAt <= oneMonthAgo, ct);
+
+            return (total, paid, pending, overdue);
+        }
         public async Task<Order?> GetInvoiceDetailsAsync(int id, CancellationToken ct = default)
         {
             return await _dbset

@@ -17,5 +17,8 @@ namespace Onpoint.Store.Domin.Repositories
     CancellationToken ct = default);
 
         Task<Order?> GetInvoiceDetailsAsync(int id, CancellationToken ct = default);
+        Task<(int Total, int Paid, int Pending, int Overdue)> GetInvoiceStatisticsAsync(
+    int? branchId,
+    CancellationToken ct = default);
     }
 }

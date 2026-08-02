@@ -28,6 +28,13 @@ namespace Onpoint.Store.Api.Controllers
             var result = await _invoiceService.GetInvoicesPagedAsync(branchId, filter, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
+        [HttpGet("statistics")]
+        public async Task<IActionResult> GetStatistics(CancellationToken ct = default)
+        {
+            var (_, branchId) = GetUserAndBranchId();
+            var result = await _invoiceService.GetInvoiceStatisticsAsync(branchId, ct);
+            return StatusCode((int)result.HttpStatusCode, result);
+        }
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetInvoiceDetails(
