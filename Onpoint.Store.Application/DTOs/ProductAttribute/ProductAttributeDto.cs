@@ -7,7 +7,7 @@ namespace Onpoint.Store.Application.DTOs.ProductAttribute
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Key { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
         public AttributeValueType ValueType { get; set; }
-        public List<CategoryBriefDto> Categories { get; set; } = new();
     }
 }

@@ -8,8 +8,7 @@ namespace Onpoint.Store.Application.Mappings
     {
         public ProductAttributeMappingProfile()
         {
-            CreateMap<ProductAttribute, ProductAttributeDto>()
-                .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.Categories));
+            CreateMap<ProductAttribute, ProductAttributeDto>();
 
             CreateMap<Category, CategoryBriefDto>();
 
