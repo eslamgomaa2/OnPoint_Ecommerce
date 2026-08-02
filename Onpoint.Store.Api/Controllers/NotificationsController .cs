@@ -1,5 +1,4 @@
 ﻿using Application.Interfaces;
-using BuildingBlocks.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Notification;
@@ -19,7 +18,7 @@ namespace Onpoint.Store.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetMyNotifications([FromQuery] PaginationRequest request)
+        public async Task<IActionResult> GetMyNotifications([FromQuery] NotificationFilterRequest request)
         {
             var userId = GetCurrentUserId();
             var result = await _service.GetUserNotificationsAsync(userId, request);

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Order;
 using Onpoint.Store.Application.DTOs.PosSales;
 using Onpoint.Store.Application.Services.PosSales;
@@ -7,7 +6,7 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/pos-sales")]
-[Authorize(Roles = "SuperAdmin" + "," + "Cashier " + "," + "BranchManager")]
+//[Authorize(Roles = "SuperAdmin" + "," + "Cashier " + "," + "BranchManager")]
 public class PosSalesController : ControllerBase
 {
     private readonly IPosSalesService _posSalesService;
@@ -23,21 +22,15 @@ public class PosSalesController : ControllerBase
         var result = await _posSalesService.GetPosSalesPagedAsync(filter, branchId, ct);
         return Ok(result);
     }
-    [HttpGet("{orderId:int}/pdf")]
-    public async Task<IActionResult> DownloadPdf(int orderId, CancellationToken ct)
+    [HttpGet("orders/{orderId}/receipt/pdf")]
+    public async Task<IActionResult> DownloadReceiptPdf(int orderId, CancellationToken ct)
     {
         var result = await _posSalesService.GeneratePdfAsync(orderId, ct);
+
         if (!result.Succeeded || result.Data == null)
-            return BadRequest(result);
+            return BadRequest(result.Message ?? "Failed to generate PDF.");
 
-        var fileName = $"invoice-{orderId}.pdf";
-
-        Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{fileName}\"");
-        Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
-        Response.Headers.Append("Pragma", "no-cache");
-        Response.Headers.Append("Expires", "0");
-
-        return File(result.Data, "application/pdf", fileName);
+        return File(result.Data, "application/pdf", "Receipt.pdf");
     }
 
     [HttpGet("export")]

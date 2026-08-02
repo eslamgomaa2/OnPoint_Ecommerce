@@ -49,14 +49,13 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             if (!validationResult.IsValid)
                 throw new ValidationException(validationResult.Errors);
 
+            var keyExists = await _unitOfWork.ProductAttributes.KeyExistsAsync(dto.Key, null, ct);
+            if (keyExists)
+                return _resultHandler.BadRequest<ProductAttributeDto>($"An attribute with the key '{dto.Key}' already exists.");
+
             var attribute = _mapper.Map<Domin.Entities.ProductAttribute>(dto);
 
-            if (dto.CategoryIds.Any())
-            {
-                var categories = await _unitOfWork.ProductAttributes.GetCategoriesByIdsAsync(dto.CategoryIds, ct);
-                foreach (var category in categories)
-                    attribute.Categories.Add(category);
-            }
+
 
             await _unitOfWork.ProductAttributes.AddAsync(attribute, ct);
             await _unitOfWork.SaveChangesAsync(ct);
@@ -108,10 +107,8 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
                 return _resultHandler.BadRequest<string>(
                     "Cannot delete this attribute because it is used by existing products or variants.");
 
-            attribute.IsDeleted = true;
-            attribute.UpdatedAt = DateTime.UtcNow;
 
-            _unitOfWork.ProductAttributes.Update(attribute);
+            _unitOfWork.ProductAttributes.Remove(attribute);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return _resultHandler.Deleted<string>();

@@ -10,7 +10,10 @@ namespace Onpoint.Store.Application.Mappings
     {
         public OrderMappingProfile()
         {
-            CreateMap<OrderItem, SalesOrderItemDto>();
+            CreateMap<OrderItem, SalesOrderItemDto>()
+                .ForMember(dest => dest.Sku, opt => opt.MapFrom(src =>
+                    src.ProductVariant != null ? src.ProductVariant.Sku : string.Empty))
+                .ForMember(dest => dest.Total, opt => opt.MapFrom(src => src.TotalPrice));
 
             CreateMap<Order, PosOrderDto>()
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems))
@@ -22,7 +25,6 @@ namespace Onpoint.Store.Application.Mappings
             CreateMap<Order, OrderDto>()
                 .ForMember(dest => dest.OrderNumber,
                     opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.InvoiceNumber) ? src.InvoiceNumber : src.Id.ToString()));
-
 
             CreateMap<OrderItem, OrderItemDto>();
         }

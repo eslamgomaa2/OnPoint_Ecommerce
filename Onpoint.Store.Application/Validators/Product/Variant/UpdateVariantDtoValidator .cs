@@ -4,7 +4,7 @@ using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
 using System.Text.RegularExpressions;
 
-namespace Onpoint.Store.Application.Validators.Product
+namespace Onpoint.Store.Application.Validators.Product.Variant
 {
     public class UpdateProductVariantDtoValidator : AbstractValidator<UpdateProductVariantDto>
     {
@@ -26,14 +26,14 @@ namespace Onpoint.Store.Application.Validators.Product
                 .WithName("Cost");
 
             RuleFor(x => x.Sku)
-                .NotEmpty()
-                .MaximumLength(50)
-                .Matches(SafeCodeRegex)
-                .WithMessage("SKU can only contain letters, numbers, hyphens and underscores.")
-                .MustAsync(async (dto, sku, ct) =>
-                    !await unitOfWork.ProductVariants.SkuExistsAsync(sku!, excludeVariantId: dto.Id, ct))
-                .WithMessage(v => $"SKU '{v.Sku}' already exists.")
-                .When(x => x.SkuMode == CodeGenerationMode.Manual && !string.IsNullOrEmpty(x.Sku));
+                    .NotEmpty().WithMessage("Manual SKU cannot be empty.")
+                    .MaximumLength(50)
+                    .Matches(SafeCodeRegex)
+                     .WithMessage("SKU can only contain letters, numbers, hyphens and underscores.")
+                     .MustAsync(async (dto, sku, ct) =>
+                     !await unitOfWork.ProductVariants.SkuExistsAsync(sku!, excludeVariantId: dto.Id, ct))
+                       .WithMessage(v => $"SKU '{v.Sku}' already exists.")
+                    .When(x => x.SkuMode == CodeGenerationMode.Manual);
 
             RuleFor(x => x.Barcode)
                 .NotEmpty()
@@ -52,8 +52,20 @@ namespace Onpoint.Store.Application.Validators.Product
                 .When(x => x.QrCodeMode == CodeGenerationMode.Manual && !string.IsNullOrEmpty(x.QrCodeValue));
 
             RuleFor(x => x.Attributes)
-                .Must(a => a == null || a.Count <= 30)
-                .WithMessage("Too many attributes for a single variant.");
+                  .Must(a => a == null || a.Select(v => v.ProductAttributeId).Distinct().Count() == a.Count)
+                        .WithMessage("Duplicate attribute assigned to the same variant.");
+
+            RuleForEach(x => x.Attributes)
+                .ChildRules(a =>
+                {
+                    a.RuleFor(v => v.ProductAttributeId)
+                        .MustAsync(async (id, ct) => await unitOfWork.ProductAttributes.ExistsAsync(id, ct))
+                        .WithMessage(v => $"Attribute with id {v.ProductAttributeId} does not exist.");
+
+                    a.RuleFor(v => v.Value)
+                        .NotEmpty()
+                        .WithMessage("Attribute value cannot be empty.");
+                });
 
             RuleForEach(x => x.BranchStocks)
                 .ChildRules(bs =>

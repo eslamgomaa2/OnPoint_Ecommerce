@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
+using Onpoint.Store.Application.Validators.Product.Variant;
 using Onpoint.Store.Domin.Repositories;
 
 namespace Onpoint.Store.Application.Validators.Product

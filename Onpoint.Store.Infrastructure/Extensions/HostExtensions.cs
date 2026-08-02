@@ -40,6 +40,8 @@ namespace Onpoint.Store.Infrastructure.Extensions
                 logger.LogInformation("Default accounts seeded successfully");
                 await SeedingAccounts.SeedBranchManagerAsync(userManager, dbContext);
                 logger.LogInformation("Default accounts seeded successfully");
+                await SeedingAccounts.SeedONPointManagerAsync(userManager, dbContext);
+                logger.LogInformation("Default accounts seeded successfully");
 
 
             }

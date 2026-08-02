@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.ProductVariant;
+using Onpoint.Store.Application.Validators.Product.Variant;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
 

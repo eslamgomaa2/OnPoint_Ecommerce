@@ -27,7 +27,7 @@ public class NotificationService : INotificationService
 
     public async Task<ServiceResult<PagedResult<NotificationDto>>> GetUserNotificationsAsync(
      int userId,
-     PaginationRequest request)
+     NotificationFilterRequest request)
     {
         var (items, totalCount) = await unitOfWork.Notifications.GetByUserIdAsync(
             userId: userId,

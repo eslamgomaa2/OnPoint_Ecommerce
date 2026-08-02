@@ -14,9 +14,8 @@ namespace Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration
         {
             public string GenerateValue()
             {
-                return DateTime.UtcNow.Ticks.ToString()[^12..];
+                return Guid.NewGuid().ToString("N")[..12].ToUpper();
             }
-
             public byte[] GenerateImage(string value)
             {
                 var writer = new BarcodeWriterPixelData

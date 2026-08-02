@@ -29,6 +29,7 @@ using Onpoint.Store.Application.Services.ContactMessage;
 using Onpoint.Store.Application.Services.CouponServ;
 using Onpoint.Store.Application.Services.Customer;
 using Onpoint.Store.Application.Services.DiscountServ;
+using Onpoint.Store.Application.Services.InvoiceServ;
 using Onpoint.Store.Application.Services.MedioServices;
 using Onpoint.Store.Application.Services.OrderServ;
 using Onpoint.Store.Application.Services.PaymentServ;
@@ -88,6 +89,7 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IStaticPageService, StaticPageService>();
             services.AddScoped<IAppSettingsService, AppSettingsService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IInvoiceService, InvoiceService>();
 
 
 

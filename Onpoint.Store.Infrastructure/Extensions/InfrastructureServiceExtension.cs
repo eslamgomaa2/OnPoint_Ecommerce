@@ -45,6 +45,7 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<IAppSettingsRepository, AppSettingsRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IShippingRepo, ShippingRepo>();
+            services.AddScoped<IInvoiceRepo, InvoiceRepo>();
 
 
 

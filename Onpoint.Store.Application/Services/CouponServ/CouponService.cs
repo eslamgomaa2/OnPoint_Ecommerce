@@ -14,19 +14,22 @@ namespace Onpoint.Store.Application.Services.CouponServ
         private readonly ServiceResultHandler _serviceResultHandler;
         private readonly IValidator<CreateCouponDto> _createCouponValidator;
         private readonly IValidator<UpdateCouponDto> _updateCouponValidator;
+        private readonly ServiceResultHandler _resultHandler;
 
         public CouponService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ServiceResultHandler serviceResultHandler,
             IValidator<CreateCouponDto> createCouponValidator,
-            IValidator<UpdateCouponDto> updateCouponValidator)
+            IValidator<UpdateCouponDto> updateCouponValidator,
+            ServiceResultHandler resultHandler)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _serviceResultHandler = serviceResultHandler;
             _createCouponValidator = createCouponValidator;
             _updateCouponValidator = updateCouponValidator;
+            _resultHandler = resultHandler;
         }
 
         public async Task<ServiceResult<CouponDto>> CreateAsync(CreateCouponDto dto, CancellationToken ct = default)
@@ -79,11 +82,28 @@ namespace Onpoint.Store.Application.Services.CouponServ
             return _serviceResultHandler.Success(couponDto);
         }
 
-        public async Task<ServiceResult<IEnumerable<CouponDto>>> GetAllAsync(CancellationToken ct = default)
+        public async Task<ServiceResult<PagedResult<CouponDto>>> GetAllAsync(
+     CouponFilterRequest filter,
+     CancellationToken ct = default)
         {
-            var coupons = await _unitOfWork.Coupons.GetAllAsync(ct: ct);
-            var couponsDto = _mapper.Map<IEnumerable<CouponDto>>(coupons);
-            return _serviceResultHandler.Success(couponsDto);
+            var (items, totalCount) = await _unitOfWork.Coupons.GetAllPagedAsync(
+                filter.SearchTerm,
+                filter.IsActive,
+                filter.DiscountType,
+                filter.PageNumber,
+                filter.PageSize,
+                ct);
+
+            var dtos = _mapper.Map<List<CouponDto>>(items);
+
+            var pagedResult = PagedResult<CouponDto>.Create(
+                dtos,
+                totalCount,
+                filter.PageNumber,
+                filter.PageSize);
+
+            return _resultHandler.Success(pagedResult);
         }
+
     }
 }

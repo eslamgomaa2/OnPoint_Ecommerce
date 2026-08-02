@@ -9,6 +9,7 @@ namespace Onpoint.Store.Domin.Repositories
     public interface IUnitOfWork
     {
         IShippingRepo Shipping { get; }
+        IInvoiceRepo Invoices { get; }
         ICustomerRepository Customers { get; }
         INotificationRepository Notifications { get; }
         IStaticPageRepository StaticPages { get; }
@@ -21,8 +22,10 @@ namespace Onpoint.Store.Domin.Repositories
         IOrderRepo Orders { get; }
         IRefundRepository Refunds { get; }
         IGenericRepository<OrderItem, int> OrderItems { get; }
+
+        IGenericRepository<VariantAttributeValue, int> VariantAttributes { get; }
         IPaymentTransactionRepository PaymentTransactions { get; }
-        IPossalesRepository Invoices { get; }
+        IPossalesRepository PosSales { get; }
         IWishlistRepository Wishlists { get; }
         IReviewRepository Reviews { get; }
         IApplicationUserRepo ApplicationUsers { get; }

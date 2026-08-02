@@ -31,5 +31,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
             return await _context.Set<ProductAttributeValue>().AnyAsync(v => v.ProductAttributeId == id, ct)
                 || await _context.Set<VariantAttributeValue>().AnyAsync(v => v.ProductAttributeId == id, ct);
         }
+
+        public Task<bool> ExistsAsync(int id, CancellationToken ct)
+        {
+            return _dbset.AnyAsync(a => a.Id == id, ct);
+        }
     }
 }

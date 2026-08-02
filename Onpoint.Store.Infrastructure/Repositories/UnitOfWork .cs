@@ -16,6 +16,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private IShippingRepo? _shipping;
         private IDbContextTransaction? _currentTransaction;
         private INotificationRepository? _notifications;
+        private IInvoiceRepo? _invoice;
         private IBrandRepository? _brands;
         private ICategoryRepository? _categories;
         private IProductRepository? _products;
@@ -25,10 +26,11 @@ namespace Onpoint.Store.Infrastructure.Repositories
         private ICouponRepository? _couponRepository;
         private IOrderRepo? _orders;
         private IPaymentTransactionRepository? _paymentTransactions;
-        private IPossalesRepository? _invoices;
+        private IPossalesRepository? _possales;
         private IWishlistRepository? _wishlists;
         private IReviewRepository? _reviews;
         private IGenericRepository<OrderItem, int>? _orderItems;
+        private IGenericRepository<VariantAttributeValue, int>? _variantAttribute;
         private IGenericRepository<RefundItem, int>? _refundItems;
         private IGenericRepository<ProductShipping, int>? _productShippings;
         private IRefreshTokenRepository? _refreshTokens;
@@ -55,7 +57,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         }
 
         public IPaymentTransactionRepository PaymentTransactions => _paymentTransactions ??= new PaymentTransactionRepository(_context);
-        public IPossalesRepository Invoices => _invoices ??= new PosSalesRepository(_context);
+        public IPossalesRepository PosSales => _possales ??= new PosSalesRepository(_context);
         public ICategoryRepository Categories => _categories ??= new CategoryRepository(_context);
         public IProductRepository Products => _products ??= new ProductRepository(_context);
         public ICartRepository Carts => _carts ??= new CartRepository(_context);
@@ -101,6 +103,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
         public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
 
         public IShippingRepo Shipping => _shipping ??= new ShippingRepo(_context);
+
+        public IGenericRepository<VariantAttributeValue, int> VariantAttributes => _variantAttribute ??= new GenericRepository<VariantAttributeValue, int>(_context);
+
+        IInvoiceRepo IUnitOfWork.Invoices => _invoice ??= new InvoiceRepo(_context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
