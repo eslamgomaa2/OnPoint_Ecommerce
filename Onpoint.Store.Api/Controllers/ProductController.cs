@@ -27,14 +27,22 @@ public class ProductController : ControllerBase
             return null;
         return userId;
     }
+
+
     [HttpGet]
     public async Task<ActionResult<ServiceResult<PagedResult<ProductListItemDto>>>> GetFiltered(
-           [FromQuery] ProductFilterRequestDto filter,
-           CancellationToken ct = default)
+     [FromQuery] ProductFilterRequestDto filter,
+     CancellationToken ct = default)
     {
-        var result = await productService.GetFilteredAsync(filter, ct);
+        bool isSuperAdmin = User.IsInRole("SuperAdmin");
+
+        var result = await productService.GetFilteredAsync(filter, isSuperAdmin, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
+
+
+
+
     [HttpGet("paged")]
     public async Task<IActionResult> GetFilteredPaged(
      [FromQuery] PaginationRequest request,

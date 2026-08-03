@@ -35,7 +35,15 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }
-
+    public class StoreSettingsConfiguration : IEntityTypeConfiguration<StoreSettings>
+    {
+        public void Configure(EntityTypeBuilder<StoreSettings> builder)
+        {
+            builder.HasIndex(s => s.Key).IsUnique();
+            builder.Property(s => s.Key).HasMaxLength(100);
+            builder.Property(s => s.Value).HasMaxLength(5000);
+        }
+    }
     public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
     {
         public void Configure(EntityTypeBuilder<Coupon> builder)

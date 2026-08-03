@@ -6,6 +6,8 @@ namespace Onpoint.Store.Domin.Enums
         Active,
         OnHold,
         Completed,
-        Cancelled
+        Cancelled,
+        PendingPayment,
+        PaymentFailed
     }
 }

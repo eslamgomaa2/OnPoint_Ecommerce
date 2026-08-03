@@ -16,16 +16,17 @@ namespace Onpoint.Store.Domin.Repositories
 
 
         Task<(IReadOnlyList<Product> Items, int TotalCount)> GetFilteredAsync(
-            int? categoryId,
-            int? minRating,
-            decimal? minPrice,
-            decimal? maxPrice,
-            bool? inStockOnly,
-            string? search,
-            SortBy sortBy,
-            int pageNumber,
-            int pageSize,
-            CancellationToken ct = default);
+      int? categoryId,
+      int? minRating,
+      decimal? minPrice,
+      decimal? maxPrice,
+      bool? inStockOnly,
+      string? search,
+      SortBy sortBy,
+      int pageNumber,
+      int pageSize,
+      ProductStatus? status,
+      CancellationToken ct = default);
         Task<Product?> GetBySkuAsync(string sku, CancellationToken ct = default);
         Task<List<Product>> SearchBySkuAsync(string skuTerm, CancellationToken ct = default);
         Task<(int InStock, int LowStock, int OutOfStock, int Total)> GetStockCountsAsync(int? branchId, CancellationToken ct = default);

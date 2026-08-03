@@ -31,7 +31,9 @@ namespace Onpoint.Store.Application.Mappings
             CreateMap<PaymentTransaction, PaymentTransactionDto>();
 
             CreateMap<Order, PosOrderDto>()
+
                 .ForMember(dest => dest.CashierName, opt => opt.MapFrom(src => src.Cashier != null ? src.Cashier.UserName : string.Empty))
+                .ForMember(dest => dest.OrderNumber, opt => opt.MapFrom(src => src.Id != null))
                 .ForMember(dest => dest.BranchName, opt => opt.MapFrom(src => src.Branch != null ? src.Branch.Name : string.Empty))
                 .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? $"{src.Customer.FName} {src.Customer.LName}" : string.Empty))
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems));

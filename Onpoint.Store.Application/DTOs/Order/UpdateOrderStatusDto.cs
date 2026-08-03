@@ -5,7 +5,8 @@
     {
         Pending = 0,
         Completed = 1,
-        Refunded = 2
+        Refunded = 2,
+        Cancelled = 4
     }
 
 }

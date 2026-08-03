@@ -3,6 +3,7 @@ using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Onpoint.Store.Application.Services.AuthServices.ExternalAuthService;
+using Onpoint.Store.Domain.Repositories;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Repositories;
 using Onpoint.Store.Domin.Repositories.Onpoint.Store.Application.Interfaces.Repositories;
@@ -46,6 +47,8 @@ namespace Onpoint.Store.Infrastructure.Extensions
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IShippingRepo, ShippingRepo>();
             services.AddScoped<IInvoiceRepo, InvoiceRepo>();
+            services.AddScoped<IAccountingRepository, AccountingRepository>();
+            services.AddScoped<IStoreSettingsRepository, StoreSettingsRepository>();
 
 
 

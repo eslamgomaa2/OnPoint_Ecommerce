@@ -20,6 +20,7 @@ namespace Onpoint.Store.Application.DTOs.PosSession
         public string BranchName { get; set; } = string.Empty;
         public string CashierName { get; set; } = string.Empty;
         public string? CustomerPhone { get; set; }
+        public string? PaymentUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public ICollection<SalesOrderItemDto> Items { get; set; } = new List<SalesOrderItemDto>();
     }

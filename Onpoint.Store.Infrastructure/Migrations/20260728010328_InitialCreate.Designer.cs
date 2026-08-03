@@ -1085,7 +1085,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ProductDescription")
+                    b.Property<string>("VariantDescription")
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
@@ -1845,7 +1845,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ProductDescription")
+                    b.Property<string>("VariantDescription")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");

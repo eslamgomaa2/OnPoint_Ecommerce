@@ -45,6 +45,7 @@ namespace Onpoint.Store.Infrastructure.Data.Context
         public DbSet<ContactMessage> ContactMessages { get; set; }
         public DbSet<AppSettingsInfo> AppSettingsInfo { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<StoreSettings> StoreSettings { get; set; }
 
 
 

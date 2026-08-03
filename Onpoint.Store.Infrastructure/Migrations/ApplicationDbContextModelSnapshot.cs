@@ -1112,7 +1112,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ProductDescription")
+                    b.Property<string>("VariantDescription")
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
@@ -1872,7 +1872,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ProductDescription")
+                    b.Property<string>("VariantDescription")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1979,6 +1979,27 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .HasFilter("[ProductVariantId] IS NOT NULL");
 
                     b.ToTable("Stocks");
+                });
+
+            modelBuilder.Entity("Onpoint.Store.Domin.Entities.StoreSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StoreSettings");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.VariantAttributeValue", b =>
