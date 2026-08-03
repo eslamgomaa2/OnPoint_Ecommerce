@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using BuildingBlocks.Results;
 using FluentValidation;
+using Ganss.Xss;
 using Onpoint.Store.Application.DTOs.StaticPage;
 using Onpoint.Store.Application.DTOs.StaticPages;
 using Onpoint.Store.Domin.Enums;
@@ -57,6 +58,8 @@ namespace Onpoint.Store.Application.Services.StaticPage
             return _resultHandler.Success(dto);
         }
 
+
+
         public async Task<ServiceResult<StaticPageReadDto>> CreateAsync(CreateStaticPageDto dto, CancellationToken ct = default)
         {
             await _createValidator.ValidateAndThrowAsync(dto, cancellationToken: ct);
@@ -64,6 +67,10 @@ namespace Onpoint.Store.Application.Services.StaticPage
             var existing = await _unitOfWork.StaticPages.GetByTypeAsync(dto.Type, ct);
             if (existing != null)
                 return _resultHandler.BadRequest<StaticPageReadDto>($"A page with type '{dto.Type}' already exists.");
+
+
+            var sanitizer = new HtmlSanitizer();
+            dto.Content = sanitizer.Sanitize(dto.Content);
 
             var entity = _mapper.Map<Onpoint.Store.Domin.Entities.StaticPage>(dto);
             await _unitOfWork.StaticPages.AddAsync(entity, ct);

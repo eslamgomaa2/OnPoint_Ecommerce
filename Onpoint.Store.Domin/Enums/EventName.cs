@@ -5,6 +5,7 @@
         OrderCreated,
         PaymentReceived,
         ReceiptPrinted,
-        Refunded
+        Refunded,
+        PaymentFailed
     }
 }

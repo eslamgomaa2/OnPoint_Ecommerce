@@ -8,6 +8,7 @@ using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.Interfaces;
 using Onpoint.Store.Application.Mappings;
 using Onpoint.Store.Application.Services;
+using Onpoint.Store.Application.Services.Accounting;
 using Onpoint.Store.Application.Services.AddressServ;
 using Onpoint.Store.Application.Services.AppSettingsServ;
 using Onpoint.Store.Application.Services.AuthServices;
@@ -45,6 +46,7 @@ using Onpoint.Store.Application.Services.ReviewServ;
 using Onpoint.Store.Application.Services.ShippingServ;
 using Onpoint.Store.Application.Services.StaticPage;
 using Onpoint.Store.Application.Services.StockServ;
+using Onpoint.Store.Application.Services.StoreSettings;
 using Onpoint.Store.Application.Services.WishlistServ;
 using System.Reflection;
 
@@ -90,6 +92,9 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IAppSettingsService, AppSettingsService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IInvoiceService, InvoiceService>();
+            services.AddScoped<IDashboardService, DashboardService>();
+            services.AddScoped<IAccountingService, AccountingService>();
+            services.AddScoped<IStoreSettingsService, StoreSettingsService>();
 
 
 

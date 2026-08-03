@@ -88,7 +88,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
         {
             IQueryable<Product> query = _dbset
                 .Where(p => !p.IsDeleted)
-                .Include(p => p.Images.Where(i => i.IsPrimary))
+                .Include(p => p.Images)
                 .Include(p => p.Category)
                 .Include(p => p.Brand)
                 .Include(p => p.Translations)
@@ -215,28 +215,27 @@ namespace Onpoint.Store.Infrastructure.Repositories
      SortBy sortBy,
      int pageNumber,
      int pageSize,
+     ProductStatus? status,
      CancellationToken ct = default)
         {
             IQueryable<Product> query = _dbset.AsNoTrackingWithIdentityResolution()
-         .Where(p => !p.IsDeleted && p.Status == ProductStatus.Active)
+     .Where(p => !p.IsDeleted)
+     .Include(p => p.Category)
+     .Include(p => p.Brand)
+     .Include(p => p.Images)
+     .Include(p => p.Reviews)
+     .Include(p => p.Discounts)
+     .Include(p => p.Variants)
+         .ThenInclude(v => v.Stocks)
+             .ThenInclude(s => s.Branch)
+     .Include(p => p.Variants)
+         .ThenInclude(v => v.AttributeValues)
+             .ThenInclude(av => av.ProductAttribute)
+     .Include(p => p.Discounts);
 
 
-         .Include(p => p.Category)
-         .Include(p => p.Brand)
-         .Include(p => p.Images)
-         .Include(p => p.Reviews)
-         .Include(p => p.Discounts)
-         .Include(p => p.Variants)
-             .ThenInclude(v => v.Stocks)
-                 .ThenInclude(s => s.Branch)
-
-         .Include(p => p.Variants)
-             .ThenInclude(v => v.AttributeValues)
-                 .ThenInclude(av => av.ProductAttribute)
-
-         .Include(p => p.Discounts);
-
-
+            if (status.HasValue)
+                query = query.Where(p => p.Status == status.Value);
             // 2. Search Filter
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -244,7 +243,10 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 query = query.Where(p =>
                     p.Name.ToLower().Contains(term) ||
                     (p.Description != null && p.Description.ToLower().Contains(term)) ||
-                    p.Variants.Any(v => v.Sku.ToLower().Contains(term)));
+                    p.Variants.Any(v =>
+                        v.Sku.ToLower().Contains(term) ||
+                        (v.Barcode != null && v.Barcode.ToLower().Contains(term)) ||
+                        (v.QrCodeValue != null && v.QrCodeValue.ToLower().Contains(term))));
             }
 
             // 3. Price Filter (on variants)

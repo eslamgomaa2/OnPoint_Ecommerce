@@ -656,8 +656,14 @@ namespace Onpoint.Store.Application.Services.ProductServ
         }
 
 
-        public async Task<ServiceResult<PagedResult<ProductListItemDto>>> GetFilteredAsync(ProductFilterRequestDto filter, CancellationToken ct = default)
+        public async Task<ServiceResult<PagedResult<ProductListItemDto>>> GetFilteredAsync(
+     ProductFilterRequestDto filter,
+     bool isSuperAdmin,
+     CancellationToken ct = default)
         {
+            ProductStatus? statusFilter = isSuperAdmin
+                ? null
+                : ProductStatus.Active;
 
             var (products, totalCount) = await _unitOfWork.Products.GetFilteredAsync(
                 filter.CategoryId,
@@ -669,11 +675,11 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 filter.SortBy,
                 filter.PageNumber,
                 filter.PageSize,
+                statusFilter,
                 ct);
 
             var dtos = products.Select(p => MapToListItem(p)).ToList();
             var result = PagedResult<ProductListItemDto>.Create(dtos, totalCount, filter.PageNumber, filter.PageSize);
-
             return _resultHandler.Success(result);
         }
 
