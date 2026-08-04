@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using BuildingBlocks.Common;
 using BuildingBlocks.Results;
 using FluentValidation;
 using Onpoint.Store.Application.DTOs;
@@ -6,6 +7,7 @@ using Onpoint.Store.Application.DTOs.Media;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.ProductVariant;
 using Onpoint.Store.Application.Helpers;
+using Onpoint.Store.Application.Mapping;
 using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration;
 using Onpoint.Store.Application.Services.CodeGeneration.QrCodeGeneration;
 using Onpoint.Store.Application.Services.CodeGeneration.SkuGeneration;
@@ -27,6 +29,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
         private readonly ISkuGeneratorService _skuGeneratorService;
         private readonly IBarcodeService _barcodeService;
         private readonly IQrCodeService _qrCodeService;
+        private readonly ICurrentLanguage _currentLanguage;
 
         public ProductService(
             IUnitOfWork unitOfWork,
@@ -37,7 +40,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
             ISkuGeneratorService skuGenerator,
             IBarcodeService barcodeService,
             IQrCodeService qrCodeService,
-            IMediaService mediaService)
+            IMediaService mediaService,
+            ICurrentLanguage currentLanguage)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -48,6 +52,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             _barcodeService = barcodeService;
             _qrCodeService = qrCodeService;
             _mediaService = mediaService;
+            _currentLanguage = currentLanguage;
         }
 
         // ============================================================================
@@ -60,7 +65,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (product == null)
                 return _resultHandler.NotFound<ProductDto>($"Product with SKU '{sku}' not found");
 
-            return _resultHandler.Success(_mapper.Map<ProductDto>(product));
+            return _resultHandler.Success(_mapper.Map<ProductDto>(product, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<ProductDashboardDto>> GetDashboardCountsAsync(int? branchId = null, CancellationToken ct = default)
@@ -79,14 +84,14 @@ namespace Onpoint.Store.Application.Services.ProductServ
         }
 
         public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
-            PaginationRequest request, int? categoryId = null, string? searchTerm = null,
-            int? branchId = null, LanguageCode? languageCode = null, int? currentUserId = null,
-            CancellationToken ct = default)
+     PaginationRequest request, int? categoryId = null, string? searchTerm = null,
+     int? branchId = null, int? currentUserId = null,
+     CancellationToken ct = default)
         {
             var (items, totalCount) = await _unitOfWork.Products.GetFilteredPagedAsync(
                 categoryId, searchTerm, branchId, request.PageNumber, request.PageSize, ct);
 
-            var dtoItems = items.Select(p => ApplyTranslation(MapWithBranchStock(p, branchId), p, languageCode)).ToList();
+            var dtoItems = items.Select(p => MapWithBranchStock(p, branchId)).ToList();
 
             if (currentUserId.HasValue && dtoItems.Any())
             {
@@ -113,7 +118,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (product is null)
                 return _resultHandler.NotFound<ProductDetailDto>("Product not found");
 
-            var dto = _mapper.Map<ProductDetailDto>(product);
+            var dto = _mapper.Map<ProductDetailDto>(product, opts => opts.Items["lang"] = _currentLanguage.Lang);
 
             var baseDto = MapWithBranchStock(product, null);
             dto.TotalStock = baseDto.TotalStock;
@@ -126,7 +131,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             dto.BranchStock = stocks.Select(s => _mapper.Map<VariantStockDto>(s)).ToList();
 
-            ApplyTranslationToDetail(dto, product, languageCode);
+
 
             if (currentUserId.HasValue)
             {
@@ -326,7 +331,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             await _unitOfWork.SaveChangesAsync(ct);
 
             var createdWithDetails = await _unitOfWork.Products.GetWithDetailsAsync(product.Id, ct);
-            return _resultHandler.Created(_mapper.Map<ProductDto>(createdWithDetails ?? product));
+            return _resultHandler.Created(_mapper.Map<ProductDto>(createdWithDetails ?? product, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         // ============================================================================
@@ -552,7 +557,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             await _unitOfWork.SaveChangesAsync(ct);
 
             var updated = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
-            return _resultHandler.Success(_mapper.Map<ProductDto>(updated ?? existingProduct));
+            return _resultHandler.Success(_mapper.Map<ProductDto>(updated ?? existingProduct, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
         // ============================================================================
         // DELETE
@@ -594,7 +599,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
         private ProductDto MapWithBranchStock(Product p, int? branchId)
         {
-            var dto = _mapper.Map<ProductDto>(p);
+            var dto = _mapper.Map<ProductDto>(p, opts => opts.Items["lang"] = _currentLanguage.Lang);
+
 
 
             IEnumerable<Stock> relevantStocks = p.Variants
@@ -618,42 +624,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return dto;
         }
 
-        private ProductDto ApplyTranslation(ProductDto dto, Product product, LanguageCode? languageCode)
-        {
-            if (languageCode == null || languageCode == LanguageCode.en)
-                return dto;
 
-            var langStr = languageCode.Value.ToString();
 
-            var translation = product.Translations
-                .FirstOrDefault(t => t.LanguageCode.Equals(langStr) && !t.IsDeleted);
 
-            if (translation != null && !string.IsNullOrEmpty(translation.Name))
-                dto.Name = translation.Name;
-
-            return dto;
-        }
-
-        private ProductDetailDto ApplyTranslationToDetail(ProductDetailDto dto, Product product, LanguageCode? languageCode)
-        {
-            if (languageCode == null || languageCode == LanguageCode.en)
-                return dto;
-
-            var langStr = languageCode.Value.ToString();
-
-            var translation = product.Translations
-                .FirstOrDefault(t => t.LanguageCode.Equals(langStr) && !t.IsDeleted);
-
-            if (translation != null)
-            {
-                if (!string.IsNullOrEmpty(translation.Name))
-                    dto.Name = translation.Name;
-                if (!string.IsNullOrEmpty(translation.Description))
-                    dto.Description = translation.Description;
-            }
-
-            return dto;
-        }
 
 
         public async Task<ServiceResult<PagedResult<ProductListItemDto>>> GetFilteredAsync(
@@ -685,6 +658,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
         private ProductListItemDto MapToListItem(Product p)
         {
+            var lang = _currentLanguage.Lang;
             var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
             var minPrice = activeVariants.Any() ? activeVariants.Min(v => v.Price) : 0;
 
@@ -711,9 +685,10 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return new ProductListItemDto
             {
                 Id = p.Id,
-                Name = p.Name,
+                Name = LocalizationHelper.Pick(p.Name, p.NameEn, lang),
                 Slug = p.Slug,
-                Description = p.Description,
+                Description = LocalizationHelper.PickNullable(p.Description, p.DescriptionEn, lang)
+        ,
                 Images = p.Images.Select(i => new ProductImageDto
                 {
                     Id = i.Id,
@@ -735,15 +710,16 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 ReviewCount = approvedReviews,
                 IsPopular = p.IsPopular,
                 InStock = inStock,
-                CategoryName = p.Category?.Name ?? string.Empty,
-                BrandName = p.Brand?.Name,
+                CategoryName = p.Category != null ? LocalizationHelper.Pick(p.Category.Name, p.Category.NameEn, lang) : string.Empty,
+                BrandName = p.Brand != null ? LocalizationHelper.Pick(p.Brand.Name, p.Brand.NameEn, lang) : null,
+
                 CreatedAt = p.CreatedAt,
 
                 Variants = activeVariants.Select(v => new ProductVariantDto
                 {
                     Id = v.Id,
                     ProductId = p.Id,
-                    ProductName = p.Name,
+                    ProductName = LocalizationHelper.Pick(p.Name, p.NameEn, lang),
                     Sku = v.Sku ?? string.Empty,
                     Barcode = v.Barcode,
                     BarcodeImagePath = v.BarcodeImagePath,
@@ -767,8 +743,11 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
                     Attributes = v.AttributeValues?.Select(av => new VariantAttributeValueDto
                     {
+
                         ProductAttributeId = av.ProductAttributeId,
-                        AttributeName = av.ProductAttribute?.Name ?? string.Empty,
+                        AttributeName = av.ProductAttribute != null
+                    ? LocalizationHelper.Pick(av.ProductAttribute.Name, av.ProductAttribute.NameEn, lang)
+                    : string.Empty,
                         Value = av.Value ?? string.Empty
                     }).ToList() ?? new List<VariantAttributeValueDto>()
                 }).ToList()

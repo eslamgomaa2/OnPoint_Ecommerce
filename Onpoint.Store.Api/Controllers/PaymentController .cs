@@ -27,21 +27,20 @@ public class PaymentController : ControllerBase
             throw new UnauthorizedAccessException("Invalid or missing user identifier in token.");
         return userId;
     }
-
-    [Authorize]
-    [HttpGet("{orderId}/methods")]
-    public async Task<IActionResult> GetAvailableMethods(int orderId, CancellationToken ct = default)
+    [HttpGet("{sessionId}/payment-methods")]
+    public async Task<IActionResult> GetPaymentMethods(int sessionId, CancellationToken ct)
     {
-        var result = await _paymentService.GetAvailablePaymentMethodsAsync(orderId, ct);
+        var result = await _paymentService.GetAvailablePaymentMethodsAsync(sessionId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 
+
     [Authorize]
-    [HttpPost("pay-hosted")]
-    public async Task<IActionResult> PayViaHosted([FromBody] PayViaHostedDto dto, CancellationToken ct = default)
+    [HttpPost("pay-hosted/{sessionId}")]
+    public async Task<IActionResult> PayViaHosted(int sessionId, [FromBody] PayViaHostedDto dto, CancellationToken ct = default)
     {
-        var userId = GetUserId();
-        var result = await _paymentService.PayViaHostedAsync(userId, dto, ct);
+
+        var result = await _paymentService.PayViaHostedAsync(sessionId, dto, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 

@@ -7,7 +7,8 @@ namespace Onpoint.Store.Domin.Entities
     {
         [Required, MaxLength(100)]
         public string Name { get; set; } = string.Empty;
-
+        [MaxLength(100)]
+        public string? NameEn { get; set; }
         [Required, MaxLength(120)]
         public string Slug { get; set; } = string.Empty;
 

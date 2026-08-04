@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Onpoint.Store.Application.DTOs.Brand;
+using Onpoint.Store.Application.Mapping.Resolvers;
 using Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Application.Mapping
@@ -9,6 +10,7 @@ namespace Onpoint.Store.Application.Mapping
         public BrandMappingProfile()
         {
             CreateMap<Brand, BrandDto>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom<BrandNameResolver>())
                 .ForMember(dest => dest.ProductsCount,
                             opt => opt.MapFrom(src => src.Products != null ? src.Products.Count : 0));
 

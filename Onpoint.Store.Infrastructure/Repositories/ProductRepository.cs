@@ -25,7 +25,7 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(p => p.Category)
                 .Include(p => p.Shipping)
                 .Include(p => p.Brand)
-                .Include(p => p.Translations)
+
                 .Include(p => p.Images.OrderBy(i => !i.IsPrimary))
                 .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow))
                 .Include(p => p.Variants.Where(v => v.IsActive))
@@ -56,7 +56,6 @@ namespace Onpoint.Store.Infrastructure.Repositories
             return await query
                 .Include(p => p.Category)
                 .Include(p => p.Brand)
-                .Include(p => p.Translations)
                 .Include(p => p.Images)
                 .Include(p => p.Discounts)
                 .Include(p => p.Variants)
@@ -91,7 +90,6 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(p => p.Images)
                 .Include(p => p.Category)
                 .Include(p => p.Brand)
-                .Include(p => p.Translations)
                 .Include(p => p.Discounts.Where(d => d.IsActive && d.EndDate >= DateTime.UtcNow))
                 .Include(p => p.Variants.Where(v => v.IsActive))
                     .ThenInclude(v => v.Stocks)

@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces;
 using Application.Services;
+using BuildingBlocks.Common;
 using BuildingBlocks.Common.Helpers;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
@@ -95,6 +96,7 @@ namespace Onpoint.Store.Application.Extensions
             services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<IAccountingService, AccountingService>();
             services.AddScoped<IStoreSettingsService, StoreSettingsService>();
+            services.AddScoped<ICurrentLanguage, CurrentLanguage>();
 
 
 

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Onpoint.Store.Application.DTOs.Category;
+using Onpoint.Store.Application.Mappings.Resolvers;
 using Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Application.Mappings
@@ -8,10 +9,10 @@ namespace Onpoint.Store.Application.Mappings
     {
         public CategoryMappingProfile()
         {
-
             CreateMap<Category, CategoryDto>()
-            .ForMember(dest => dest.ProductsCount, opt => opt.MapFrom(src => src.Products.Count));
-
+                .ForMember(dest => dest.Name, opt => opt.MapFrom<CategoryNameResolver>())
+                .ForMember(dest => dest.Description, opt => opt.MapFrom<CategoryDescriptionResolver>())
+                .ForMember(dest => dest.ProductsCount, opt => opt.MapFrom(src => src.Products.Count));
 
             CreateMap<CreateCategoryDto, Category>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
@@ -23,7 +24,6 @@ namespace Onpoint.Store.Application.Mappings
                 .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
-
         }
     }
 }

@@ -6,6 +6,7 @@ namespace Onpoint.Store.Application.DTOs.Brand
     {
         [Required, MaxLength(100)]
         public string Name { get; set; } = string.Empty;
+        public string? NameEn { get; set; }          // ⬅️ جديد
 
         public string? LogoUrl { get; set; }
 

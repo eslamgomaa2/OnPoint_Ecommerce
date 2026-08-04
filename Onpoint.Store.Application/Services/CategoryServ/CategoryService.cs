@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using BuildingBlocks.Common;
 using BuildingBlocks.Results;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -16,19 +17,22 @@ namespace Onpoint.Store.Application.Services.CategoryServ
         private readonly IMapper _mapper;
         private readonly IValidator<CreateCategoryDto> _createValidator;
         private readonly IValidator<UpdateCategoryDto> _updateValidator;
+        private readonly ICurrentLanguage _currentLanguage;
 
         public CategoryService(
             IUnitOfWork unitOfWork,
             ServiceResultHandler resultHandler,
             IMapper mapper,
             IValidator<CreateCategoryDto> createValidator,
-            IValidator<UpdateCategoryDto> updateValidator)
+            IValidator<UpdateCategoryDto> updateValidator,
+            ICurrentLanguage currentLanguage)
         {
             _unitOfWork = unitOfWork;
             _resultHandler = resultHandler;
             _mapper = mapper;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
+            _currentLanguage = currentLanguage;
         }
 
         public async Task<ServiceResult<IReadOnlyList<CategoryDto>>> GetAllAsync(CancellationToken ct = default)
@@ -37,7 +41,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
                 include: q => q.Include(c => c.Products),
                 ct: ct);
 
-            return _resultHandler.Success(_mapper.Map<IReadOnlyList<CategoryDto>>(categories));
+            return _resultHandler.Success(_mapper.Map<IReadOnlyList<CategoryDto>>(categories, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<PagedResult<CategoryDto>>> GetPagedAsync(PaginationRequest request, CancellationToken ct = default)
@@ -66,7 +70,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             );
 
             var pagedResult = PagedResult<CategoryDto>.Create(
-                _mapper.Map<IReadOnlyList<CategoryDto>>(items),
+               _mapper.Map<IReadOnlyList<CategoryDto>>(items, opts => opts.Items["lang"] = _currentLanguage.Lang),
                 totalCount,
                 request.PageNumber,
                 request.PageSize);
@@ -80,7 +84,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             if (category is null)
                 return _resultHandler.NotFound<CategoryDto>("Category not found");
 
-            return _resultHandler.Success(_mapper.Map<CategoryDto>(category));
+            return _resultHandler.Success(_mapper.Map<CategoryDto>(category, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<CategoryDto>> CreateAsync(CreateCategoryDto dto, CancellationToken ct = default)
@@ -92,7 +96,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
             await _unitOfWork.Categories.AddAsync(category, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Created(_mapper.Map<CategoryDto>(category));
+            return _resultHandler.Created(_mapper.Map<CategoryDto>(category, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<CategoryDto>> UpdateAsync(int id, UpdateCategoryDto dto, CancellationToken ct = default)
@@ -120,7 +124,7 @@ namespace Onpoint.Store.Application.Services.CategoryServ
                 return _resultHandler.BadRequest<CategoryDto>("A category with this name already exists.");
             }
 
-            return _resultHandler.Success(_mapper.Map<CategoryDto>(existingCategory));
+            return _resultHandler.Success(_mapper.Map<CategoryDto>(existingCategory, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default)

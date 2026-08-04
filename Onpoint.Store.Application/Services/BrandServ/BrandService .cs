@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using BuildingBlocks.Common;
 using BuildingBlocks.Results;
 using FluentValidation;
 using Onpoint.Store.Application.DTOs.Brand;
@@ -16,19 +17,22 @@ namespace Onpoint.Store.Application.Services.Brand
         private readonly IValidator<CreateBrandDto> _createValidator;
         private readonly IValidator<UpdateBrandDto> _updateValidator;
         private readonly ServiceResultHandler _resultHandler;
+        private readonly ICurrentLanguage _currentLanguage;
 
         public BrandService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IValidator<CreateBrandDto> createValidator,
             IValidator<UpdateBrandDto> updateValidator,
-            ServiceResultHandler resultHandler)
+            ServiceResultHandler resultHandler,
+            ICurrentLanguage currentLanguage)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
             _resultHandler = resultHandler;
+            _currentLanguage = currentLanguage;
         }
 
         public async Task<ServiceResult<IEnumerable<ProductDto>>> GetProductsByBrandIdAsync(int brandId, CancellationToken ct = default)
@@ -38,7 +42,7 @@ namespace Onpoint.Store.Application.Services.Brand
                 return _resultHandler.NotFound<IEnumerable<ProductDto>>("Brand not found");
 
             var products = await _unitOfWork.Brands.GetProductsByBrandIdAsync(brandId, ct);
-            var dtos = _mapper.Map<IEnumerable<ProductDto>>(products);
+            var dtos = _mapper.Map<IEnumerable<ProductDto>>(products, opts => opts.Items["lang"] = _currentLanguage.Lang);
 
             return _resultHandler.Success(dtos);
         }
@@ -46,7 +50,7 @@ namespace Onpoint.Store.Application.Services.Brand
         public async Task<ServiceResult<IEnumerable<BrandDto>>> GetAllAsync(CancellationToken ct = default)
         {
             var brands = await _unitOfWork.Brands.GetAllAsync(ct);
-            var dtos = _mapper.Map<IEnumerable<BrandDto>>(brands);
+            var dtos = _mapper.Map<IEnumerable<BrandDto>>(brands, opts => opts.Items["lang"] = _currentLanguage.Lang); ;
             return _resultHandler.Success(dtos);
         }
 
@@ -56,7 +60,7 @@ namespace Onpoint.Store.Application.Services.Brand
             if (brand == null)
                 return _resultHandler.NotFound<BrandDto>("Brand not found");
 
-            var dto = _mapper.Map<BrandDto>(brand);
+            var dto = _mapper.Map<BrandDto>(brand, opts => opts.Items["lang"] = _currentLanguage.Lang);
             return _resultHandler.Success(dto);
         }
 
@@ -65,7 +69,7 @@ namespace Onpoint.Store.Application.Services.Brand
             var (items, totalCount) = await _unitOfWork.Brands.GetFilteredPagedAsync(
                 searchTerm, isActive, pageNumber, pageSize, ct);
 
-            var dtos = _mapper.Map<IReadOnlyList<BrandDto>>(items);
+            var dtos = _mapper.Map<IReadOnlyList<BrandDto>>(items, opts => opts.Items["lang"] = _currentLanguage.Lang);
 
             var pagedResult = new PagedResultDto<BrandDto>
             {
@@ -88,7 +92,7 @@ namespace Onpoint.Store.Application.Services.Brand
             await _unitOfWork.Brands.AddAsync(brand, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            var resultDto = _mapper.Map<BrandDto>(brand);
+            var resultDto = _mapper.Map<BrandDto>(brand, opts => opts.Items["lang"] = _currentLanguage.Lang);
             return _resultHandler.Created(resultDto);
         }
 
@@ -110,7 +114,7 @@ namespace Onpoint.Store.Application.Services.Brand
             _unitOfWork.Brands.Update(brand);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            var resultDto = _mapper.Map<BrandDto>(brand);
+            var resultDto = _mapper.Map<BrandDto>(brand, opts => opts.Items["lang"] = _currentLanguage.Lang);
             return _resultHandler.Success(resultDto);
         }
 

@@ -7,7 +7,9 @@ namespace Onpoint.Store.Application.DTOs
     public class CreateProductDto
     {
         public string Name { get; set; } = string.Empty;
+        public string? NameEn { get; set; }
         public string? Description { get; set; }
+        public string? DescriptionEn { get; set; }
         public int CategoryId { get; set; }
         public int BrandId { get; set; }
         public bool IsPopular { get; set; }

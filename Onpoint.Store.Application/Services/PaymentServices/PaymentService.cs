@@ -1,5 +1,7 @@
-﻿using BuildingBlocks.Results;
+﻿
+using BuildingBlocks.Results;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Onpoint.Store.Application.Common;
@@ -24,6 +26,8 @@ namespace Onpoint.Store.Application.Services.PaymentServices
         private readonly IMyFatoorahClient _myFatoorahClient;
         private readonly MyFatoorahOptions _options;
         private readonly ILogger<PaymentService> _logger;
+        private readonly IConfiguration _configuration;
+        private const int CashPaymentMethodId = 0;
 
         public PaymentService(
             IUnitOfWork unitOfWork,
@@ -32,7 +36,9 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             IOptions<MyFatoorahOptions> options,
             UserManager<ApplicationUser> userManager,
             IOrderService orderService,
-            ILogger<PaymentService> logger)
+            ILogger<PaymentService> logger
+,
+IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _resultHandler = resultHandler;
@@ -41,73 +47,99 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             _userManager = userManager;
             this.orderService = orderService;
             _logger = logger;
+            _configuration = configuration;
+            _configuration = configuration;
         }
 
-        public async Task<ServiceResult<List<PaymentMethodDto>>> GetAvailablePaymentMethodsAsync(int orderId, CancellationToken ct = default)
+        public async Task<ServiceResult<List<PaymentMethodDto>>> GetAvailablePaymentMethodsAsync(
+     int sessionId, CancellationToken ct = default)
         {
-            var order = await _unitOfWork.Orders.GetByIdAsync(orderId, ct);
-            if (order == null)
-                return _resultHandler.NotFound<List<PaymentMethodDto>>("Order not found.");
+            var session = await _unitOfWork.PosSessions.GetByIdAsync(sessionId, ct);
+            if (session == null)
+                return _resultHandler.NotFound<List<PaymentMethodDto>>("Session not found.");
 
-            var methods = await _myFatoorahClient.InitiatePaymentAsync(order.TotalAmount, "KWD", ct);
-            return _resultHandler.Success<List<PaymentMethodDto>>(methods);
+            decimal subTotal = session.Items.Sum(i => i.UnitPrice * i.Quantity);
+            decimal shippingCost = GetShippingCost();
+            decimal amountToCharge = subTotal - session.DiscountAmount + shippingCost;
+
+            var gatewayMethods = await _myFatoorahClient.InitiatePaymentAsync(amountToCharge, "KWD", ct);
+
+
+            var result = new List<PaymentMethodDto>
+    {
+        new PaymentMethodDto
+        {
+            PaymentMethodId = CashPaymentMethodId,
+            PaymentMethodEn = "Cash",
+            PaymentMethodAr = "كاش",
+            ImageUrl = null
+        }
+    };
+
+            result.AddRange(gatewayMethods);
+
+            return _resultHandler.Success(result);
         }
 
-        public async Task<ServiceResult<ExecutePaymentResultDto>> PayViaHostedAsync(int userId, PayViaHostedDto dto, CancellationToken ct = default)
+        public async Task<ServiceResult<ExecutePaymentResultDto>> PayViaHostedAsync(
+     int sessionId, PayViaHostedDto dto, CancellationToken ct = default)
         {
-            var order = await ValidateOrderForPaymentAsync(userId, dto.OrderId, ct);
-            if (order == null)
-                return _resultHandler.BadRequest<ExecutePaymentResultDto>("Order is not eligible for payment.");
+            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId, ct);
+            if (session == null)
+                return _resultHandler.BadRequest<ExecutePaymentResultDto>("Session is not eligible for payment.");
 
-            var user = await _userManager.FindByIdAsync(userId.ToString());
+            decimal subTotal = session.Items.Sum(i => i.UnitPrice * i.Quantity);
+            decimal shippingCost = GetShippingCost();
+            decimal amountToCharge = subTotal - session.DiscountAmount + shippingCost;
+            var customer = await _unitOfWork.Customers.GetByIdAsync(session.CustomerId ?? 0, ct);
 
             var request = new ExecutePaymentRequestModel
             {
                 PaymentMethodId = dto.PaymentMethodId,
-                InvoiceValue = order.TotalAmount,
+                InvoiceValue = amountToCharge,
                 DisplayCurrencyIso = "KWD",
-                CustomerName = user?.UserName ?? "Customer",
-                CustomerEmail = user?.Email ?? string.Empty,
-                CustomerMobile = user?.PhoneNumber ?? string.Empty,
-                CallBackUrl = $"{_options.CallBackBaseUrl}?orderId={order.Id}",
-                ErrorUrl = $"{_options.ErrorBaseUrl}?orderId={order.Id}",
-                CustomerReference = order.Id.ToString()
+                CustomerName = $"{customer?.FName} {customer?.LName}" ?? "Customer",
+                CustomerEmail = customer?.Email ?? string.Empty,
+                CustomerMobile = customer?.Phone ?? string.Empty,
+                CallBackUrl = $"{_options.CallBackBaseUrl}?sessionId={session.Id}",
+                ErrorUrl = $"{_options.ErrorBaseUrl}?sessionId={session.Id}",
+                CustomerReference = session.Id.ToString()
             };
 
             var result = await _myFatoorahClient.ExecutePaymentAsync(request, ct);
 
-            await SaveOrUpdatePendingTransactionAsync(order.Id, "MyFatoorah", result.InvoiceId, order.TotalAmount, ct);
+            await SaveOrUpdatePendingTransactionAsync(session.Id, "MyFatoorah", result.InvoiceId, amountToCharge, ct);
 
             return _resultHandler.Success<ExecutePaymentResultDto>(result);
         }
 
-        public async Task<ServiceResult<ExecutePaymentResultDto>> PayViaEmbeddedAsync(int userId, PayViaEmbeddedDto dto, CancellationToken ct = default)
-        {
-            var order = await ValidateOrderForPaymentAsync(userId, dto.OrderId, ct);
-            if (order == null)
-                return _resultHandler.BadRequest<ExecutePaymentResultDto>("Order is not eligible for payment.");
+        /* public async Task<ServiceResult<ExecutePaymentResultDto>> PayViaEmbeddedAsync(int userId, PayViaEmbeddedDto dto, CancellationToken ct = default)
+         {
+             var order = await ValidateOrderForPaymentAsync(userId, dto.OrderId, ct);
+             if (order == null)
+                 return _resultHandler.BadRequest<ExecutePaymentResultDto>("Order is not eligible for payment.");
 
-            var user = await _userManager.FindByIdAsync(userId.ToString());
+             var user = await _userManager.FindByIdAsync(userId.ToString());
 
-            var request = new ExecutePaymentRequestModel
-            {
-                SessionId = dto.SessionId,
-                InvoiceValue = order.TotalAmount,
-                DisplayCurrencyIso = "KWD",
-                CustomerName = user?.UserName ?? "Customer",
-                CustomerEmail = user?.Email ?? string.Empty,
-                CustomerMobile = user?.PhoneNumber ?? string.Empty,
-                CallBackUrl = $"{_options.CallBackBaseUrl}?orderId={order.Id}",
-                ErrorUrl = $"{_options.ErrorBaseUrl}?orderId={order.Id}",
-                CustomerReference = order.Id.ToString()
-            };
+             var request = new ExecutePaymentRequestModel
+             {
+                 SessionId = dto.SessionId,
+                 InvoiceValue = order.TotalAmount,
+                 DisplayCurrencyIso = "KWD",
+                 CustomerName = user?.UserName ?? "Customer",
+                 CustomerEmail = user?.Email ?? string.Empty,
+                 CustomerMobile = user?.PhoneNumber ?? string.Empty,
+                 CallBackUrl = $"{_options.CallBackBaseUrl}?orderId={order.Id}",
+                 ErrorUrl = $"{_options.ErrorBaseUrl}?orderId={order.Id}",
+                 CustomerReference = order.Id.ToString()
+             };
 
-            var result = await _myFatoorahClient.ExecutePaymentAsync(request, ct);
+             var result = await _myFatoorahClient.ExecutePaymentAsync(request, ct);
 
-            await SaveOrUpdatePendingTransactionAsync(order.Id, "MyFatoorah", result.InvoiceId, order.TotalAmount, ct);
+             await SaveOrUpdatePendingTransactionAsync(order.Id, "MyFatoorah", result.InvoiceId, order.TotalAmount, ct);
 
-            return _resultHandler.Success<ExecutePaymentResultDto>(result);
-        }
+             return _resultHandler.Success<ExecutePaymentResultDto>(result);
+         }*/
 
         public async Task HandleWebhookNotificationAsync(string invoiceId, CancellationToken ct = default)
         {
@@ -339,32 +371,18 @@ namespace Onpoint.Store.Application.Services.PaymentServices
         }
 
 
-        private async Task<Order?> ValidateOrderForPaymentAsync(int userId, int orderId, CancellationToken ct)
+        private async Task<PosSession?> ValidateSessionForPaymentAsync(int sessionId, CancellationToken ct)
         {
-            var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId, ct);
+            var session = await _unitOfWork.PosSessions.GetSessionWithItemsAsync(sessionId, ct);
 
-            if (order == null)
+            if (session == null)
             {
-                _logger.LogWarning("Order {OrderId} not found.", orderId);
-                return null;
-            }
-            if (order.UserId != userId)
-            {
-                _logger.LogWarning("Order {OrderId} UserId {OrderUserId} does not match requesting userId {UserId}.", orderId, order.UserId, userId);
-                return null;
-            }
-            if (order.Status != OrderStatus.Pending)
-            {
-                _logger.LogWarning("Order {OrderId} status is {Status}, expected Pending.", orderId, order.Status);
-                return null;
-            }
-            if (order.PaymentMethod == PaymentMethod.Cash)
-            {
-                _logger.LogWarning("Order {OrderId} payment method is Cash, not eligible for online payment.", orderId);
+                _logger.LogWarning("Session {SessionId} not found.", sessionId);
                 return null;
             }
 
-            return order;
+
+            return session;
         }
 
         private async Task SaveOrUpdatePendingTransactionAsync(int orderId, string provider, string gatewayId, decimal amount, CancellationToken ct)
@@ -460,6 +478,8 @@ namespace Onpoint.Store.Application.Services.PaymentServices
             {
                 _logger.LogError(ex, "Failed to handle payment failure for invoice {InvoiceId}", invoiceId);
             }
+
         }
+        private decimal GetShippingCost() => _configuration.GetValue<decimal>("CartSettings:FixedShippingCost", 10.0m);
     }
 }
