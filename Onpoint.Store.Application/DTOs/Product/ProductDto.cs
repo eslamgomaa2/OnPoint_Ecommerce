@@ -1,4 +1,5 @@
-﻿using Onpoint.Store.Domin.Enums;
+using Onpoint.Store.Application.DTOs.ProductVariant;
+using Onpoint.Store.Domin.Enums;
 
 namespace Onpoint.Store.Application.DTOs.Product
 {
@@ -21,6 +22,7 @@ namespace Onpoint.Store.Application.DTOs.Product
         public bool IsPopular { get; set; }
         public bool IsInCart { get; set; }
         public bool IsInWishlist { get; set; }
+        public ProductVariantDto? DefaultVariant { get; set; }
 
     }
 }

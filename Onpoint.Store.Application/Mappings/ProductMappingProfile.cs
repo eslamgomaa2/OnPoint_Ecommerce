@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+using AutoMapper;
+using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
@@ -84,7 +85,9 @@ namespace Onpoint.Store.Application.Mappings
             // ⚠️ ProductVariant -> ProductVariantDto
             CreateMap<ProductVariant, ProductVariantDto>()
                .ForMember(dest => dest.ProductId, opt => opt.MapFrom(src => src.ProductId))
-               .ForMember(dest => dest.Attributes, opt => opt.MapFrom(src => src.AttributeValues));
+               .ForMember(dest => dest.Attributes, opt => opt.MapFrom(src => src.AttributeValues))
+               .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => ProductVariantHelper.CalculateAvailableQuantity(src.Stocks, null)))
+               .ForMember(dest => dest.InStock, opt => opt.MapFrom(src => ProductVariantHelper.IsInStock(src.Stocks, null)));
 
             CreateMap<VariantAttributeValue, VariantAttributeValueDto>()
                 .ForMember(dest => dest.ProductAttributeId, opt => opt.MapFrom(src => src.ProductAttributeId))

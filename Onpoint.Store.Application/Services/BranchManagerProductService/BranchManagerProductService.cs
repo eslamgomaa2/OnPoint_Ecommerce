@@ -1,11 +1,14 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BuildingBlocks.Common;
 using BuildingBlocks.Results;
 using FluentValidation;
+using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.DTOs.Media;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
+using Onpoint.Store.Application.DTOs.ProductVariant;
 using Onpoint.Store.Application.Helpers;
+using Onpoint.Store.Application.Mapping;
 using Onpoint.Store.Application.Services.BranchManagerProductService;
 using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration;
 using Onpoint.Store.Application.Services.CodeGeneration.QrCodeGeneration;
@@ -113,6 +116,24 @@ namespace Onpoint.Store.Application.Services.ProductServ
             var baseDto = MapWithBranchStock(product, branchId);
             dto.TotalStock = baseDto.TotalStock;
             dto.StockStatus = baseDto.StockStatus;
+            dto.DefaultVariant = baseDto.DefaultVariant;
+            dto.Price = baseDto.Price;
+            dto.Cost = baseDto.Cost;
+            dto.Sku = baseDto.Sku;
+            dto.DiscountedPrice = baseDto.DiscountedPrice;
+
+            if (dto.Variants != null && product.Variants != null)
+            {
+                foreach (var vDto in dto.Variants)
+                {
+                    var entity = product.Variants.FirstOrDefault(v => v.Id == vDto.Id);
+                    if (entity != null)
+                    {
+                        vDto.Quantity = ProductVariantHelper.CalculateAvailableQuantity(entity.Stocks, branchId);
+                        vDto.InStock = ProductVariantHelper.IsInStock(entity.Stocks, branchId);
+                    }
+                }
+            }
 
             return _resultHandler.Success(dto);
         }
@@ -370,17 +391,51 @@ namespace Onpoint.Store.Application.Services.ProductServ
         {
             var dto = _mapper.Map<ProductDto>(p, opts => opts.Items["lang"] = _currentLanguage.Lang);
 
+            var defaultVariantEntity = ProductVariantHelper.SelectDefaultVariant(p.Variants, branchId);
+            if (defaultVariantEntity != null)
+            {
+                dto.DefaultVariant = new ProductVariantDto
+                {
+                    Id = defaultVariantEntity.Id,
+                    ProductId = p.Id,
+                    ProductName = LocalizationHelper.Pick(p.Name, p.NameEn, _currentLanguage.Lang),
+                    Sku = defaultVariantEntity.Sku ?? string.Empty,
+                    Barcode = defaultVariantEntity.Barcode,
+                    BarcodeImagePath = defaultVariantEntity.BarcodeImagePath,
+                    QrCodeValue = defaultVariantEntity.QrCodeValue,
+                    QrCodeImagePath = defaultVariantEntity.QrCodeImagePath,
+                    Price = defaultVariantEntity.Price,
+                    Cost = defaultVariantEntity.Cost,
+                    IsActive = defaultVariantEntity.IsActive,
+                    Quantity = ProductVariantHelper.CalculateAvailableQuantity(defaultVariantEntity.Stocks, branchId),
+                    InStock = ProductVariantHelper.IsInStock(defaultVariantEntity.Stocks, branchId)
+                };
+
+                dto.Price = defaultVariantEntity.Price;
+                dto.Cost = defaultVariantEntity.Cost;
+                dto.Sku = defaultVariantEntity.Sku;
+
+                var activeDiscount = p.Discounts?.FirstOrDefault(d => d.IsActive && d.EndDate >= DateTime.UtcNow);
+                if (activeDiscount != null)
+                {
+                    dto.DiscountedPrice = defaultVariantEntity.Price * (1 - activeDiscount.DiscountPercentage / 100m);
+                }
+                else
+                {
+                    dto.DiscountedPrice = defaultVariantEntity.Price;
+                }
+            }
 
             IEnumerable<Stock> relevantStocks = p.Variants
-                .Where(v => v.IsActive)
-                .SelectMany(v => v.Stocks);
+                .Where(v => v.IsActive && !v.IsDeleted)
+                .SelectMany(v => v.Stocks ?? Enumerable.Empty<Stock>());
 
             if (branchId.HasValue)
                 relevantStocks = relevantStocks.Where(s => s.BranchId == branchId.Value);
 
             var stocksList = relevantStocks.ToList();
 
-            dto.TotalStock = stocksList.Sum(s => s.Quantity);
+            dto.TotalStock = stocksList.Sum(s => Math.Max(0, s.Quantity - s.ReservedQuantity));
             var minLevel = stocksList.Any() ? stocksList.Max(s => s.MinimumStockLevel) : 0;
 
             dto.StockStatus = dto.TotalStock <= 0

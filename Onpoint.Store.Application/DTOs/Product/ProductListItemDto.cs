@@ -1,4 +1,4 @@
-﻿using Onpoint.Store.Application.DTOs.ProductVariant;
+using Onpoint.Store.Application.DTOs.ProductVariant;
 
 namespace Onpoint.Store.Application.DTOs.Product
 {
@@ -21,6 +21,7 @@ namespace Onpoint.Store.Application.DTOs.Product
         public string CategoryName { get; set; } = string.Empty;
         public string? BrandName { get; set; }
         public List<ProductVariantDto> Variants { get; set; } = new();
+        public ProductVariantDto? DefaultVariant { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

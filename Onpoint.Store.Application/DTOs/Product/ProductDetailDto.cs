@@ -1,4 +1,4 @@
-﻿using Onpoint.Store.Application.DTOs.ProductVariant;
+using Onpoint.Store.Application.DTOs.ProductVariant;
 using Onpoint.Store.Domin.Enums;
 
 namespace Onpoint.Store.Application.DTOs.Product
@@ -31,6 +31,7 @@ namespace Onpoint.Store.Application.DTOs.Product
         public List<ProductImageDto> Images { get; set; } = new();
         public List<DiscountDto> ActiveDiscounts { get; set; } = new();
         public List<ProductVariantDto> Variants { get; set; } = new();
+        public ProductVariantDto? DefaultVariant { get; set; }
         public List<ProductAttributeValueDto> Attributes { get; set; } = new();
         public List<VariantStockDto> BranchStock { get; set; } = new();
         public ProductShippingDto? Shipping { get; set; }

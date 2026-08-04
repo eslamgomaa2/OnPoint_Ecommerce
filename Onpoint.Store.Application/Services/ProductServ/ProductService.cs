@@ -1,7 +1,8 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BuildingBlocks.Common;
 using BuildingBlocks.Results;
 using FluentValidation;
+using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.DTOs;
 using Onpoint.Store.Application.DTOs.Media;
 using Onpoint.Store.Application.DTOs.Product;
@@ -123,15 +124,38 @@ namespace Onpoint.Store.Application.Services.ProductServ
             var baseDto = MapWithBranchStock(product, null);
             dto.TotalStock = baseDto.TotalStock;
             dto.StockStatus = baseDto.StockStatus;
+            dto.DefaultVariant = baseDto.DefaultVariant;
+            dto.Price = baseDto.Price;
+            dto.Cost = baseDto.Cost;
+            dto.Sku = baseDto.Sku;
+            dto.DiscountedPrice = baseDto.DiscountedPrice;
 
-            // ⚠️ All stocks are on variants
+            if (baseDto.DefaultVariant != null)
+            {
+                dto.Barcode = baseDto.DefaultVariant.Barcode;
+                dto.BarcodeImagePath = baseDto.DefaultVariant.BarcodeImagePath;
+                dto.QrCodeValue = baseDto.DefaultVariant.QrCodeValue;
+                dto.QrCodeImagePath = baseDto.DefaultVariant.QrCodeImagePath;
+            }
+
+            if (dto.Variants != null && product.Variants != null)
+            {
+                foreach (var vDto in dto.Variants)
+                {
+                    var entity = product.Variants.FirstOrDefault(v => v.Id == vDto.Id);
+                    if (entity != null)
+                    {
+                        vDto.Quantity = ProductVariantHelper.CalculateAvailableQuantity(entity.Stocks, null);
+                        vDto.InStock = ProductVariantHelper.IsInStock(entity.Stocks, null);
+                    }
+                }
+            }
+
             var stocks = product.Variants
-                .Where(v => v.IsActive)
-                .SelectMany(v => v.Stocks);
+                .Where(v => v.IsActive && !v.IsDeleted)
+                .SelectMany(v => v.Stocks ?? Enumerable.Empty<Stock>());
 
             dto.BranchStock = stocks.Select(s => _mapper.Map<VariantStockDto>(s)).ToList();
-
-
 
             if (currentUserId.HasValue)
             {
@@ -601,18 +625,51 @@ namespace Onpoint.Store.Application.Services.ProductServ
         {
             var dto = _mapper.Map<ProductDto>(p, opts => opts.Items["lang"] = _currentLanguage.Lang);
 
+            var defaultVariantEntity = ProductVariantHelper.SelectDefaultVariant(p.Variants, branchId);
+            if (defaultVariantEntity != null)
+            {
+                dto.DefaultVariant = new ProductVariantDto
+                {
+                    Id = defaultVariantEntity.Id,
+                    ProductId = p.Id,
+                    ProductName = LocalizationHelper.Pick(p.Name, p.NameEn, _currentLanguage.Lang),
+                    Sku = defaultVariantEntity.Sku ?? string.Empty,
+                    Barcode = defaultVariantEntity.Barcode,
+                    BarcodeImagePath = defaultVariantEntity.BarcodeImagePath,
+                    QrCodeValue = defaultVariantEntity.QrCodeValue,
+                    QrCodeImagePath = defaultVariantEntity.QrCodeImagePath,
+                    Price = defaultVariantEntity.Price,
+                    Cost = defaultVariantEntity.Cost,
+                    IsActive = defaultVariantEntity.IsActive,
+                    Quantity = ProductVariantHelper.CalculateAvailableQuantity(defaultVariantEntity.Stocks, branchId),
+                    InStock = ProductVariantHelper.IsInStock(defaultVariantEntity.Stocks, branchId)
+                };
 
+                dto.Price = defaultVariantEntity.Price;
+                dto.Cost = defaultVariantEntity.Cost;
+                dto.Sku = defaultVariantEntity.Sku;
+
+                var activeDiscount = p.Discounts?.FirstOrDefault(d => d.IsActive && d.EndDate >= DateTime.UtcNow);
+                if (activeDiscount != null)
+                {
+                    dto.DiscountedPrice = defaultVariantEntity.Price * (1 - activeDiscount.DiscountPercentage / 100m);
+                }
+                else
+                {
+                    dto.DiscountedPrice = defaultVariantEntity.Price;
+                }
+            }
 
             IEnumerable<Stock> relevantStocks = p.Variants
-                .Where(v => v.IsActive)
-                .SelectMany(v => v.Stocks);
+                .Where(v => v.IsActive && !v.IsDeleted)
+                .SelectMany(v => v.Stocks ?? Enumerable.Empty<Stock>());
 
             if (branchId.HasValue)
                 relevantStocks = relevantStocks.Where(s => s.BranchId == branchId.Value);
 
             var stocksList = relevantStocks.ToList();
 
-            dto.TotalStock = stocksList.Sum(s => s.Quantity);
+            dto.TotalStock = stocksList.Sum(s => Math.Max(0, s.Quantity - s.ReservedQuantity));
             var minLevel = stocksList.Any() ? stocksList.Max(s => s.MinimumStockLevel) : 0;
 
             dto.StockStatus = dto.TotalStock <= 0
@@ -623,11 +680,6 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             return dto;
         }
-
-
-
-
-
 
         public async Task<ServiceResult<PagedResult<ProductListItemDto>>> GetFilteredAsync(
      ProductFilterRequestDto filter,
@@ -659,36 +711,69 @@ namespace Onpoint.Store.Application.Services.ProductServ
         private ProductListItemDto MapToListItem(Product p)
         {
             var lang = _currentLanguage.Lang;
-            var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
-            var minPrice = activeVariants.Any() ? activeVariants.Min(v => v.Price) : 0;
+            var activeVariants = p.Variants.Where(v => v.IsActive && !v.IsDeleted).ToList();
+            var defaultVariantEntity = ProductVariantHelper.SelectDefaultVariant(p.Variants);
 
+            var basePrice = defaultVariantEntity?.Price ?? 0m;
             var activeDiscount = p.Discounts
                 .FirstOrDefault(d => d.IsActive && d.EndDate >= DateTime.UtcNow);
             var discountPercentage = activeDiscount?.DiscountPercentage;
-            var originalPrice = discountPercentage.HasValue ? minPrice : (decimal?)null;
+            var originalPrice = discountPercentage.HasValue ? basePrice : (decimal?)null;
             var finalPrice = discountPercentage.HasValue
-                ? minPrice * (1 - discountPercentage.Value / 100m)
-                : minPrice;
+                ? basePrice * (1 - discountPercentage.Value / 100m)
+                : basePrice;
 
-            var inStock = activeVariants.Any(v =>
-                v.Stocks != null && v.Stocks.Any(s => s.Quantity > s.MinimumStockLevel));
+            var inStock = activeVariants.Any(v => ProductVariantHelper.IsInStock(v.Stocks));
 
             var approvedReviews = p.Reviews.Count(r => r.IsApproved);
             var avgRating = approvedReviews > 0
                 ? p.Reviews.Where(r => r.IsApproved).Average(r => r.Rating)
                 : 0;
 
-            var primaryImage = p.Images
-                .OrderByDescending(i => i.IsPrimary)
-                .FirstOrDefault();
+            var variantDtos = activeVariants.Select(v => new ProductVariantDto
+            {
+                Id = v.Id,
+                ProductId = p.Id,
+                ProductName = LocalizationHelper.Pick(p.Name, p.NameEn, lang),
+                Sku = v.Sku ?? string.Empty,
+                Barcode = v.Barcode,
+                BarcodeImagePath = v.BarcodeImagePath,
+                QrCodeValue = v.QrCodeValue,
+                QrCodeImagePath = v.QrCodeImagePath,
+                Price = v.Price,
+                Cost = v.Cost,
+                IsActive = v.IsActive,
+                Quantity = ProductVariantHelper.CalculateAvailableQuantity(v.Stocks),
+                InStock = ProductVariantHelper.IsInStock(v.Stocks),
+                Stocks = v.Stocks?.Select(s => new VariantStockDto
+                {
+                    Id = s.Id,
+                    Quantity = s.Quantity,
+                    BranchId = s.BranchId,
+                    BranchName = s.Branch?.Name ?? string.Empty,
+                    ReservedQuantity = s.ReservedQuantity,
+                    AvailableQuantity = Math.Max(0, s.Quantity - s.ReservedQuantity)
+                }).ToList() ?? new List<VariantStockDto>(),
+                Attributes = v.AttributeValues?.Select(av => new VariantAttributeValueDto
+                {
+                    ProductAttributeId = av.ProductAttributeId,
+                    AttributeName = av.ProductAttribute != null
+                        ? LocalizationHelper.Pick(av.ProductAttribute.Name, av.ProductAttribute.NameEn, lang)
+                        : string.Empty,
+                    Value = av.Value ?? string.Empty
+                }).ToList() ?? new List<VariantAttributeValueDto>()
+            }).ToList();
+
+            var defaultVariantDto = defaultVariantEntity != null
+                ? variantDtos.FirstOrDefault(v => v.Id == defaultVariantEntity.Id)
+                : null;
 
             return new ProductListItemDto
             {
                 Id = p.Id,
                 Name = LocalizationHelper.Pick(p.Name, p.NameEn, lang),
                 Slug = p.Slug,
-                Description = LocalizationHelper.PickNullable(p.Description, p.DescriptionEn, lang)
-        ,
+                Description = LocalizationHelper.PickNullable(p.Description, p.DescriptionEn, lang),
                 Images = p.Images.Select(i => new ProductImageDto
                 {
                     Id = i.Id,
@@ -712,45 +797,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
                 InStock = inStock,
                 CategoryName = p.Category != null ? LocalizationHelper.Pick(p.Category.Name, p.Category.NameEn, lang) : string.Empty,
                 BrandName = p.Brand != null ? LocalizationHelper.Pick(p.Brand.Name, p.Brand.NameEn, lang) : null,
-
                 CreatedAt = p.CreatedAt,
-
-                Variants = activeVariants.Select(v => new ProductVariantDto
-                {
-                    Id = v.Id,
-                    ProductId = p.Id,
-                    ProductName = LocalizationHelper.Pick(p.Name, p.NameEn, lang),
-                    Sku = v.Sku ?? string.Empty,
-                    Barcode = v.Barcode,
-                    BarcodeImagePath = v.BarcodeImagePath,
-                    QrCodeValue = v.QrCodeValue,
-                    QrCodeImagePath = v.QrCodeImagePath,
-                    Price = v.Price,
-                    Cost = v.Cost,
-                    IsActive = v.IsActive,
-
-                    // ✅ Stocks = List<VariantStockDto>
-                    Stocks = v.Stocks?.Select(s => new VariantStockDto
-                    {
-                        Id = s.Id,
-                        Quantity = s.Quantity,
-                        // Add other properties if needed:
-                        BranchId = s.BranchId,
-                        BranchName = s.Branch?.Name,
-                        ReservedQuantity = s.ReservedQuantity,
-                        AvailableQuantity = s.Quantity - s.ReservedQuantity
-                    }).ToList() ?? new List<VariantStockDto>(),
-
-                    Attributes = v.AttributeValues?.Select(av => new VariantAttributeValueDto
-                    {
-
-                        ProductAttributeId = av.ProductAttributeId,
-                        AttributeName = av.ProductAttribute != null
-                    ? LocalizationHelper.Pick(av.ProductAttribute.Name, av.ProductAttribute.NameEn, lang)
-                    : string.Empty,
-                        Value = av.Value ?? string.Empty
-                    }).ToList() ?? new List<VariantAttributeValueDto>()
-                }).ToList()
+                Variants = variantDtos,
+                DefaultVariant = defaultVariantDto
             };
         }
     }

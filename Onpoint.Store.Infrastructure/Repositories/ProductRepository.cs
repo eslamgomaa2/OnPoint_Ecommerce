@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Onpoint.Store.Domin.Entities;
 using Onpoint.Store.Domin.Enums;
 using Onpoint.Store.Domin.Repositories;
@@ -31,6 +31,8 @@ namespace Onpoint.Store.Infrastructure.Repositories
                 .Include(p => p.Variants.Where(v => v.IsActive))
                     .ThenInclude(v => v.AttributeValues)
                         .ThenInclude(av => av.ProductAttribute)
+                .Include(p => p.Variants.Where(v => v.IsActive))
+                    .ThenInclude(v => v.Stocks)
                 .Include(p => p.Reviews.Where(r => r.IsApproved))
                 .FirstOrDefaultAsync(p => p.Id == id, ct);
 

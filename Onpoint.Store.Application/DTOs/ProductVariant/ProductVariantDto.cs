@@ -1,4 +1,4 @@
-﻿namespace Onpoint.Store.Application.DTOs.ProductVariant
+namespace Onpoint.Store.Application.DTOs.ProductVariant
 {
     public class ProductVariantDto
     {
@@ -16,6 +16,8 @@
         public decimal Cost { get; set; }
 
         public bool IsActive { get; set; }
+        public bool InStock { get; set; }
+        public int Quantity { get; set; }
 
 
         public List<VariantStockDto> Stocks { get; set; } = new();

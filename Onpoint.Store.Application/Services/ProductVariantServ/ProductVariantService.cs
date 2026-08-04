@@ -1,6 +1,7 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BuildingBlocks.Results;
 using FluentValidation;
+using Onpoint.Store.Application.Common;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.ProductVariant;
 using Onpoint.Store.Application.Services.CodeGeneration.BarcodeGeneration;
@@ -369,13 +370,14 @@ namespace Onpoint.Store.Application.Services.ProductVariantServ
                 Price = v.Price,
                 Cost = v.Cost,
                 IsActive = v.IsActive,
+                Quantity = ProductVariantHelper.CalculateAvailableQuantity(v.Stocks),
+                InStock = ProductVariantHelper.IsInStock(v.Stocks),
                 Attributes = v.AttributeValues?.Select(av => new VariantAttributeValueDto
                 {
                     ProductAttributeId = av.ProductAttributeId,
                     AttributeName = av.ProductAttribute?.Name ?? string.Empty,
                     Value = av.Value
                 }).ToList() ?? new List<VariantAttributeValueDto>()
-
             };
         }
         private async Task<string> GenerateUniqueBarcodeAsync(CancellationToken ct, int maxAttempts = 5)
