@@ -29,6 +29,8 @@ namespace Onpoint.Store.Application.Services.PosServ
         private readonly ILogger<PosSessionService> _logger;
         private readonly IMyFatoorahClient _myFatoorahClient;
 
+        private const int CashPaymentMethodId = 0;
+
 
         public PosSessionService(
             IUnitOfWork unitOfWork,
@@ -527,8 +529,9 @@ namespace Onpoint.Store.Application.Services.PosServ
         #region Complete Session
 
         public async Task<ServiceResult<PosOrderDto>> CompleteSessionAsync(
-     int sessionId,
-     CompletePosSessionDto dto)
+            int sessionId,
+            CompletePosSessionDto dto,
+            CancellationToken ct = default)
         {
             var session = await GetSessionWithDetailsAsync(sessionId);
             if (session == null)
@@ -542,24 +545,10 @@ namespace Onpoint.Store.Application.Services.PosServ
 
             var (subTotal, taxAmount, total) = CalculateTotals(session);
 
-            var totalPayments = dto.Payments.Sum(p => p.Amount);
-            if (dto.Payments.Any() && Math.Abs(totalPayments - total) > 0.001m)
-                return _resultHandler.BadRequest<PosOrderDto>(
-                    $"Payment amount ({totalPayments}) does not match total ({total})");
+            bool isCash = dto.PaymentMethodId == CashPaymentMethodId;
 
-            var cashPayment = dto.Payments.FirstOrDefault(p => p.Method == PaymentMethod.Cash);
-            if (cashPayment != null && cashPayment.Amount > 0 && dto.AmountReceived < cashPayment.Amount)
-                return _resultHandler.BadRequest<PosOrderDto>("Amount received is less than cash payment");
-
-            // ✅ حدد نوع الدفع
-            var hasCardPayment = dto.Payments.Any(p => p.Method == PaymentMethod.Visa ||
-                                                        p.Method == PaymentMethod.MasterCard ||
-                                                        p.Method == PaymentMethod.CreditCard ||
-                                                        p.Method == PaymentMethod.DebitCard ||
-                                                        p.Method == PaymentMethod.Wallet);
-
-            var cashAmount = cashPayment?.Amount ?? 0;
-            var cardAmount = total - cashAmount;
+            if (isCash && dto.AmountReceived < total)
+                return _resultHandler.BadRequest<PosOrderDto>("Amount received is less than total amount");
 
             Order order;
             string? paymentUrl = null;
@@ -568,14 +557,14 @@ namespace Onpoint.Store.Application.Services.PosServ
 
             try
             {
-                // ========== 1. تحقق من Stock ==========
+                // ========== 1. تحقق من الـ Stock ==========
                 var stockKeys = session.Items
                     .Select(i => (i.ProductId, i.ProductVariantId))
                     .Distinct()
                     .ToList();
 
                 var stocks = await _unitOfWork.Stocks
-                    .GetByProductVariantsAndBranchAsync(stockKeys, session.BranchId);
+                    .GetByProductVariantsAndBranchAsync(stockKeys, session.BranchId, ct);
 
                 foreach (var item in session.Items)
                 {
@@ -596,20 +585,18 @@ namespace Onpoint.Store.Application.Services.PosServ
                     }
                 }
 
-                // ✅ لو كاش فقط → اخصص Stock دلوقتي
-                if (!hasCardPayment)
+                foreach (var item in session.Items)
                 {
-                    foreach (var item in session.Items)
-                    {
-                        var stock = stocks.First(s =>
-                            s.ProductId == item.ProductId &&
-                            s.ProductVariantId == item.ProductVariantId);
-                        stock.Quantity -= item.Quantity;
-                        _unitOfWork.Stocks.Update(stock);
-                    }
+                    var stock = stocks.First(s =>
+                        s.ProductId == item.ProductId &&
+                        s.ProductVariantId == item.ProductVariantId);
+                    stock.Quantity -= item.Quantity;
+                    _unitOfWork.Stocks.Update(stock);
                 }
 
-                // ========== 2. أنشئ الـ Order Items ==========
+                if (dto.CustomerId.HasValue)
+                    session.CustomerId = dto.CustomerId.Value;
+
                 var orderItems = session.Items.Select(i => new OrderItem
                 {
                     ProductId = i.ProductId,
@@ -621,20 +608,17 @@ namespace Onpoint.Store.Application.Services.PosServ
                     UnitPrice = i.UnitPrice
                 }).ToList();
 
-                // ========== 3. حدد الـ Status ==========
-                var orderStatus = hasCardPayment ? OrderStatus.PendingPayment : OrderStatus.Completed;
-                var primaryMethod = dto.Payments.Count == 1
-                    ? dto.Payments[0].Method
-                    : PaymentMethod.Cash;
+                var orderStatus = isCash ? OrderStatus.Completed : OrderStatus.PendingPayment;
+                var amountReceived = isCash ? dto.AmountReceived : total;
+                var change = isCash && dto.AmountReceived > total ? dto.AmountReceived - total : 0;
 
-                // ========== 4. أنشئ الـ Order ==========
                 order = new Order
                 {
                     CashierId = session.CashierId,
                     CustomerId = session.CustomerId,
                     InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{session.Id:D4}",
                     PhoneNumber = session.CustomerPhone ?? string.Empty,
-                    PaymentMethod = primaryMethod,
+                    PaymentMethod = (PaymentMethod)dto.PaymentMethodId,
                     Status = orderStatus,
                     Source = OrderSource.Pos,
                     BranchId = session.BranchId,
@@ -643,51 +627,40 @@ namespace Onpoint.Store.Application.Services.PosServ
                     ShippingCost = 0,
                     DiscountAmount = session.DiscountAmount,
                     TotalAmount = total,
-                    AmountReceived = dto.AmountReceived,
-                    Change = dto.AmountReceived > total ? dto.AmountReceived - total : 0,
+                    AmountReceived = amountReceived,
+                    Change = change,
                     OrderItems = orderItems,
                 };
 
-                // ========== 5. سجّل الـ Transactions ==========
-                foreach (var payment in dto.Payments)
+                order.Transactions.Add(new PaymentTransaction
                 {
-                    var isCard = payment.Method == PaymentMethod.Visa ||
-                                 payment.Method == PaymentMethod.MasterCard ||
-                                 payment.Method == PaymentMethod.CreditCard ||
-                                 payment.Method == PaymentMethod.DebitCard ||
-                                 payment.Method == PaymentMethod.Wallet;
+                    PaymentMethod = (PaymentMethod)dto.PaymentMethodId,
+                    Amount = total,
+                    CurrencyCode = "KWD",
+                    Status = isCash ? PaymentStatus.Success : PaymentStatus.Pending,
+                    PaidAt = isCash ? DateTime.UtcNow : null,
+                    Provider = isCash ? "POS" : "MyFatoorah",
+                });
 
-                    var transaction = new PaymentTransaction
-                    {
-                        PaymentMethod = payment.Method,
-                        Amount = payment.Amount,
-                        CurrencyCode = "KWD",
-                        Status = isCard ? PaymentStatus.Pending : PaymentStatus.Success,
-                        PaidAt = isCard ? null : DateTime.UtcNow, // ✅ nullable
-                        Provider = "POS",
-                    };
-                    order.Transactions.Add(transaction);
-                }
-
-                // ========== 6. سجّل الـ Status History ==========
+                // ========== 5. سجّل الـ Status History ==========
                 order.StatusHistory.Add(new OrderStatusHistory
                 {
                     Status = orderStatus,
                     EventName = EventName.OrderCreated,
-                    Description = hasCardPayment
-                        ? "Order created via POS - Awaiting card payment"
-                        : "Order created via POS",
+                    Description = isCash
+                        ? "Order created via POS"
+                        : "Order created via POS - Awaiting card payment",
                     EventTime = DateTime.UtcNow,
                     PerformedByUserId = session.CashierId
                 });
 
-                if (!hasCardPayment)
+                if (isCash)
                 {
                     order.StatusHistory.Add(new OrderStatusHistory
                     {
                         Status = OrderStatus.Completed,
                         EventName = EventName.PaymentReceived,
-                        Description = $"Payment received via {primaryMethod}. Amount: {total:C}",
+                        Description = $"Cash payment received. Amount: {total:C}",
                         EventTime = DateTime.UtcNow,
                         PerformedByUserId = session.CashierId
                     });
@@ -702,11 +675,11 @@ namespace Onpoint.Store.Application.Services.PosServ
                     });
                 }
 
-                // ========== 7. الكوبون ==========
+                // ========== 6. الكوبون ==========
                 if (!string.IsNullOrEmpty(session.CouponCode))
                 {
                     var coupon = await _unitOfWork.Coupons
-                        .FirstOrDefaultAsync(c => c.Code == session.CouponCode);
+                        .FirstOrDefaultAsync(c => c.Code == session.CouponCode, ct);
                     if (coupon != null)
                     {
                         coupon.UsedCount++;
@@ -714,26 +687,18 @@ namespace Onpoint.Store.Application.Services.PosServ
                     }
                 }
 
-                // ========== 8. احفظ الـ Order ==========
-                await _unitOfWork.Orders.AddAsync(order);
-                await _unitOfWork.SaveChangesAsync();
+                // ========== 7. احفظ الـ Order ==========
+                await _unitOfWork.Orders.AddAsync(order, ct);
+                await _unitOfWork.SaveChangesAsync(ct);
 
-                // ========== 9. اربط الـ Session بالـ Order ==========
+                // ========== 8. اربط الـ Session بالـ Order ==========
                 session.OrderId = order.Id;
-                session.AmountReceived = dto.AmountReceived;
-                session.Change = order.Change;
-
-                if (!hasCardPayment)
-                {
-                    session.Status = PosSessionStatus.Completed;
-                }
-                else
-                {
-                    session.Status = PosSessionStatus.PendingPayment;
-                }
+                session.AmountReceived = amountReceived;
+                session.Change = change;
+                session.Status = isCash ? PosSessionStatus.Completed : PosSessionStatus.PendingPayment;
 
                 _unitOfWork.PosSessions.Update(session);
-                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(ct);
 
                 await _unitOfWork.CommitTransactionAsync();
             }
@@ -743,84 +708,23 @@ namespace Onpoint.Store.Application.Services.PosServ
                 throw;
             }
 
-            // ========== 10. لو فيه كارد → استدعي MyFatoorah (برة الترانزاكشن!) ==========
-            if (hasCardPayment)
+            // ========== 9. لو كارت → نادي MyFatoorah (برة الترانزاكشن) ==========
+            if (!isCash)
             {
-                try
+                var (success, url, errorMessage) = await ExecuteCardPaymentAsync(
+                    session, order, dto.PaymentMethodId, total, ct);
+
+                if (!success)
                 {
-                    var cardPayment = dto.Payments.First(p =>
-                        p.Method == PaymentMethod.Visa ||
-                        p.Method == PaymentMethod.MasterCard ||
-                        p.Method == PaymentMethod.CreditCard ||
-                        p.Method == PaymentMethod.DebitCard ||
-                        p.Method == PaymentMethod.Wallet);
-
-                    // ✅ استخدم القيم من appsettings أو من Session
-                    var executeRequest = new ExecutePaymentRequestModel
-                    {
-                        InvoiceValue = Math.Round(cardAmount, 3),
-
-                        PaymentMethodId = GetMyFatoorahPaymentMethodId(cardPayment.Method),
-
-                        CustomerName = session.Customer?.FName ?? "POS Customer",
-                        CustomerEmail = session.Customer?.Email ?? "pos@onpoint.store",
-                        CustomerMobile = session.CustomerPhone ?? session.Customer?.Phone ?? "",
-                        CallBackUrl = _configuration["MyFatoorah:CallbackUrl"] ?? "https://yourapp.com/api/payments/callback",
-                        ErrorUrl = _configuration["MyFatoorah:ErrorUrl"] ?? "https://yourapp.com/payment/error",
-                        CustomerReference = order.Id.ToString(),
-                        Language = "AR",
-                        DisplayCurrencyIso = "KWD",
-                    };
-
-                    var myFatoorahResult = await _myFatoorahClient
-                        .ExecutePaymentAsync(executeRequest);
-
-                    // ✅ استخدم GatewayTransactionId الموجود
-                    var cardTransaction = order.Transactions
-                        .FirstOrDefault(t => t.PaymentMethod == cardPayment.Method);
-                    if (cardTransaction == null)
-                    {
-                        _logger.LogError("Pending card transaction not found for Order {OrderId}", order.Id);
-                        return _resultHandler.BadRequest<PosOrderDto>("Internal error: transaction not found.");
-                    }
-                    cardTransaction.GatewayTransactionId = myFatoorahResult.InvoiceId;
-                    _unitOfWork.Orders.Update(order);
-                    await _unitOfWork.SaveChangesAsync();
-
-                    paymentUrl = myFatoorahResult.PaymentUrl;
-
-                    _logger.LogInformation(
-                        "MyFatoorah payment initiated for Order {OrderId}, Invoice {InvoiceId}",
-                        order.Id, myFatoorahResult.InvoiceId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "MyFatoorah payment initiation failed for Order {OrderId}", order.Id);
-
-                    await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
-                    try
-                    {
-                        order.Status = OrderStatus.PaymentFailed;
-                        _unitOfWork.Orders.Update(order);
-
-                        session.Status = PosSessionStatus.PaymentFailed;
-                        _unitOfWork.PosSessions.Update(session);
-
-                        await _unitOfWork.SaveChangesAsync();
-                        await _unitOfWork.CommitTransactionAsync();
-                    }
-                    catch
-                    {
-                        await _unitOfWork.RollbackTransactionAsync();
-                        throw;
-                    }
-
+                    await CompensateFailedCardInitiationAsync(session, order, ct);
                     return _resultHandler.BadRequest<PosOrderDto>(
-                        "Failed to initiate card payment. Please try again.");
+                        errorMessage ?? "Failed to initiate card payment. Please try again.");
                 }
+
+                paymentUrl = url;
             }
 
-            // ========== 11. QR Code ==========
+            // ========== 10. QR Code ==========
             try
             {
                 var qrValue = $"https://yourapp.com/invoice/{order.Id}";
@@ -833,7 +737,7 @@ namespace Onpoint.Store.Application.Services.PosServ
                 {
                     order.QRCode = uploadResult.Data;
                     _unitOfWork.Orders.Update(order);
-                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.SaveChangesAsync(ct);
                 }
             }
             catch (Exception ex)
@@ -841,31 +745,98 @@ namespace Onpoint.Store.Application.Services.PosServ
                 _logger.LogError(ex, "QR generation failed for Order {OrderId}", order.Id);
             }
 
-            // ========== 12. رجّع الـ DTO ==========
             var resultDto = _mapper.Map<PosOrderDto>(order);
             resultDto.PaymentUrl = paymentUrl;
 
             if (!string.IsNullOrEmpty(paymentUrl))
-            {
                 return _resultHandler.Success(resultDto, "Payment required to complete the order.");
-            }
 
             return _resultHandler.Created(resultDto);
         }
-
         #endregion
-        private int GetMyFatoorahPaymentMethodId(PaymentMethod method)
+        private async Task<(bool Success, string? PaymentUrl, string? ErrorMessage)> ExecuteCardPaymentAsync(
+            PosSession session, Order order, int paymentMethodId, decimal amount, CancellationToken ct)
         {
-            return method switch
+            try
             {
-                PaymentMethod.KNet => 1,
-                PaymentMethod.Visa => 2,
-                PaymentMethod.MasterCard => 2,
-                PaymentMethod.CreditCard => 2,
-                PaymentMethod.DebitCard => 2,
+                var request = new ExecutePaymentRequestModel
+                {
+                    InvoiceValue = Math.Round(amount, 3),
+                    PaymentMethodId = paymentMethodId,
+                    CustomerName = session.Customer?.FName ?? "POS Customer",
+                    CustomerEmail = session.Customer?.Email ?? "pos@onpoint.store",
+                    CustomerMobile = session.CustomerPhone ?? session.Customer?.Phone ?? "",
+                    CallBackUrl = _configuration["MyFatoorah:CallbackUrl"] ?? "https://yourapp.com/api/payments/callback",
+                    ErrorUrl = _configuration["MyFatoorah:ErrorUrl"] ?? "https://yourapp.com/payment/error",
+                    CustomerReference = order.Id.ToString(),
+                    Language = "AR",
+                    DisplayCurrencyIso = "KWD",
+                };
 
-                _ => 2
-            };
+                var result = await _myFatoorahClient.ExecutePaymentAsync(request, ct);
+
+                var cardTransaction = order.Transactions.FirstOrDefault(t => t.PaymentMethod == (PaymentMethod)paymentMethodId);
+                if (cardTransaction == null)
+                {
+                    _logger.LogError("Pending card transaction not found for Order {OrderId}", order.Id);
+                    return (false, null, "Internal error: transaction not found.");
+                }
+
+                cardTransaction.GatewayTransactionId = result.InvoiceId;
+                _unitOfWork.Orders.Update(order);
+                await _unitOfWork.SaveChangesAsync(ct);
+
+                _logger.LogInformation(
+                    "MyFatoorah payment initiated for Order {OrderId}, Invoice {InvoiceId}",
+                    order.Id, result.InvoiceId);
+
+                return (true, result.PaymentUrl, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "MyFatoorah payment initiation failed for Order {OrderId}", order.Id);
+                return (false, null, "Failed to initiate card payment. Please try again.");
+            }
+        }
+
+        private async Task CompensateFailedCardInitiationAsync(PosSession session, Order order, CancellationToken ct)
+        {
+            await _unitOfWork.BeginTransactionAsync(IsolationLevel.Serializable);
+            try
+            {
+                var stockKeys = order.OrderItems
+                    .Select(i => (i.ProductId, i.ProductVariantId))
+                    .Distinct()
+                    .ToList();
+
+                var stocks = await _unitOfWork.Stocks
+                    .GetByProductVariantsAndBranchAsync(stockKeys, session.BranchId, ct);
+
+                foreach (var item in order.OrderItems)
+                {
+                    var stock = stocks.FirstOrDefault(s =>
+                        s.ProductId == item.ProductId && s.ProductVariantId == item.ProductVariantId);
+                    if (stock != null)
+                    {
+                        stock.Quantity += item.Quantity;
+                        _unitOfWork.Stocks.Update(stock);
+                    }
+                }
+
+                order.Status = OrderStatus.PaymentFailed;
+                _unitOfWork.Orders.Update(order);
+
+                session.Status = PosSessionStatus.PaymentFailed;
+                _unitOfWork.PosSessions.Update(session);
+
+                await _unitOfWork.SaveChangesAsync(ct);
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
     }
 }

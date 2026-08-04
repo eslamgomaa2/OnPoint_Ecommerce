@@ -13,8 +13,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
      bool isSuperAdmin,
      CancellationToken ct = default);
         Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
-        PaginationRequest request, int? categoryId = null, string? searchTerm = null,
-     int? branchId = null, LanguageCode? languageCode = null, int? currentUserId = null,
+     PaginationRequest request, int? categoryId = null, string? searchTerm = null,
+     int? branchId = null, int? currentUserId = null,
      CancellationToken ct = default);
         Task<ServiceResult<ProductDetailDto>> GetByIdAsync(int id, LanguageCode? languageCode = null, int? currentUserId = null, CancellationToken ct = default);
 

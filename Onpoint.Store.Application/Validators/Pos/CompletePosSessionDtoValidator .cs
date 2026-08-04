@@ -5,16 +5,21 @@ namespace Onpoint.Store.Application.Validators.Pos
 {
     public class CompletePosSessionDtoValidator : AbstractValidator<CompletePosSessionDto>
     {
+        private const int CashPaymentMethodId = 0;
+
         public CompletePosSessionDtoValidator()
         {
-            RuleForEach(x => x.Payments).ChildRules(payment =>
-            {
-                payment.RuleFor(x => x.Amount).GreaterThan(0).WithMessage("Payment amount must be greater than 0");
-            });
+            RuleFor(x => x.PaymentMethodId)
+                .GreaterThanOrEqualTo(0)
+                .WithMessage("Payment method is required");
 
             RuleFor(x => x.AmountReceived)
                 .GreaterThanOrEqualTo(0)
-                .When(x => x.Payments.Any(p => p.Method == Domin.Enums.PaymentMethod.Cash))
+                .WithMessage("Amount received cannot be negative");
+
+            RuleFor(x => x.AmountReceived)
+                .GreaterThan(0)
+                .When(x => x.PaymentMethodId == CashPaymentMethodId)
                 .WithMessage("Amount received is required for cash payments");
         }
     }

@@ -45,9 +45,9 @@ namespace Onpoint.Store.Application.Services.PosServ
         Task<ServiceResult<PosSessionDto>> ApplyCouponAsync(int sessionId, string couponCode);
         Task<ServiceResult<PosSessionDto>> RemoveCouponAsync(int sessionId);
 
-        // Payment & Completion
+
         Task<ServiceResult<ReceiptPreviewDto>> PreviewReceiptAsync(int sessionId);
-        Task<ServiceResult<PosOrderDto>> CompleteSessionAsync(int sessionId, CompletePosSessionDto dto);
+        Task<ServiceResult<PosOrderDto>> CompleteSessionAsync(int sessionId, CompletePosSessionDto dto, CancellationToken ct = default);
     }
 }
 

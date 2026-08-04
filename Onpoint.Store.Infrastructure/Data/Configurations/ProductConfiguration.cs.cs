@@ -34,10 +34,7 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
                     .OnDelete(DeleteBehavior.Cascade);
 
 
-            builder.HasMany(p => p.Translations)
-                    .WithOne(t => t.Product)
-                    .HasForeignKey(t => t.ProductId)
-                     .OnDelete(DeleteBehavior.Cascade);
+
             builder.HasMany(p => p.Reviews)
                .WithOne(r => r.Product)
                .HasForeignKey(r => r.ProductId)
@@ -193,10 +190,7 @@ namespace Onpoint.Store.Infrastructure.Data.Configurations
             // Unique: ProductId + LanguageCode
             builder.HasIndex(x => new { x.ProductId, x.LanguageCode }).IsUnique();
 
-            builder.HasOne(x => x.Product)
-                .WithMany(p => p.Translations)
-                .HasForeignKey(x => x.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

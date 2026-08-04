@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Onpoint.Store.Application.DTOs.Product;
 using Onpoint.Store.Application.DTOs.Product.BranchManger;
 using Onpoint.Store.Application.Services.BranchManagerProductService;
-using Onpoint.Store.Domin.Enums;
 using System.Security.Claims;
 
 namespace Onpoint.Store.Api.Controllers
@@ -36,7 +35,7 @@ namespace Onpoint.Store.Api.Controllers
         public async Task<IActionResult> GetFilteredPaged(
             [FromQuery] PaginationRequest request,
             [FromQuery] int? categoryId = null,
-            [FromQuery] LanguageCode? lang = null,
+
             CancellationToken ct = default)
         {
             var (_, branchId) = GetUserAndBranchId();
@@ -44,18 +43,18 @@ namespace Onpoint.Store.Api.Controllers
                 return Unauthorized(new { message = "BranchId not found in token" });
 
             var result = await _branchManagerProductService.GetFilteredPagedAsync(
-                branchId.Value, request, categoryId, request.SearchTerm, lang, ct);
+                branchId.Value, request, categoryId, request.SearchTerm, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id, [FromQuery] LanguageCode? lang, CancellationToken ct)
+        public async Task<IActionResult> GetById(int id, CancellationToken ct)
         {
             var (_, branchId) = GetUserAndBranchId();
             if (!branchId.HasValue)
                 return Unauthorized(new { message = "BranchId not found in token" });
 
-            var result = await _branchManagerProductService.GetByIdAsync(branchId.Value, id, lang, ct);
+            var result = await _branchManagerProductService.GetByIdAsync(branchId.Value, id, ct);
             return StatusCode((int)result.HttpStatusCode, result);
         }
 

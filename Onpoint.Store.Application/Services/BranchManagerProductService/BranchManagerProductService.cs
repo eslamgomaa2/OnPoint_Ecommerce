@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using BuildingBlocks.Common;
 using BuildingBlocks.Results;
 using FluentValidation;
 using Onpoint.Store.Application.DTOs.Media;
@@ -27,6 +28,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
         private readonly ISkuGeneratorService _skuGeneratorService;
         private readonly IBarcodeService _barcodeService;
         private readonly IQrCodeService _qrCodeService;
+        private readonly ICurrentLanguage _currentLanguage;
 
         public BranchManagerProductService(
             IUnitOfWork unitOfWork,
@@ -37,7 +39,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
             ISkuGeneratorService skuGenerator,
             IBarcodeService barcodeService,
             IQrCodeService qrCodeService,
-            IMediaService mediaService)
+            IMediaService mediaService,
+            ICurrentLanguage currentLanguage)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -48,6 +51,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             _barcodeService = barcodeService;
             _qrCodeService = qrCodeService;
             _mediaService = mediaService;
+            _currentLanguage = currentLanguage;
         }
 
         // ============================================================================
@@ -72,18 +76,17 @@ namespace Onpoint.Store.Application.Services.ProductServ
         // GET PAGED
         // ============================================================================
         public async Task<ServiceResult<PagedResult<ProductDto>>> GetFilteredPagedAsync(
-            int branchId,
-            PaginationRequest request,
-            int? categoryId = null,
-            string? searchTerm = null,
-            LanguageCode? languageCode = null,
-            CancellationToken ct = default)
+     int branchId,
+     PaginationRequest request,
+     int? categoryId = null,
+     string? searchTerm = null,
+     CancellationToken ct = default)
         {
             var (items, totalCount) = await _unitOfWork.Products.GetFilteredPagedAsync(
                 categoryId, searchTerm, branchId, request.PageNumber, request.PageSize, ct);
 
             var dtoItems = items
-                .Select(p => ApplyTranslation(MapWithBranchStock(p, branchId), p, languageCode))
+                .Select(p => MapWithBranchStock(p, branchId))
                 .ToList();
 
             var pagedResult = PagedResult<ProductDto>.Create(dtoItems, totalCount, request.PageNumber, request.PageSize);
@@ -94,10 +97,9 @@ namespace Onpoint.Store.Application.Services.ProductServ
         // GET BY ID
         // ============================================================================
         public async Task<ServiceResult<ProductDetailDto>> GetByIdAsync(
-            int branchId,
-            int id,
-            LanguageCode? languageCode = null,
-            CancellationToken ct = default)
+     int branchId,
+     int id,
+     CancellationToken ct = default)
         {
             var product = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
             if (product is null)
@@ -106,15 +108,11 @@ namespace Onpoint.Store.Application.Services.ProductServ
             if (!HasStockInBranch(product, branchId))
                 return _resultHandler.NotFound<ProductDetailDto>("Product not available in this branch");
 
-            var dto = _mapper.Map<ProductDetailDto>(product);
+            var dto = _mapper.Map<ProductDetailDto>(product, opts => opts.Items["lang"] = _currentLanguage.Lang);
 
             var baseDto = MapWithBranchStock(product, branchId);
             dto.TotalStock = baseDto.TotalStock;
             dto.StockStatus = baseDto.StockStatus;
-
-
-
-            ApplyTranslationToDetail(dto, product, languageCode);
 
             return _resultHandler.Success(dto);
         }
@@ -182,7 +180,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return _resultHandler.Created(_mapper.Map<ProductDto>(product));
+            return _resultHandler.Created(_mapper.Map<ProductDto>(product, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         // ============================================================================
@@ -221,7 +219,7 @@ namespace Onpoint.Store.Application.Services.ProductServ
             await _unitOfWork.SaveChangesAsync(ct);
 
             var updated = await _unitOfWork.Products.GetWithDetailsAsync(id, ct);
-            return _resultHandler.Success(_mapper.Map<ProductDto>(updated ?? existingProduct));
+            return _resultHandler.Success(_mapper.Map<ProductDto>(updated ?? existingProduct, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         // ============================================================================
@@ -370,7 +368,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
 
         private ProductDto MapWithBranchStock(Product p, int? branchId)
         {
-            var dto = _mapper.Map<ProductDto>(p);
+            var dto = _mapper.Map<ProductDto>(p, opts => opts.Items["lang"] = _currentLanguage.Lang);
+
 
             IEnumerable<Stock> relevantStocks = p.Variants
                 .Where(v => v.IsActive)
@@ -393,41 +392,8 @@ namespace Onpoint.Store.Application.Services.ProductServ
             return dto;
         }
 
-        private ProductDto ApplyTranslation(ProductDto dto, Product product, LanguageCode? languageCode)
-        {
-            if (languageCode == null || languageCode == LanguageCode.en)
-                return dto;
 
-            var langStr = languageCode.Value.ToString();
 
-            var translation = product.Translations
-                .FirstOrDefault(t => t.LanguageCode.Equals(langStr) && !t.IsDeleted);
 
-            if (translation != null && !string.IsNullOrEmpty(translation.Name))
-                dto.Name = translation.Name;
-
-            return dto;
-        }
-
-        private ProductDetailDto ApplyTranslationToDetail(ProductDetailDto dto, Product product, LanguageCode? languageCode)
-        {
-            if (languageCode == null || languageCode == LanguageCode.en)
-                return dto;
-
-            var langStr = languageCode.Value.ToString();
-
-            var translation = product.Translations
-                .FirstOrDefault(t => t.LanguageCode.Equals(langStr) && !t.IsDeleted);
-
-            if (translation != null)
-            {
-                if (!string.IsNullOrEmpty(translation.Name))
-                    dto.Name = translation.Name;
-                if (!string.IsNullOrEmpty(translation.Description))
-                    dto.Description = translation.Description;
-            }
-
-            return dto;
-        }
     }
 }

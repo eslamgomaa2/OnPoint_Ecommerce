@@ -1,12 +1,15 @@
-﻿namespace Onpoint.Store.Application.DTOs.PosSession
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Onpoint.Store.Application.DTOs.PosSession
 {
     public class CompletePosSessionDto
     {
-        public List<SplitPaymentDto> Payments { get; set; } = new();
-        public decimal AmountReceived { get; set; }
+        [Required]
+        public int PaymentMethodId { get; set; }
 
+        public int? CustomerId { get; set; }
 
-
-
+        [Range(0, double.MaxValue)]
+        public decimal AmountReceived { get; set; }   // مطلوبة فعلياً لو Cash (PaymentMethodId == 0)
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Onpoint.Store.Infrastructure.Data.Context;
 
@@ -11,9 +12,11 @@ using Onpoint.Store.Infrastructure.Data.Context;
 namespace Onpoint.Store.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260804091617_addlocalization")]
+    partial class addlocalization
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -235,7 +238,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.AppSettingsInfo", b =>
@@ -292,7 +295,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AppSettingsInfo", (string)null);
+                    b.ToTable("AppSettingsInfo");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ApplicationUser", b =>
@@ -463,7 +466,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Branches", (string)null);
+                    b.ToTable("Branches");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Brand", b =>
@@ -511,7 +514,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Brand", (string)null);
+                    b.ToTable("Brand");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Cart", b =>
@@ -548,7 +551,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Carts", (string)null);
+                    b.ToTable("Carts");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.CartItem", b =>
@@ -596,7 +599,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[ProductVariantId] IS NOT NULL");
 
-                    b.ToTable("CartItems", (string)null);
+                    b.ToTable("CartItems");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Category", b =>
@@ -641,7 +644,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ContactMessage", b =>
@@ -679,7 +682,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ContactMessages", (string)null);
+                    b.ToTable("ContactMessages");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Coupon", b =>
@@ -734,7 +737,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("Coupons", (string)null);
+                    b.ToTable("Coupons");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.CustomerEngagement.Notification", b =>
@@ -764,7 +767,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Discount", b =>
@@ -803,7 +806,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("Discounts", (string)null);
+                    b.ToTable("Discounts");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.EmailVerificationOtp", b =>
@@ -843,7 +846,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("EmailVerificationOtps", (string)null);
+                    b.ToTable("EmailVerificationOtps");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Identity.Customer", b =>
@@ -1249,7 +1252,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductAttribute", b =>
@@ -1296,7 +1299,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("ProductAttribute", (string)null);
+                    b.ToTable("ProductAttribute");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductAttributeValue", b =>
@@ -1337,7 +1340,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("ProductId", "ProductAttributeId")
                         .IsUnique();
 
-                    b.ToTable("ProductAttributeValue", (string)null);
+                    b.ToTable("ProductAttributeValue");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductImage", b =>
@@ -1375,7 +1378,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductImages", (string)null);
+                    b.ToTable("ProductImages");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.ProductShipping", b =>
@@ -1542,7 +1545,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("Sku")
                         .IsUnique();
 
-                    b.ToTable("ProductVariant", (string)null);
+                    b.ToTable("ProductVariant");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.RefreshToken", b =>
@@ -1573,7 +1576,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Refund", b =>
@@ -1714,7 +1717,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("ProductId", "IsApproved");
 
-                    b.ToTable("Reviews", (string)null);
+                    b.ToTable("Reviews");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PaymentTransaction", b =>
@@ -1783,7 +1786,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("PaymentTransactions", (string)null);
+                    b.ToTable("PaymentTransactions");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PosSession", b =>
@@ -1850,7 +1853,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasIndex("CashierId", "Status");
 
-                    b.ToTable("PosSessions", (string)null);
+                    b.ToTable("PosSessions");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Sales.PosSessionItem", b =>
@@ -1908,7 +1911,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[ProductVariantId] IS NOT NULL");
 
-                    b.ToTable("PosSessionItems", (string)null);
+                    b.ToTable("PosSessionItems");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.StaticPage", b =>
@@ -2001,7 +2004,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[ProductVariantId] IS NOT NULL");
 
-                    b.ToTable("Stocks", (string)null);
+                    b.ToTable("Stocks");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.StoreSettings", b =>
@@ -2022,7 +2025,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StoreSettings", (string)null);
+                    b.ToTable("StoreSettings");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.VariantAttributeValue", b =>
@@ -2063,7 +2066,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("ProductVariantId", "ProductAttributeId")
                         .IsUnique();
 
-                    b.ToTable("VariantAttributeValue", (string)null);
+                    b.ToTable("VariantAttributeValue");
                 });
 
             modelBuilder.Entity("Onpoint.Store.Domin.Entities.Wishlist", b =>
@@ -2104,7 +2107,7 @@ namespace Onpoint.Store.Infrastructure.Migrations
                     b.HasIndex("UserId", "ProductId")
                         .IsUnique();
 
-                    b.ToTable("Wishlists", (string)null);
+                    b.ToTable("Wishlists");
                 });
 
             modelBuilder.Entity("CategoryProductAttribute", b =>

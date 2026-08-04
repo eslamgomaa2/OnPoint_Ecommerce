@@ -49,12 +49,11 @@ public class ProductController : ControllerBase
      [FromQuery] int? categoryId = null,
      [FromQuery] string? searchTerm = null,
      [FromQuery] int? branchId = null,
-     [FromQuery] LanguageCode? lang = null,
      CancellationToken ct = default)
     {
         var currentUserId = GetCurrentUserId();
         var result = await productService.GetFilteredPagedAsync(
-            request, categoryId, searchTerm, branchId, lang, currentUserId, ct);
+            request, categoryId, searchTerm, branchId, currentUserId, ct);
         return StatusCode((int)result.HttpStatusCode, result);
     }
 

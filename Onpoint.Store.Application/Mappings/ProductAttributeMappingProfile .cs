@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Onpoint.Store.Application.DTOs.ProductAttribute;
+using Onpoint.Store.Application.Mappings.Resolvers;
 using Onpoint.Store.Domin.Entities;
 
 namespace Onpoint.Store.Application.Mappings
@@ -8,9 +9,11 @@ namespace Onpoint.Store.Application.Mappings
     {
         public ProductAttributeMappingProfile()
         {
-            CreateMap<ProductAttribute, ProductAttributeDto>();
+            CreateMap<ProductAttribute, ProductAttributeDto>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom<ProductAttributeNameResolver>());
 
-            CreateMap<Category, CategoryBriefDto>();
+            CreateMap<Category, CategoryBriefDto>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom<CategoryBriefNameResolver>());
 
             CreateMap<CreateProductAttributeDto, ProductAttribute>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())

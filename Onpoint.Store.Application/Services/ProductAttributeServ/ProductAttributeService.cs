@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using BuildingBlocks.Common;
 using BuildingBlocks.Results;
 using FluentValidation;
 using Onpoint.Store.Application.DTOs.ProductAttribute;
+using Onpoint.Store.Application.Mapping;
 using Onpoint.Store.Domin.Repositories;
 
 namespace Onpoint.Store.Application.Services.ProductAttributeServ
@@ -13,19 +15,22 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
         private readonly ServiceResultHandler _resultHandler;
         private readonly IValidator<CreateProductAttributeDto> _createValidator;
         private readonly IValidator<UpdateProductAttributeDto> _updateValidator;
+        private readonly ICurrentLanguage _currentLanguage;
 
         public ProductAttributeService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ServiceResultHandler resultHandler,
             IValidator<CreateProductAttributeDto> createValidator,
-            IValidator<UpdateProductAttributeDto> updateValidator)
+            IValidator<UpdateProductAttributeDto> updateValidator,
+            ICurrentLanguage currentLanguage)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _resultHandler = resultHandler;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
+            _currentLanguage = currentLanguage;
         }
 
         public async Task<ServiceResult<PagedResult<ProductAttributeDto>>> GetAllWithCategoriesAsync(
@@ -41,16 +46,16 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
                     filter.ValueType,
                     ct);
 
+            var lang = _currentLanguage.Lang;
+
             var dtos = items.Select(a => new ProductAttributeDto
             {
                 Id = a.Id,
-                Name = a.Name,
+                Name = LocalizationHelper.Pick(a.Name, a.NameEn, lang),
                 Key = a.Key,
                 IsActive = a.IsActive,
                 ValueType = a.ValueType,
-
             }).ToList();
-
             var pagedResult = PagedResult<ProductAttributeDto>.Create(dtos, totalCount, filter.PageNumber, filter.PageSize);
 
             return _resultHandler.Success(pagedResult);
@@ -62,7 +67,8 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             if (attribute is null)
                 return _resultHandler.NotFound<ProductAttributeDto>("Attribute not found.");
 
-            return _resultHandler.Success<ProductAttributeDto>(_mapper.Map<ProductAttributeDto>(attribute));
+            return _resultHandler.Success<ProductAttributeDto>(
+    _mapper.Map<ProductAttributeDto>(attribute, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<ProductAttributeDto>> CreateAsync(CreateProductAttributeDto dto, CancellationToken ct = default)
@@ -83,7 +89,9 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
             await _unitOfWork.SaveChangesAsync(ct);
 
             var saved = await _unitOfWork.ProductAttributes.GetByIdWithCategoriesAsync(attribute.Id, ct);
-            return _resultHandler.Created<ProductAttributeDto>(_mapper.Map<ProductAttributeDto>(saved));
+
+            return _resultHandler.Created<ProductAttributeDto>(
+    _mapper.Map<ProductAttributeDto>(saved, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<ProductAttributeDto>> UpdateAsync(int id, UpdateProductAttributeDto dto, CancellationToken ct = default)
@@ -106,8 +114,8 @@ namespace Onpoint.Store.Application.Services.ProductAttributeServ
 
             _unitOfWork.ProductAttributes.Update(existing);
             await _unitOfWork.SaveChangesAsync(ct);
-
-            return _resultHandler.Success<ProductAttributeDto>(_mapper.Map<ProductAttributeDto>(existing));
+            return _resultHandler.Success<ProductAttributeDto>(
+    _mapper.Map<ProductAttributeDto>(existing, opts => opts.Items["lang"] = _currentLanguage.Lang));
         }
 
         public async Task<ServiceResult<string>> DeleteAsync(int id, CancellationToken ct = default)
